@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset ligero */
+html, body, #__next {
+  height: 100%;
+}
+body {
+  @apply bg-neutral-950 text-neutral-100 font-sans;
+}
+
+/* Contenedor principal */
+.container-page {
+  @apply max-w-7xl mx-auto p-6;
+}
+
+/* Cards */
+.card {
+  @apply rounded-xl bg-neutral-900 border border-neutral-800 shadow-md;
+}
+.card-body {
+  @apply p-4;
+}
+
+/* Botones */
+.btn {
+  @apply px-4 py-2 rounded-lg text-sm font-semibold transition-colors;
+  @apply bg-neutral-700 text-neutral-100 hover:bg-neutral-600;
+}
+.btn-primary {
+  @apply bg-emerald-600 hover:bg-emerald-500 text-white;
+}
+
+/* Inputs */
+.input {
+  @apply px-3 py-2 rounded-lg border border-neutral-700 bg-neutral-800 text-neutral-100 text-sm;
+  @apply focus:outline-none focus:ring-2 focus:ring-emerald-600;
+}
+
+/* KPI / etiquetas destacadas */
+.kpi {
+  @apply text-sm font-semibold text-neutral-400;
+}
+
+/* Progress bar flexible (verde) */
+.progress {
+  @apply relative flex h-2 w-full overflow-hidden rounded-full bg-neutral-800;
+}
+.progress > span {
+  @apply block h-full bg-emerald-600 transition-all duration-300;
+}
+
+/* ─────────────────────────────────────────────
+   RANGE SLIDER (input[type="range"]) universal
+   Forzamos accent-color + estilo custom
+   ───────────────────────────────────────────── */
+.range {
+  /* Hace que la “línea azul” nativa pase a verde en navegadores modernos */
+  accent-color: #059669;
+
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 9999px;
+
+  /* Relleno verde hasta --sx y resto gris oscuro (fallback si el motor ignora accent-color) */
+  background:
+    linear-gradient(#059669 0 0) 0/var(--sx,0%) 100% no-repeat,
+    #262626;
+  outline: none;
+}
+
+/* Thumb WebKit (Chrome/Safari/Edge) */
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 3px solid #059669; /* aro verde */
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.5); /* halo oscuro */
+  cursor: pointer;
+}
+/* Track WebKit */
+.range::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: transparent; /* lo gestiona el background de .range */
+}
+
+/* Firefox */
+.range::-moz-range-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: #262626;
+}
+.range::-moz-range-progress {
+  height: 8px;
+  border-radius: 9999px;
+  background: #059669;
+}
+.range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 3px solid #059669;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+
+/* Focus/active */
+.range:focus { outline: none; }
+.range:active::-webkit-slider-thumb,
+.range:active::-moz-range-thumb { transform: scale(0.98); }
+
+/* Extra: por si en algún sitio se usa input[type=range] sin .range */
+input[type="range"] {
+  accent-color: #059669; /* mínimo, que no vuelva a salir azul */
+}
