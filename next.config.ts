@@ -2,10 +2,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Omite ESLint en el build de producción (Vercel)
+  // ❗ Evita que el build falle por reglas de ESLint (no-explicit-any, etc.)
   eslint: { ignoreDuringBuilds: true },
 
-  // (opcional) si hubiera errores de tipos TS que bloqueen el build:
+  // (opcional) si más adelante te bloquean errores de TypeScript:
   // typescript: { ignoreBuildErrors: true },
 };
 
