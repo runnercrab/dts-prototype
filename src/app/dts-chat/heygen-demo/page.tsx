@@ -1,4 +1,4 @@
-import HeygenEmbed from "@/components/HeygenEmbed";
+import HeygenEmbed from "../../../components/HeygenEmbed";
 
 export default function HeygenDemoPage() {
   return (
