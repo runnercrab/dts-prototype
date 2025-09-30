@@ -1,11 +1,11 @@
 // dts-prototype/src/app/heygen-demo/page.tsx
-export const dynamic = "force-static";
+export const dynamic = "force-static"; // estable para Vercel
 
 export default function HeygenDemoPage() {
   return (
-    <main className="container-page" style={{ padding: "24px" }}>
+    <main className="container-page" style={{ padding: 24 }}>
       <h1 className="mb-4">Demo Avatar HeyGen</h1>
-      <p className="mb-6">Vídeo incrustado con iframe (no afecta al asistente).</p>
+      <p className="mb-6">Página independiente para mostrar el avatar en un iframe.</p>
 
       <div
         style={{
@@ -26,13 +26,7 @@ export default function HeygenDemoPage() {
           allow="encrypted-media; fullscreen;"
           allowFullScreen
           frameBorder={0}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            display: "block",
-          }}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
         />
       </div>
     </main>
