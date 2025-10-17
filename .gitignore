@@ -12,15 +12,3 @@ dist
 coverage
 
 ayuda
-node_modules
-.next
-.env.local
-.vercel
-dist
-.DS_Store
-node_modules
-.next
-.env.local
-.vercel
-dist
-.DS_Store
