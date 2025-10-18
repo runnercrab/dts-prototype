@@ -159,7 +159,6 @@ export default function AvatarPane() {
     const reply = (j?.reply||'').trim() || 'Puedo ayudarte con el diagnóstico DTS.'
 
     try {
-      // ✅ CORREGIDO: NO pasar voice en speak() - la voz ya está fijada en createStartAvatar
       await avatarRef.current?.speak({
         text: reply,
         task_type:'REPEAT',
@@ -185,7 +184,6 @@ export default function AvatarPane() {
       on('AVATAR_START_TALKING', ()=> setAvatarTalking(true))
       on('AVATAR_STOP_TALKING',  ()=> setAvatarTalking(false))
 
-      // ✅ CORREGIDO: voiceId en camelCase + rate
       const payload:any = { 
         quality:'high', 
         avatarName: ENV_AVATAR, 
@@ -205,7 +203,6 @@ export default function AvatarPane() {
       setReady(true)
 
       try {
-        // ✅ CORREGIDO: NO pasar voice en speak()
         await avatar.speak({
           text: ENV_GREETING.slice(0,120),
           task_type:'REPEAT',
@@ -224,7 +221,6 @@ export default function AvatarPane() {
   }
 
   const cooldownActive = Date.now() < cooldownUntilRef.current
-  // ✅ CORREGIDO: lógica de recActive
   const recActive = pttState === 'arming' || pttState === 'recording'
 
   return (
@@ -241,8 +237,8 @@ export default function AvatarPane() {
           )}
         </div>
 
-        {/* Player — el video NO captura clicks */}
-        <div className="relative w-full h-[420px] rounded-xl border border-neutral-800 bg-black overflow-hidden">
+        {/* Player — el video NO captura clicks - ✅ CAMBIO AQUÍ: aspect-video y max-h en lugar de h fija */}
+        <div className="relative w-full aspect-video max-h-[420px] rounded-xl border border-neutral-800 bg-black overflow-hidden">
           <video
             ref={videoRef}
             className="w-full h-full object-cover pointer-events-none"
