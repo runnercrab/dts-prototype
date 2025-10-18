@@ -124,6 +124,7 @@ export default function AvatarPane() {
   }
 
   async function startRecord() {
+    console.log('🎤 Iniciando grabación...')
     if (avatarTalking) return
     if (Date.now() < cooldownUntilRef.current) return
     if (!procStreamRef.current) await ensureMicChain()
@@ -135,28 +136,42 @@ export default function AvatarPane() {
     recRef.current = rec; recStartTsRef.current = Date.now()
     setPttState('arming')
     rec.ondataavailable = e => { if (e.data && e.data.size) recChunksRef.current.push(e.data) }
-    rec.onstart = () => setPttState('recording')
+    rec.onstart = () => {
+      setPttState('recording')
+      console.log('✅ Grabación iniciada')
+    }
     rec.start(0)
 
-    const stopOnce = () => { document.removeEventListener('pointerup', stopOnce); stopRecordAndSend() }
-    document.addEventListener('pointerup', stopOnce, { once: true })
+    // ✅ FIX: Eliminadas las 2 líneas que causaban la doble llamada a stopRecordAndSend
+    // El onPointerUp del botón ya maneja el evento de soltar
   }
 
   async function stopRecordAndSend() {
+    console.log('🛑 stopRecordAndSend llamado, estado:', recRef.current?.state)
     const rec = recRef.current
-    if (!rec || rec.state==='inactive') { setPttState('idle'); return }
+    if (!rec || rec.state==='inactive') { 
+      console.log('⚠️ Recorder ya estaba inactivo')
+      setPttState('idle'); 
+      return 
+    }
     setPttState('idle')
     await new Promise<void>(res => { rec.onstop = () => res(); try{ rec.stop() }catch{ res() } })
 
     const blob = new Blob(recChunksRef.current, { type: (rec.mimeType.includes('webm') ? 'audio/webm' : 'audio/mp4') })
     recChunksRef.current = []
+    console.log('🎵 Blob creado, tamaño:', blob.size)
 
     const { text, lang } = await transcribeBlob(blob)
-    if (!text || lang!=='es') return
+    console.log('📝 Transcripción:', text, 'Lang:', lang)
+    if (!text) {
+      console.log('⚠️ No hay texto en la transcripción')
+      return
+    }
 
     const r = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: text }), cache:'no-store' })
     const j = await r.json().catch(()=> ({}))
     const reply = (j?.reply||'').trim() || 'Puedo ayudarte con el diagnóstico DTS.'
+    console.log('💬 Respuesta del avatar:', reply)
 
     try {
       await avatarRef.current?.speak({
@@ -238,7 +253,7 @@ export default function AvatarPane() {
         </div>
 
         {/* Player — el video NO captura clicks */}
-        <div className="relative w-full aspect-video max-h-[420px] rounded-xl border border-neutral-800 bg-black overflow-hidden">
+        <div className="relative w-full h-[420px] rounded-xl border border-neutral-800 bg-black overflow-hidden">
           <video
             ref={videoRef}
             className="w-full h-full object-cover pointer-events-none"
@@ -247,25 +262,23 @@ export default function AvatarPane() {
           />
           {ready && (
             <button
-              className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-16 h-16 rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30 touch-none select-none
+              className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-16 h-16 rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30
                           ${recActive ? 'bg-red-600 text-white' : (avatarTalking || cooldownActive) ? 'bg-neutral-400 text-white cursor-not-allowed' : 'bg-white text-black'}`}
-              style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
               title={(avatarTalking || cooldownActive) ? 'Espera a que el avatar termine…' : 'Mantén pulsado para hablar'}
               disabled={avatarTalking || cooldownActive}
               onPointerDown={(e)=>{ e.preventDefault(); if (avatarTalking || cooldownActive) return; try { (e.currentTarget as any).setPointerCapture?.(e.pointerId) } catch {}; startRecord() }}
               onPointerUp={(e)=>{ e.preventDefault(); if (avatarTalking || cooldownActive) return; stopRecordAndSend(); try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId) } catch {} }}
               onPointerCancel={(e)=>{ e.preventDefault(); if (!(avatarTalking || cooldownActive)) stopRecordAndSend() }}
               onPointerLeave={(e)=>{ e.preventDefault(); if (!(avatarTalking || cooldownActive) && recActive) stopRecordAndSend() }}
-              onContextMenu={(e)=> e.preventDefault()}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
                 <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V20H9v2h6v-2h-2v-2.08A7 7 0 0 0 19 11h-2z"/>
               </svg>
             </button>
           )}
         </div>
 
-        {/* Log opcional (puedes ocultarlo si molesta) */}
+        {/* Log para debug - puedes ocultarlo después */}
         <pre className="mt-3 max-h-36 overflow-auto text-xs text-neutral-300 bg-neutral-900/50 p-2 rounded">{log.join('\n')}</pre>
       </div>
     </div>
