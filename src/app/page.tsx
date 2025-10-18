@@ -23,23 +23,16 @@ export default function Home() {
             playsInline
           >
             Tu navegador no soporta el elemento de video.
-</video>
+          </video>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="card">
+      <div className="flex justify-center">
+        <div className="card max-w-md w-full">
           <div className="card-body">
             <h2 className="mb-2">Diagnóstico</h2>
             <p className="mb-6">Evalúa tu madurez digital en 6 dimensiones.</p>
             <Link href="/dts-chat" className="btn btn-primary">Ir al Diagnóstico</Link>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body">
-            <h2 className="mb-2">Asistente</h2>
-            <p className="mb-6">Chat libre con el avatar (placeholder de momento).</p>
-            <Link href="/asistente" className="btn btn-muted">Abrir Asistente</Link>
           </div>
         </div>
       </div>
