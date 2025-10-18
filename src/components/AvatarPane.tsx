@@ -254,6 +254,26 @@ export default function AvatarPane() {
 
         {/* Player — el video NO captura clicks */}
         <div className="relative w-full h-[420px] rounded-xl border border-neutral-800 bg-black overflow-hidden">
+          {/* Mensaje de carga mientras se inicia el avatar */}
+          {starting && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 z-20">
+              <div className="flex flex-col items-center space-y-4">
+                {/* Spinner animado */}
+                <div className="relative">
+                  <div className="w-16 h-16 border-4 border-neutral-600 border-t-white rounded-full animate-spin"></div>
+                </div>
+                {/* Texto principal */}
+                <div className="text-white text-2xl font-semibold">
+                  Connecting...
+                </div>
+                {/* Texto descriptivo */}
+                <div className="text-neutral-400 text-sm text-center max-w-xs px-4">
+                  Loading up your avatar now for a realtime interactive experience
+                </div>
+              </div>
+            </div>
+          )}
+          
           <video
             ref={videoRef}
             className="w-full h-full object-cover pointer-events-none"
