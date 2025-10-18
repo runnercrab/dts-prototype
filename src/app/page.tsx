@@ -4,9 +4,28 @@ export default function Home() {
   return (
     <main className="container-page">
       <h1 className="mb-4">Digital Transformation Score</h1>
-      <p className="mb-10 text-neutral-400">
-        Prototipo: diagnóstico 0–10 y asistente. El avatar irá a la izquierda, el chat a la derecha.
+      <p className="mb-6 text-neutral-400">
+        Prototipo para ayudar a pymes que te da un score del nivel de madurez digital, 
+        así como madurez de los datos y otros scores futuros (como ISO's) y te devuelve 
+        un score y te dice cómo mejorar.
       </p>
+
+      {/* Video de bienvenida */}
+      <div className="mb-8 w-full max-w-4xl mx-auto">
+        <div className="relative w-full rounded-xl overflow-hidden border border-neutral-800 bg-black" style={{ aspectRatio: '16/9' }}>
+          <video
+            src="/Welcome.mp4"
+            className="w-full h-full object-cover"
+            controls
+            controlsList="nofullscreen nodownload noremoteplayback"
+            disablePictureInPicture
+            muted={false}
+            playsInline
+          >
+            Tu navegador no soporta el elemento de video.
+</video>
+        </div>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="card">
@@ -19,7 +38,7 @@ export default function Home() {
         <div className="card">
           <div className="card-body">
             <h2 className="mb-2">Asistente</h2>
-            <p className="mb-6">Chat libre (placeholder de momento).</p>
+            <p className="mb-6">Chat libre con el avatar (placeholder de momento).</p>
             <Link href="/asistente" className="btn btn-muted">Abrir Asistente</Link>
           </div>
         </div>
