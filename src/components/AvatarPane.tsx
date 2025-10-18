@@ -151,7 +151,6 @@ export default function AvatarPane() {
 
   async function startRecord() {
     console.log('🎤 Iniciando grabación...')
-    startInactivityTimer() // ✅ Resetear timer cuando el usuario interactúa
     if (avatarTalking) return
     if (Date.now() < cooldownUntilRef.current) return
     if (!procStreamRef.current) await ensureMicChain()
