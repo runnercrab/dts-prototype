@@ -237,7 +237,7 @@ export default function AvatarPane() {
           )}
         </div>
 
-        {/* Player — el video NO captura clicks - ✅ CAMBIO AQUÍ: aspect-video y max-h en lugar de h fija */}
+        {/* Player — el video NO captura clicks */}
         <div className="relative w-full aspect-video max-h-[420px] rounded-xl border border-neutral-800 bg-black overflow-hidden">
           <video
             ref={videoRef}
@@ -247,16 +247,18 @@ export default function AvatarPane() {
           />
           {ready && (
             <button
-              className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-16 h-16 rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30
+              className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-16 h-16 rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30 touch-none select-none
                           ${recActive ? 'bg-red-600 text-white' : (avatarTalking || cooldownActive) ? 'bg-neutral-400 text-white cursor-not-allowed' : 'bg-white text-black'}`}
+              style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
               title={(avatarTalking || cooldownActive) ? 'Espera a que el avatar termine…' : 'Mantén pulsado para hablar'}
               disabled={avatarTalking || cooldownActive}
               onPointerDown={(e)=>{ e.preventDefault(); if (avatarTalking || cooldownActive) return; try { (e.currentTarget as any).setPointerCapture?.(e.pointerId) } catch {}; startRecord() }}
               onPointerUp={(e)=>{ e.preventDefault(); if (avatarTalking || cooldownActive) return; stopRecordAndSend(); try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId) } catch {} }}
               onPointerCancel={(e)=>{ e.preventDefault(); if (!(avatarTalking || cooldownActive)) stopRecordAndSend() }}
               onPointerLeave={(e)=>{ e.preventDefault(); if (!(avatarTalking || cooldownActive) && recActive) stopRecordAndSend() }}
+              onContextMenu={(e)=> e.preventDefault()}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 pointer-events-none">
                 <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V20H9v2h6v-2h-2v-2.08A7 7 0 0 0 19 11h-2z"/>
               </svg>
             </button>
