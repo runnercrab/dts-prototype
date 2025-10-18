@@ -38,20 +38,46 @@ export default function AvatarPane() {
     setTimeout(() => setCooldownTick(t => t + 1), ms + 30)
   }
 
+  // ✅ Sistema de timeout de inactividad
+  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const INACTIVITY_TIMEOUT = 3 * 60 * 1000 // 3 minutos en milisegundos
+
+  const resetInactivityTimer = () => {
+    // Limpiar timeout anterior
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current)
+    }
+    
+    // Solo establecer nuevo timeout si el avatar está ready
+    if (ready) {
+      inactivityTimeoutRef.current = setTimeout(() => {
+        console.log('⏱️ Sesión cerrada por inactividad (3 minutos)')
+        close()
+      }, INACTIVITY_TIMEOUT)
+    }
+  }
+
+  const clearInactivityTimer = () => {
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current)
+      inactivityTimeoutRef.current = null
+    }
+  }
+
   useEffect(() => {
     // silencia warnings ruidosos del datachannel
     const orig = console.error
     console.error = (...args: any[]) => {
       try {
         const msg = args?.map(a => (typeof a === 'string' ? a : a?.message || '')).join(' ')
-        if (/Unknown DataChannel error on lossy|RTCEngine\.handleDataError/i.test(msg)) return
+        if (/Unknown DataChannel error on (lossy|reliable)|RTCEngine\.handleDataError/i.test(msg)) return
       } catch {}
       orig(...args)
     }
     return () => {
       console.error = orig
       try { avatarRef.current?.stopAvatar?.() } catch {}
-      stopAudio(); stopAvatarMonitor()
+      stopAudio(); stopAvatarMonitor(); clearInactivityTimer()
     }
   }, [])
 
@@ -125,6 +151,7 @@ export default function AvatarPane() {
 
   async function startRecord() {
     console.log('🎤 Iniciando grabación...')
+    startInactivityTimer() // ✅ Resetear timer cuando el usuario interactúa
     if (avatarTalking) return
     if (Date.now() < cooldownUntilRef.current) return
     if (!procStreamRef.current) await ensureMicChain()
@@ -183,13 +210,16 @@ export default function AvatarPane() {
   }
 
   const start = async () => {
+    console.log('1️⃣ Función start llamada')
     if (starting || ready) return
     setStarting(true)
     try {
+      console.log('2️⃣ Obteniendo token...')
       const tr = await fetch('/api/heygen/token', { method:'POST', cache:'no-store' })
       const tj = await tr.json()
       if (!tr.ok || !tj?.token) { setStarting(false); return }
 
+      console.log('3️⃣ Creando avatar...')
       const avatar: any = new (StreamingAvatar as any)({ token: tj.token })
       avatarRef.current = avatar
 
@@ -212,12 +242,17 @@ export default function AvatarPane() {
         })
       }
       
+      console.log('4️⃣ Iniciando avatar...')
       await avatar.createStartAvatar(payload)
 
       if (avatar.mediaStream) hookVideo(avatar.mediaStream)
+      console.log('5️⃣ Avatar iniciado, estableciendo ready=true')
       setReady(true)
+      
+      // El timer se iniciará automáticamente por el useEffect que observa 'ready'
 
       try {
+        console.log('7️⃣ Avatar hablando greeting...')
         await avatar.speak({
           text: ENV_GREETING.slice(0,120),
           task_type:'REPEAT',
@@ -226,10 +261,12 @@ export default function AvatarPane() {
       } finally { armCooldown(1000) }
     } finally {
       setStarting(false)
+      console.log('8️⃣ Start completado')
     }
   }
 
   const close = async () => {
+    clearInactivityTimer() // ✅ Limpiar timer al cerrar
     try { avatarRef.current?.stopAvatar?.() } catch {}
     avatarRef.current = null; setReady(false)
     stopAudio(); stopAvatarMonitor()
@@ -286,10 +323,32 @@ export default function AvatarPane() {
                           ${recActive ? 'bg-red-600 text-white' : (avatarTalking || cooldownActive) ? 'bg-neutral-400 text-white cursor-not-allowed' : 'bg-white text-black'}`}
               title={(avatarTalking || cooldownActive) ? 'Espera a que el avatar termine…' : 'Mantén pulsado para hablar'}
               disabled={avatarTalking || cooldownActive}
-              onPointerDown={(e)=>{ e.preventDefault(); if (avatarTalking || cooldownActive) return; try { (e.currentTarget as any).setPointerCapture?.(e.pointerId) } catch {}; startRecord() }}
-              onPointerUp={(e)=>{ e.preventDefault(); if (avatarTalking || cooldownActive) return; stopRecordAndSend(); try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId) } catch {} }}
-              onPointerCancel={(e)=>{ e.preventDefault(); if (!(avatarTalking || cooldownActive)) stopRecordAndSend() }}
-              onPointerLeave={(e)=>{ e.preventDefault(); if (!(avatarTalking || cooldownActive) && recActive) stopRecordAndSend() }}
+              onPointerDown={(e)=>{ 
+                e.preventDefault(); 
+                e.stopPropagation();
+                if (avatarTalking || cooldownActive) return; 
+                try { (e.currentTarget as any).setPointerCapture?.(e.pointerId) } catch {}; 
+                startRecord() 
+              }}
+              onPointerUp={(e)=>{ 
+                e.preventDefault(); 
+                e.stopPropagation();
+                if (avatarTalking || cooldownActive) return; 
+                stopRecordAndSend(); 
+                try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId) } catch {} 
+              }}
+              onPointerCancel={(e)=>{ 
+                e.preventDefault(); 
+                e.stopPropagation();
+                if (!(avatarTalking || cooldownActive)) stopRecordAndSend() 
+              }}
+              onPointerLeave={(e)=>{ 
+                e.preventDefault(); 
+                e.stopPropagation();
+                if (!(avatarTalking || cooldownActive) && recActive) stopRecordAndSend() 
+              }}
+              onContextMenu={(e) => e.preventDefault()}
+              style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
                 <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V20H9v2h6v-2h-2v-2.08A7 7 0 0 0 19 11h-2z"/>
