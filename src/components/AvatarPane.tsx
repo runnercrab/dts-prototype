@@ -41,7 +41,7 @@ export default function AvatarPane() {
 
   // ✅ TIMER DE INACTIVIDAD - Enfoque simple con ref
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const INACTIVITY_TIMEOUT = 3 * 60 * 1000 // 3 minutos en producción
+  const INACTIVITY_TIMEOUT = 35 * 1000  // 35 segundos en producción
 
   // ✅ useEffect que observa cuando ready cambia a true
   useEffect(() => {

@@ -53,12 +53,12 @@ export default function DtsChat() {
         </div>
       </div>
 
-      {/* GRID 2x2 responsive */}
+      {/* GRID 2x2 responsive - NUEVO ORDEN */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Arriba izquierda: Avatar */}
+        {/* ✅ Arriba izquierda: Avatar */}
         <AvatarPane />
 
-        {/* Arriba derecha: Progreso, slider, botones, resultado */}
+        {/* ✅ Arriba derecha: Diagnóstico (Progreso, slider, botones, resultado) */}
         <div className="card">
           <div className="card-body">
             {/* Progreso */}
@@ -155,11 +155,11 @@ export default function DtsChat() {
           </div>
         </div>
 
-        {/* Abajo izquierda: Radar */}
-        <RadarScore labels={LABELS} values={values} />
-
-        {/* Abajo derecha: Asistente */}
+        {/* ✅ Abajo izquierda: Asistente (ahora aquí, debajo del Avatar) */}
         <AssistantChat />
+
+        {/* ✅ Abajo derecha: Radar (ahora aquí, debajo del Diagnóstico) */}
+        <RadarScore labels={LABELS} values={values} />
       </div>
     </main>
   )
