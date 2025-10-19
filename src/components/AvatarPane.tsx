@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import StreamingAvatar from '@heygen/streaming-avatar'
+import { bus } from '../lib/bus'
 
 const ENV_AVATAR = (process.env.NEXT_PUBLIC_HEYGEN_AVATAR_NAME || '').trim() || 'Shawn_Therapist_public'
 const ENV_VOICE  = (process.env.NEXT_PUBLIC_HEYGEN_VOICE_ID || '').trim()
@@ -40,7 +41,7 @@ export default function AvatarPane() {
 
   // ✅ TIMER DE INACTIVIDAD - Enfoque simple con ref
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const INACTIVITY_TIMEOUT = 3 * 60 * 1000  // 3 Minutos
+  const INACTIVITY_TIMEOUT = 3 * 60 * 1000 // 3 minutos en producción
 
   // ✅ useEffect que observa cuando ready cambia a true
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function AvatarPane() {
         inactivityTimeoutRef.current = null
       }
     }
-  }, [ready]) // ✅ Solo observa 'ready'
+  }, [ready])
 
   // ✅ Función para reiniciar el timer cuando el usuario interactúa
   const restartInactivityTimer = () => {
@@ -223,10 +224,16 @@ export default function AvatarPane() {
       return
     }
 
+    // ✅ Emitir evento: usuario habló por voz
+    bus.emit('user:voice', { text })
+
     const r = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: text }), cache:'no-store' })
     const j = await r.json().catch(()=> ({}))
     const reply = (j?.reply||'').trim() || 'Puedo ayudarte con el diagnóstico DTS.'
     console.log('💬 Respuesta del avatar:', reply)
+
+    // ✅ Emitir evento: avatar va a responder por voz
+    bus.emit('avatar:voice', { text: reply })
 
     try {
       await avatarRef.current?.speak({

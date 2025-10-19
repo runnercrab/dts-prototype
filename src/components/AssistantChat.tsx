@@ -1,20 +1,51 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { bus } from '../lib/bus'
 
-type Msg = { role: 'user' | 'assistant'; text: string }
+type Msg = { 
+  role: 'user' | 'assistant'
+  text: string
+  source?: 'text' | 'voice' // ✅ Nuevo: identificar origen
+}
 
 export default function AssistantChat() {
   const [input, setInput] = useState('')
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [loading, setLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // ✅ Auto-scroll al último mensaje
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [msgs])
+
+  // ✅ Escuchar eventos de voz del avatar
+  useEffect(() => {
+    // Cuando el usuario habla (voz)
+    const handleUserVoice = (data: { text: string }) => {
+      setMsgs(m => [...m, { role: 'user', text: data.text, source: 'voice' }])
+    }
+
+    // Cuando el avatar responde (voz)
+    const handleAvatarVoice = (data: { text: string }) => {
+      setMsgs(m => [...m, { role: 'assistant', text: data.text, source: 'voice' }])
+    }
+
+    bus.on('user:voice', handleUserVoice)
+    bus.on('avatar:voice', handleAvatarVoice)
+
+    return () => {
+      bus.off('user:voice', handleUserVoice)
+      bus.off('avatar:voice', handleAvatarVoice)
+    }
+  }, [])
 
   async function send() {
     const userText = input.trim()
     if (!userText) return
 
-    // pinta el mensaje del usuario
-    setMsgs(m => [...m, { role: 'user', text: userText }])
+    // Pinta el mensaje del usuario (texto)
+    setMsgs(m => [...m, { role: 'user', text: userText, source: 'text' }])
     setInput('')
     setLoading(true)
 
@@ -28,12 +59,12 @@ export default function AssistantChat() {
       const data = await r.json()
       const assistantText = data?.reply ?? '(sin respuesta)'
 
-      setMsgs(m => [...m, { role: 'assistant', text: assistantText }])
+      setMsgs(m => [...m, { role: 'assistant', text: assistantText, source: 'text' }])
 
-      // 🔔 manda evento al avatar para que lo hable
+      // 🔔 Manda evento al avatar para que lo hable
       bus.emit('llm:reply', { text: assistantText })
     } catch (e: any) {
-      setMsgs(m => [...m, { role: 'assistant', text: '(error de conexión)' }])
+      setMsgs(m => [...m, { role: 'assistant', text: '(error de conexión)', source: 'text' }])
     } finally {
       setLoading(false)
     }
@@ -44,19 +75,26 @@ export default function AssistantChat() {
       <div className="card-body flex flex-col h-full">
         <h2 className="mb-3">Asistente</h2>
 
-        {/* Zona de mensajes */}
-        <div className="flex-1 overflow-y-auto space-y-2 mb-3">
+        {/* Zona de mensajes con scroll */}
+        <div className="flex-1 overflow-y-auto space-y-2 mb-3 min-h-0">
           {msgs.map((m, i) => (
             <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
-              <span
-                className={`inline-block px-3 py-2 rounded-lg ${
-                  m.role === 'user'
-                    ? 'bg-emerald-700 text-white'
-                    : 'bg-neutral-800 text-neutral-200'
-                }`}
-              >
-                {m.text}
-              </span>
+              <div className="inline-block text-left">
+                {/* Indicador de fuente (voz/texto) */}
+                <div className="text-xs text-neutral-500 mb-1">
+                  {m.role === 'user' ? '👤 Usuario' : '🤖 Avatar'}
+                  {m.source === 'voice' && ' 🎤'}
+                </div>
+                <span
+                  className={`inline-block px-3 py-2 rounded-lg ${
+                    m.role === 'user'
+                      ? 'bg-emerald-700 text-white'
+                      : 'bg-neutral-800 text-neutral-200'
+                  }`}
+                >
+                  {m.text}
+                </span>
+              </div>
             </div>
           ))}
           {loading && (
@@ -66,6 +104,8 @@ export default function AssistantChat() {
               </span>
             </div>
           )}
+          {/* Marcador invisible para auto-scroll */}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Input + botón enviar */}
