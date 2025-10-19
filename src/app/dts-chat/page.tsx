@@ -7,13 +7,43 @@ import RadarScore from '../../components/RadarScore'
 import { computeScore } from '../../lib/score'
 import { adviceFor, Dimension } from '../../lib/advice'
 
-const STEPS: { id: number; dim: Dimension; q: string }[] = [
-  { id: 1, dim: 'Estrategia', q: '¿Nivel de estrategia digital (visión, planes, medición)?' },
-  { id: 2, dim: 'Procesos',   q: '¿Nivel de digitalización de procesos clave?' },
-  { id: 3, dim: 'Personas',   q: '¿Nivel de competencias digitales en el equipo?' },
-  { id: 4, dim: 'Tecnología', q: '¿Nivel de uso de herramientas digitales y cloud?' },
-  { id: 5, dim: 'Datos',      q: '¿Nivel de gestión y análisis de datos?' },
-  { id: 6, dim: 'Cliente',    q: '¿Experiencia omnicanal y medición (NPS/CSAT)?' },
+const STEPS: { id: number; dim: Dimension; q: string; explanation: string }[] = [
+  { 
+    id: 1, 
+    dim: 'Estrategia', 
+    q: '¿Nivel de estrategia digital (visión, planes, medición)?',
+    explanation: 'Define cómo la empresa planea implementar la transformación digital y cómo medirá su éxito.'
+  },
+  { 
+    id: 2, 
+    dim: 'Procesos', 
+    q: '¿Nivel de digitalización de procesos clave?',
+    explanation: 'Busca optimizar y automatizar tareas para aumentar la eficiencia y reducir costos operativos.'
+  },
+  { 
+    id: 3, 
+    dim: 'Personas', 
+    q: '¿Nivel de competencias digitales en el equipo?',
+    explanation: 'Evalúa las habilidades digitales del equipo y la cultura organizacional para adoptar nuevas tecnologías.'
+  },
+  { 
+    id: 4, 
+    dim: 'Tecnología', 
+    q: '¿Nivel de uso de herramientas digitales y cloud?',
+    explanation: 'Mide la infraestructura tecnológica, cloud y herramientas digitales disponibles para la empresa.'
+  },
+  { 
+    id: 5, 
+    dim: 'Datos', 
+    q: '¿Nivel de gestión y análisis de datos?',
+    explanation: 'Evalúa cómo la empresa recopila, almacena, analiza y utiliza datos para tomar decisiones estratégicas.'
+  },
+  { 
+    id: 6, 
+    dim: 'Cliente', 
+    q: '¿Experiencia omnicanal y medición (NPS/CSAT)?',
+    explanation: 'Analiza la experiencia del cliente en todos los canales digitales y cómo se mide su satisfacción.'
+  },
 ]
 
 const LABELS = STEPS.map(s => s.dim)
@@ -125,6 +155,14 @@ export default function DtsChat() {
               Previsualización del score (0–100):{' '}
               <span className="font-semibold text-neutral-200">{score}</span>
             </p>
+
+            {/* Explicación de la dimensión actual */}
+            <div className="mt-3 p-3 rounded-lg bg-neutral-800/50 border border-neutral-700">
+              <p className="text-sm text-neutral-300">
+                <span className="font-semibold text-emerald-400">{step.dim}:</span>{' '}
+                {step.explanation}
+              </p>
+            </div>
 
             {/* Resultado con consejos */}
             {finalScore !== null && (
