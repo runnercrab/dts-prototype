@@ -24,10 +24,13 @@ export default function AssistantChat() {
     // Cuando el usuario habla (voz)
     const handleUserVoice = (data: { text: string }) => {
       setMsgs(m => [...m, { role: 'user', text: data.text, source: 'voice' }])
+      // Mostrar "pensando" inmediatamente
+      setLoading(true)
     }
 
     // Cuando el avatar responde (voz)
     const handleAvatarVoice = (data: { text: string }) => {
+      setLoading(false)
       setMsgs(m => [...m, { role: 'assistant', text: data.text, source: 'voice' }])
     }
 
@@ -73,10 +76,30 @@ export default function AssistantChat() {
   return (
     <div className="card h-full">
       <div className="card-body flex flex-col h-full">
-        <h2 className="mb-3">Asistente</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2>Asistente</h2>
+          {msgs.length > 0 && (
+            <button
+              className="btn btn-sm opacity-70 hover:opacity-100"
+              onClick={() => setMsgs([])}
+              title="Limpiar historial"
+            >
+              🗑️
+            </button>
+          )}
+        </div>
 
         {/* Zona de mensajes con scroll */}
         <div className="flex-1 overflow-y-auto space-y-2 mb-3 min-h-0">
+          {/* Mensaje de bienvenida */}
+          {msgs.length === 0 && (
+            <div className="text-center text-neutral-400 py-8">
+              <div className="text-4xl mb-2">👋</div>
+              <p className="text-sm">Hola, soy tu asistente DTS.</p>
+              <p className="text-xs mt-1">¿En qué puedo ayudarte?</p>
+            </div>
+          )}
+          
           {msgs.map((m, i) => (
             <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
               <div className="inline-block text-left">
@@ -99,8 +122,8 @@ export default function AssistantChat() {
           ))}
           {loading && (
             <div className="text-left">
-              <span className="inline-block px-3 py-2 rounded-lg bg-neutral-700 text-neutral-300 animate-pulse">
-                pensando…
+              <span className="inline-block px-3 py-2 rounded-lg bg-neutral-700 text-neutral-300">
+                💭 Pensando...
               </span>
             </div>
           )}
