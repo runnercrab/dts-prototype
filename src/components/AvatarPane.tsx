@@ -38,30 +38,59 @@ export default function AvatarPane() {
     setTimeout(() => setCooldownTick(t => t + 1), ms + 30)
   }
 
-  // ✅ Sistema de timeout de inactividad
+  // ✅ TIMER DE INACTIVIDAD - Enfoque simple con ref
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const INACTIVITY_TIMEOUT = 3 * 60 * 1000 // 3 minutos en milisegundos
+  const INACTIVITY_TIMEOUT = 3 * 60 * 1000  // 3 Minutos
 
-  const resetInactivityTimer = () => {
-    // Limpiar timeout anterior
+  // ✅ useEffect que observa cuando ready cambia a true
+  useEffect(() => {
+    if (ready) {
+      console.log('🕐 Avatar listo, iniciando timer de inactividad:', INACTIVITY_TIMEOUT / 1000, 'segundos')
+      
+      // Limpiar cualquier timer previo
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current)
+      }
+      
+      // Crear nuevo timer
+      inactivityTimeoutRef.current = setTimeout(() => {
+        console.log('⏱️ Sesión cerrada por inactividad')
+        closeSession()
+      }, INACTIVITY_TIMEOUT)
+    } else {
+      // Si ready se pone en false, limpiar el timer
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current)
+        inactivityTimeoutRef.current = null
+        console.log('🔄 Timer de inactividad cancelado (ready=false)')
+      }
+    }
+    
+    // Cleanup cuando el componente se desmonte o ready cambie
+    return () => {
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current)
+        inactivityTimeoutRef.current = null
+      }
+    }
+  }, [ready]) // ✅ Solo observa 'ready'
+
+  // ✅ Función para reiniciar el timer cuando el usuario interactúa
+  const restartInactivityTimer = () => {
+    if (!ready) return // Solo si el avatar está activo
+    
+    console.log('🔄 Reiniciando timer de inactividad')
+    
+    // Limpiar timer actual
     if (inactivityTimeoutRef.current) {
       clearTimeout(inactivityTimeoutRef.current)
     }
     
-    // Solo establecer nuevo timeout si el avatar está ready
-    if (ready) {
-      inactivityTimeoutRef.current = setTimeout(() => {
-        console.log('⏱️ Sesión cerrada por inactividad (3 minutos)')
-        close()
-      }, INACTIVITY_TIMEOUT)
-    }
-  }
-
-  const clearInactivityTimer = () => {
-    if (inactivityTimeoutRef.current) {
-      clearTimeout(inactivityTimeoutRef.current)
-      inactivityTimeoutRef.current = null
-    }
+    // Crear nuevo timer
+    inactivityTimeoutRef.current = setTimeout(() => {
+      console.log('⏱️ Sesión cerrada por inactividad')
+      closeSession()
+    }, INACTIVITY_TIMEOUT)
   }
 
   useEffect(() => {
@@ -77,7 +106,7 @@ export default function AvatarPane() {
     return () => {
       console.error = orig
       try { avatarRef.current?.stopAvatar?.() } catch {}
-      stopAudio(); stopAvatarMonitor(); clearInactivityTimer()
+      stopAudio(); stopAvatarMonitor()
     }
   }, [])
 
@@ -121,6 +150,7 @@ export default function AvatarPane() {
       requestAnimationFrame(loop)
     } catch {}
   }
+  
   function stopAvatarMonitor() {
     try { avatarAnalyserRef.current?.disconnect() } catch {}
     avatarAnalyserRef.current = null
@@ -151,6 +181,8 @@ export default function AvatarPane() {
 
   async function startRecord() {
     console.log('🎤 Iniciando grabación...')
+    restartInactivityTimer() // ✅ Reiniciar timer cuando el usuario interactúa
+    
     if (avatarTalking) return
     if (Date.now() < cooldownUntilRef.current) return
     if (!procStreamRef.current) await ensureMicChain()
@@ -167,9 +199,6 @@ export default function AvatarPane() {
       console.log('✅ Grabación iniciada')
     }
     rec.start(0)
-
-    // ✅ FIX: Eliminadas las 2 líneas que causaban la doble llamada a stopRecordAndSend
-    // El onPointerUp del botón ya maneja el evento de soltar
   }
 
   async function stopRecordAndSend() {
@@ -246,12 +275,10 @@ export default function AvatarPane() {
 
       if (avatar.mediaStream) hookVideo(avatar.mediaStream)
       console.log('5️⃣ Avatar iniciado, estableciendo ready=true')
-      setReady(true)
-      
-      // El timer se iniciará automáticamente por el useEffect que observa 'ready'
+      setReady(true) // ✅ Esto dispara el useEffect que inicia el timer
 
       try {
-        console.log('7️⃣ Avatar hablando greeting...')
+        console.log('6️⃣ Avatar hablando greeting...')
         await avatar.speak({
           text: ENV_GREETING.slice(0,120),
           task_type:'REPEAT',
@@ -260,15 +287,17 @@ export default function AvatarPane() {
       } finally { armCooldown(1000) }
     } finally {
       setStarting(false)
-      console.log('8️⃣ Start completado')
+      console.log('7️⃣ Start completado')
     }
   }
 
-  const close = async () => {
-    clearInactivityTimer() // ✅ Limpiar timer al cerrar
+  const closeSession = () => {
+    console.log('🚪 Cerrando sesión del avatar...')
     try { avatarRef.current?.stopAvatar?.() } catch {}
-    avatarRef.current = null; setReady(false)
-    stopAudio(); stopAvatarMonitor()
+    avatarRef.current = null
+    setReady(false) // ✅ Esto limpia el timer automáticamente
+    stopAudio()
+    stopAvatarMonitor()
   }
 
   const cooldownActive = Date.now() < cooldownUntilRef.current
@@ -284,7 +313,7 @@ export default function AvatarPane() {
               {starting ? 'Starting…' : 'Start'}
             </button>
           ) : (
-            <button className="btn" onClick={close}>Close</button>
+            <button className="btn" onClick={closeSession}>Close</button>
           )}
         </div>
 
@@ -356,7 +385,7 @@ export default function AvatarPane() {
           )}
         </div>
 
-        {/* Log para debug - puedes ocultarlo después */}
+        {/* Log para debug */}
         <pre className="mt-3 max-h-36 overflow-auto text-xs text-neutral-300 bg-neutral-900/50 p-2 rounded">{log.join('\n')}</pre>
       </div>
     </div>
