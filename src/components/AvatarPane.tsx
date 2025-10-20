@@ -16,6 +16,7 @@ export default function AvatarPane() {
 
   // Audio PTT
   const audioCtxRef    = useRef<AudioContext | null>(null)
+  const rawStreamRef   = useRef<MediaStream | null>(null) // ✅ NUEVO: guardar el stream raw
   const procStreamRef  = useRef<MediaStream | null>(null)
   const recRef         = useRef<MediaRecorder | null>(null)
   const recChunksRef   = useRef<BlobPart[]>([])
@@ -39,27 +40,23 @@ export default function AvatarPane() {
     setTimeout(() => setCooldownTick(t => t + 1), ms + 30)
   }
 
-  // ✅ TIMER DE INACTIVIDAD - Enfoque simple con ref
+  // Timer de inactividad
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const INACTIVITY_TIMEOUT = 35 * 1000 // 35 segundos para pruebas (cambiar a 3 * 60 * 1000 en producción)
+  const INACTIVITY_TIMEOUT = 3 * 60 * 1000
 
-  // ✅ useEffect que observa cuando ready cambia a true
   useEffect(() => {
     if (ready) {
       console.log('🕐 Avatar listo, iniciando timer de inactividad:', INACTIVITY_TIMEOUT / 1000, 'segundos')
       
-      // Limpiar cualquier timer previo
       if (inactivityTimeoutRef.current) {
         clearTimeout(inactivityTimeoutRef.current)
       }
       
-      // Crear nuevo timer
       inactivityTimeoutRef.current = setTimeout(() => {
         console.log('⏱️ Sesión cerrada por inactividad')
         closeSession()
       }, INACTIVITY_TIMEOUT)
     } else {
-      // Si ready se pone en false, limpiar el timer
       if (inactivityTimeoutRef.current) {
         clearTimeout(inactivityTimeoutRef.current)
         inactivityTimeoutRef.current = null
@@ -67,7 +64,6 @@ export default function AvatarPane() {
       }
     }
     
-    // Cleanup cuando el componente se desmonte o ready cambie
     return () => {
       if (inactivityTimeoutRef.current) {
         clearTimeout(inactivityTimeoutRef.current)
@@ -76,18 +72,15 @@ export default function AvatarPane() {
     }
   }, [ready])
 
-  // ✅ Función para reiniciar el timer cuando el usuario interactúa
   const restartInactivityTimer = () => {
-    if (!ready) return // Solo si el avatar está activo
+    if (!ready) return
     
     console.log('🔄 Reiniciando timer de inactividad')
     
-    // Limpiar timer actual
     if (inactivityTimeoutRef.current) {
       clearTimeout(inactivityTimeoutRef.current)
     }
     
-    // Crear nuevo timer
     inactivityTimeoutRef.current = setTimeout(() => {
       console.log('⏱️ Sesión cerrada por inactividad')
       closeSession()
@@ -95,7 +88,6 @@ export default function AvatarPane() {
   }
 
   useEffect(() => {
-    // silencia warnings ruidosos del datachannel
     const orig = console.error
     console.error = (...args: any[]) => {
       try {
@@ -107,15 +99,56 @@ export default function AvatarPane() {
     return () => {
       console.error = orig
       try { avatarRef.current?.stopAvatar?.() } catch {}
-      stopAudio(); stopAvatarMonitor()
+      stopAudio()
+      stopAvatarMonitor()
     }
   }, [])
 
+  // ✅ FUNCIÓN MEJORADA: Detener audio completamente
   function stopAudio() {
-    try { if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop() } catch {}
-    recRef.current = null; recChunksRef.current = []; setPttState('idle')
-    if (audioCtxRef.current) { try { audioCtxRef.current.close() } catch {} }
-    audioCtxRef.current = null; procStreamRef.current = null
+    console.log('🛑 Deteniendo audio completamente...')
+    
+    // Detener MediaRecorder
+    try { 
+      if (recRef.current && recRef.current.state !== 'inactive') {
+        recRef.current.stop() 
+      }
+    } catch(e) {
+      console.log('Error deteniendo recorder:', e)
+    }
+    recRef.current = null
+    recChunksRef.current = []
+    setPttState('idle')
+    
+    // ✅ Cerrar AudioContext
+    if (audioCtxRef.current) { 
+      try { 
+        audioCtxRef.current.close() 
+        console.log('✅ AudioContext cerrado')
+      } catch(e) {
+        console.log('Error cerrando AudioContext:', e)
+      } 
+    }
+    audioCtxRef.current = null
+    
+    // ✅ CRÍTICO: Detener TODAS las pistas del stream raw
+    if (rawStreamRef.current) {
+      rawStreamRef.current.getTracks().forEach(track => {
+        track.stop()
+        console.log('✅ Pista de audio detenida:', track.label)
+      })
+      rawStreamRef.current = null
+    }
+    
+    // ✅ Limpiar stream procesado
+    if (procStreamRef.current) {
+      procStreamRef.current.getTracks().forEach(track => {
+        track.stop()
+      })
+      procStreamRef.current = null
+    }
+    
+    console.log('✅ Audio completamente detenido')
   }
 
   function hookVideo(stream: MediaStream) {
@@ -160,16 +193,51 @@ export default function AvatarPane() {
     setAvatarTalking(false)
   }
 
+  // ✅ FUNCIÓN MEJORADA: Solicitar permisos de micrófono de forma segura
   async function ensureMicChain() {
-    const base: MediaStreamConstraints = { audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:false, channelCount:1, sampleRate:48000 } }
-    const raw = await navigator.mediaDevices.getUserMedia(base)
-    const ctx = new AudioContext(); audioCtxRef.current = ctx
-    const src = ctx.createMediaStreamSource(raw)
-    const comp = ctx.createDynamicsCompressor()
-    comp.threshold.value = -28; comp.knee.value = 22; comp.ratio.value = 3.5; comp.attack.value = 0.003; comp.release.value = 0.25
-    const dest = ctx.createMediaStreamDestination()
-    src.connect(comp).connect(dest)
-    procStreamRef.current = dest.stream
+    console.log('🎤 Solicitando permisos de micrófono...')
+    
+    // ✅ Si ya existe, no volver a crear
+    if (procStreamRef.current && rawStreamRef.current) {
+      console.log('✅ Micrófono ya configurado')
+      return
+    }
+    
+    try {
+      const base: MediaStreamConstraints = { 
+        audio: { 
+          echoCancellation: true, 
+          noiseSuppression: true, 
+          autoGainControl: false, 
+          channelCount: 1, 
+          sampleRate: 48000 
+        } 
+      }
+      
+      const raw = await navigator.mediaDevices.getUserMedia(base)
+      rawStreamRef.current = raw // ✅ GUARDAR para poder cerrarlo después
+      console.log('✅ Permisos de micrófono obtenidos')
+      
+      const ctx = new AudioContext()
+      audioCtxRef.current = ctx
+      
+      const src = ctx.createMediaStreamSource(raw)
+      const comp = ctx.createDynamicsCompressor()
+      comp.threshold.value = -28
+      comp.knee.value = 22
+      comp.ratio.value = 3.5
+      comp.attack.value = 0.003
+      comp.release.value = 0.25
+      
+      const dest = ctx.createMediaStreamDestination()
+      src.connect(comp).connect(dest)
+      procStreamRef.current = dest.stream
+      
+      console.log('✅ Cadena de audio configurada')
+    } catch(e) {
+      console.error('❌ Error configurando micrófono:', e)
+      throw e
+    }
   }
 
   async function transcribeBlob(blob: Blob): Promise<{ text:string, lang:'es'|'other' }> {
@@ -180,38 +248,88 @@ export default function AvatarPane() {
     return { text:(j?.text||'').trim(), lang }
   }
 
+  // ✅ Variable para evitar múltiples llamadas simultáneas
+  const isRecordingRef = useRef(false)
+
   async function startRecord() {
     console.log('🎤 Iniciando grabación...')
-    restartInactivityTimer() // ✅ Reiniciar timer cuando el usuario interactúa
+    
+    // ✅ Evitar múltiples llamadas simultáneas
+    if (isRecordingRef.current) {
+      console.log('⚠️ Ya hay una grabación en curso')
+      return
+    }
+    
+    restartInactivityTimer()
     
     if (avatarTalking) return
     if (Date.now() < cooldownUntilRef.current) return
-    if (!procStreamRef.current) await ensureMicChain()
-    if (recRef.current && recRef.current.state!=='inactive') return
+    
+    // ✅ Marcar que estamos grabando
+    isRecordingRef.current = true
+    
+    try {
+      if (!procStreamRef.current) await ensureMicChain()
+      if (recRef.current && recRef.current.state !== 'inactive') return
 
-    recChunksRef.current = []
-    const mime = ['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(c => (window as any).MediaRecorder?.isTypeSupported?.(c)) || 'audio/webm'
-    const rec = new MediaRecorder(procStreamRef.current!, { mimeType: mime, bitsPerSecond: 128_000 })
-    recRef.current = rec; recStartTsRef.current = Date.now()
-    setPttState('arming')
-    rec.ondataavailable = e => { if (e.data && e.data.size) recChunksRef.current.push(e.data) }
-    rec.onstart = () => {
-      setPttState('recording')
-      console.log('✅ Grabación iniciada')
+      recChunksRef.current = []
+      const mime = ['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(c => (window as any).MediaRecorder?.isTypeSupported?.(c)) || 'audio/webm'
+      const rec = new MediaRecorder(procStreamRef.current!, { mimeType: mime, bitsPerSecond: 128_000 })
+      recRef.current = rec
+      recStartTsRef.current = Date.now()
+      setPttState('arming')
+      
+      rec.ondataavailable = e => { 
+        if (e.data && e.data.size) recChunksRef.current.push(e.data) 
+      }
+      
+      rec.onstart = () => {
+        setPttState('recording')
+        console.log('✅ Grabación iniciada')
+      }
+      
+      rec.start(0)
+    } catch(e) {
+      console.error('❌ Error al iniciar grabación:', e)
+      isRecordingRef.current = false // ✅ Liberar en caso de error
+      setPttState('idle')
     }
-    rec.start(0)
   }
 
   async function stopRecordAndSend() {
-    console.log('🛑 stopRecordAndSend llamado, estado:', recRef.current?.state)
+    console.log('🛑 stopRecordAndSend llamado')
+    
+    // ✅ Si no estamos grabando, no hacer nada
+    if (!isRecordingRef.current) {
+      console.log('⚠️ No hay grabación activa')
+      return
+    }
+    
     const rec = recRef.current
-    if (!rec || rec.state==='inactive') { 
+    if (!rec || rec.state === 'inactive') { 
       console.log('⚠️ Recorder ya estaba inactivo')
-      setPttState('idle'); 
+      setPttState('idle')
+      isRecordingRef.current = false // ✅ Liberar
       return 
     }
+    
     setPttState('idle')
-    await new Promise<void>(res => { rec.onstop = () => res(); try{ rec.stop() }catch{ res() } })
+    
+    await new Promise<void>(res => { 
+      rec.onstop = () => {
+        console.log('✅ Grabación detenida')
+        res()
+      }
+      try { 
+        rec.stop() 
+      } catch(e) { 
+        console.log('Error deteniendo recorder:', e)
+        res() 
+      } 
+    })
+    
+    // ✅ Liberar flag de grabación
+    isRecordingRef.current = false
 
     const blob = new Blob(recChunksRef.current, { type: (rec.mimeType.includes('webm') ? 'audio/webm' : 'audio/mp4') })
     recChunksRef.current = []
@@ -224,7 +342,6 @@ export default function AvatarPane() {
       return
     }
 
-    // ✅ Emitir evento: usuario habló por voz
     bus.emit('user:voice', { text })
 
     const r = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: text }), cache:'no-store' })
@@ -232,7 +349,6 @@ export default function AvatarPane() {
     const reply = (j?.reply||'').trim() || 'Puedo ayudarte con el diagnóstico DTS.'
     console.log('💬 Respuesta del avatar:', reply)
 
-    // ✅ Emitir evento: avatar va a responder por voz
     bus.emit('avatar:voice', { text: reply })
 
     try {
@@ -282,7 +398,7 @@ export default function AvatarPane() {
 
       if (avatar.mediaStream) hookVideo(avatar.mediaStream)
       console.log('5️⃣ Avatar iniciado, estableciendo ready=true')
-      setReady(true) // ✅ Esto dispara el useEffect que inicia el timer
+      setReady(true)
 
       try {
         console.log('6️⃣ Avatar hablando greeting...')
@@ -298,13 +414,26 @@ export default function AvatarPane() {
     }
   }
 
+  // ✅ FUNCIÓN MEJORADA: Cerrar sesión completamente
   const closeSession = () => {
     console.log('🚪 Cerrando sesión del avatar...')
-    setReady(false) // ✅ Primero ocultar UI
-    stopAudio() // ✅ Detener audio
-    stopAvatarMonitor() // ✅ Detener monitor
-    try { avatarRef.current?.stopAvatar?.() } catch {} // ✅ Luego cerrar avatar
+    
+    setReady(false)
+    
+    // ✅ IMPORTANTE: Detener audio ANTES de cerrar avatar
+    stopAudio()
+    stopAvatarMonitor()
+    
+    try { 
+      avatarRef.current?.stopAvatar?.() 
+      console.log('✅ Avatar cerrado')
+    } catch(e) {
+      console.log('Error cerrando avatar:', e)
+    }
+    
     avatarRef.current = null
+    
+    console.log('✅ Sesión cerrada completamente')
   }
 
   const cooldownActive = Date.now() < cooldownUntilRef.current
@@ -324,21 +453,16 @@ export default function AvatarPane() {
           )}
         </div>
 
-        {/* Player — el video NO captura clicks */}
         <div className="relative w-full h-[420px] rounded-xl border border-neutral-800 bg-black overflow-hidden">
-          {/* Mensaje de carga mientras se inicia el avatar */}
           {starting && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 z-20">
               <div className="flex flex-col items-center space-y-4">
-                {/* Spinner animado */}
                 <div className="relative">
                   <div className="w-16 h-16 border-4 border-neutral-600 border-t-white rounded-full animate-spin"></div>
                 </div>
-                {/* Texto principal */}
                 <div className="text-white text-2xl font-semibold">
                   Connecting...
                 </div>
-                {/* Texto descriptivo */}
                 <div className="text-neutral-400 text-sm text-center max-w-xs px-4">
                   Loading up your avatar now for a realtime interactive experience
                 </div>
@@ -359,27 +483,27 @@ export default function AvatarPane() {
               title={(avatarTalking || cooldownActive) ? 'Espera a que el avatar termine…' : 'Mantén pulsado para hablar'}
               disabled={avatarTalking || cooldownActive}
               onPointerDown={(e)=>{ 
-                e.preventDefault(); 
-                e.stopPropagation();
-                if (avatarTalking || cooldownActive) return; 
-                try { (e.currentTarget as any).setPointerCapture?.(e.pointerId) } catch {}; 
+                e.preventDefault()
+                e.stopPropagation()
+                if (avatarTalking || cooldownActive) return
+                try { (e.currentTarget as any).setPointerCapture?.(e.pointerId) } catch {}
                 startRecord() 
               }}
               onPointerUp={(e)=>{ 
-                e.preventDefault(); 
-                e.stopPropagation();
-                if (avatarTalking || cooldownActive) return; 
-                stopRecordAndSend(); 
+                e.preventDefault()
+                e.stopPropagation()
+                if (avatarTalking || cooldownActive) return
+                stopRecordAndSend()
                 try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId) } catch {} 
               }}
               onPointerCancel={(e)=>{ 
-                e.preventDefault(); 
-                e.stopPropagation();
+                e.preventDefault()
+                e.stopPropagation()
                 if (!(avatarTalking || cooldownActive)) stopRecordAndSend() 
               }}
               onPointerLeave={(e)=>{ 
-                e.preventDefault(); 
-                e.stopPropagation();
+                e.preventDefault()
+                e.stopPropagation()
                 if (!(avatarTalking || cooldownActive) && recActive) stopRecordAndSend() 
               }}
               onContextMenu={(e) => e.preventDefault()}
@@ -392,7 +516,6 @@ export default function AvatarPane() {
           )}
         </div>
 
-        {/* Log para debug */}
         <pre className="mt-3 max-h-36 overflow-auto text-xs text-neutral-300 bg-neutral-900/50 p-2 rounded">{log.join('\n')}</pre>
       </div>
     </div>
