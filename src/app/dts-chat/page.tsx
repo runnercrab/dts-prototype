@@ -7,42 +7,78 @@ import RadarScore from '../../components/RadarScore'
 import { computeScore } from '../../lib/score'
 import { adviceFor, Dimension } from '../../lib/advice'
 
-const STEPS: { id: number; dim: Dimension; q: string; explanation: string }[] = [
+const STEPS: { id: number; dim: Dimension; q: string; explanation: string; guide: string[] }[] = [
   { 
     id: 1, 
     dim: 'Estrategia', 
-    q: '¿Nivel de estrategia digital (visión, planes, medición)?',
-    explanation: 'Define cómo la empresa planea implementar la transformación digital y cómo medirá su éxito.'
+    q: '¿Tienes una estrategia digital clara con objetivos específicos?',
+    explanation: 'Define cómo la empresa planea implementar la transformación digital y cómo medirá su éxito.',
+    guide: [
+      '0-2: No tenemos estrategia digital',
+      '3-5: Estamos empezando a definirla',
+      '6-8: Tenemos un plan en ejecución',
+      '9-10: Estrategia madura y medida'
+    ]
   },
   { 
     id: 2, 
     dim: 'Procesos', 
-    q: '¿Nivel de digitalización de procesos clave?',
-    explanation: 'Busca optimizar y automatizar tareas para aumentar la eficiencia y reducir costos operativos.'
+    q: '¿Cuántos de tus procesos operativos están digitalizados?',
+    explanation: 'Busca optimizar y automatizar tareas para aumentar la eficiencia y reducir costos operativos.',
+    guide: [
+      '0-2: Todo es manual',
+      '3-5: Algunos procesos digitalizados',
+      '6-8: Mayoría de procesos digitales',
+      '9-10: Totalmente automatizado'
+    ]
   },
   { 
     id: 3, 
     dim: 'Personas', 
-    q: '¿Nivel de competencias digitales en el equipo?',
-    explanation: 'Evalúa las habilidades digitales del equipo y la cultura organizacional para adoptar nuevas tecnologías.'
+    q: '¿Tu equipo domina las herramientas digitales que necesita?',
+    explanation: 'Evalúa las habilidades digitales del equipo y la cultura organizacional para adoptar nuevas tecnologías.',
+    guide: [
+      '0-2: Habilidades básicas',
+      '3-5: Conocimientos intermedios',
+      '6-8: Equipo capacitado digitalmente',
+      '9-10: Expertos en herramientas digitales'
+    ]
   },
   { 
     id: 4, 
     dim: 'Tecnología', 
-    q: '¿Nivel de uso de herramientas digitales y cloud?',
-    explanation: 'Mide la infraestructura tecnológica, cloud y herramientas digitales disponibles para la empresa.'
+    q: '¿Usas soluciones cloud y herramientas digitales modernas?',
+    explanation: 'Mide la infraestructura tecnológica, cloud y herramientas digitales disponibles para la empresa.',
+    guide: [
+      '0-2: Infraestructura muy limitada',
+      '3-5: Algunas herramientas digitales',
+      '6-8: Buen stack tecnológico',
+      '9-10: Tecnología de punta (cloud, APIs)'
+    ]
   },
   { 
     id: 5, 
     dim: 'Datos', 
-    q: '¿Nivel de gestión y análisis de datos?',
-    explanation: 'Evalúa cómo la empresa recopila, almacena, analiza y utiliza datos para tomar decisiones estratégicas.'
+    q: '¿Utilizas datos para tomar decisiones estratégicas?',
+    explanation: 'Evalúa cómo la empresa recopila, almacena, analiza y utiliza datos para tomar decisiones estratégicas.',
+    guide: [
+      '0-2: Decisiones por intuición',
+      '3-5: Algunos datos, poco análisis',
+      '6-8: Decisiones basadas en datos',
+      '9-10: Cultura data-driven completa'
+    ]
   },
   { 
     id: 6, 
     dim: 'Cliente', 
-    q: '¿Experiencia omnicanal y medición (NPS/CSAT)?',
-    explanation: 'Analiza la experiencia del cliente en todos los canales digitales y cómo se mide su satisfacción.'
+    q: '¿Conoces qué tan satisfechos están tus clientes?',
+    explanation: 'Analiza la experiencia del cliente en todos los canales digitales y cómo se mide su satisfacción.',
+    guide: [
+      '0-2: No medimos satisfacción',
+      '3-5: Medición ocasional',
+      '6-8: Seguimiento regular',
+      '9-10: Medición continua y mejora activa'
+    ]
   },
 ]
 
@@ -162,6 +198,16 @@ export default function DtsChat() {
                 <span className="font-semibold text-emerald-400">{step.dim}:</span>{' '}
                 {step.explanation}
               </p>
+            </div>
+
+            {/* Guía de escala específica por dimensión */}
+            <div className="mt-3 p-3 rounded-lg bg-neutral-900/50 border border-neutral-600">
+              <p className="text-xs text-neutral-400 mb-2 font-semibold">💡 Guía rápida:</p>
+              <ul className="text-xs text-neutral-300 space-y-1">
+                {step.guide.map((g, i) => (
+                  <li key={i}>• {g}</li>
+                ))}
+              </ul>
             </div>
 
             {/* Resultado con consejos */}
