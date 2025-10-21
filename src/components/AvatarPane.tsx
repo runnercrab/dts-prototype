@@ -341,7 +341,13 @@ export default function AvatarPane() {
     isRecordingRef.current = true
     
     try {
-      if (!procStreamRef.current) await ensureMicChain()
+      // ✅ CRÍTICO: Solo verificar que existe, NO volver a solicitar permisos
+      if (!procStreamRef.current || !rawStreamRef.current) {
+        console.log('⚠️ El micrófono no está configurado. Esto no debería pasar.')
+        isRecordingRef.current = false
+        return
+      }
+      
       if (recRef.current && recRef.current.state !== 'inactive') return
 
       recChunksRef.current = []
@@ -441,6 +447,19 @@ export default function AvatarPane() {
       const tr = await fetch('/api/heygen/token', { method:'POST', cache:'no-store' })
       const tj = await tr.json()
       if (!tr.ok || !tj?.token) { setStarting(false); return }
+
+      // ✅ CRÍTICO: Solicitar permisos de micrófono ANTES de iniciar el avatar
+      // Esto evita que se grabe automáticamente al conceder permisos
+      console.log('2.5️⃣ Solicitando permisos de micrófono...')
+      try {
+        await ensureMicChain()
+        console.log('✅ Permisos de micrófono obtenidos correctamente')
+      } catch(e) {
+        console.error('❌ Error obteniendo permisos de micrófono:', e)
+        alert('⚠️ Necesitamos permisos de micrófono para usar el avatar. Por favor, permite el acceso.')
+        setStarting(false)
+        return
+      }
 
       console.log('3️⃣ Creando avatar...')
       const avatar: any = new (StreamingAvatar as any)({ token: tj.token })
