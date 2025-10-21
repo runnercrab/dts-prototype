@@ -18,9 +18,5 @@ export default withSentryConfig(
     silent: true, // Suprime logs del plugin
     org: "dts",
     project: "dts-prototype",
-    
-    // Opciones de source maps
-    hideSourceMaps: true, // Oculta source maps en producción
-    disableLogger: true, // Desactiva logs del SDK
   }
 );
