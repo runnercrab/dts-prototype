@@ -13,10 +13,19 @@ export default function AssistantChat() {
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  // ✅ Auto-scroll al último mensaje
+  // ✅ DESACTIVADO: Auto-scroll solo cuando el usuario envía mensaje de TEXTO
+  // NO hacer scroll cuando llegan mensajes de VOZ para no mover el foco del avatar
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Solo hacer scroll si el último mensaje es de texto del usuario
+    if (msgs.length > 0) {
+      const lastMsg = msgs[msgs.length - 1]
+      // Solo scroll si el usuario escribió (no por voz)
+      if (lastMsg.role === 'user' && lastMsg.source === 'text') {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
   }, [msgs])
 
   // ✅ Escuchar eventos de voz del avatar
@@ -90,7 +99,10 @@ export default function AssistantChat() {
         </div>
 
         {/* Zona de mensajes con scroll */}
-        <div className="flex-1 overflow-y-auto space-y-2 mb-3 min-h-0">
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto space-y-2 mb-3 min-h-0"
+        >
           {/* Mensaje de bienvenida */}
           {msgs.length === 0 && (
             <div className="text-center text-neutral-400 py-8">
@@ -141,6 +153,8 @@ export default function AssistantChat() {
             onKeyDown={e => {
               if (e.key === 'Enter') send()
             }}
+            // ✅ CRÍTICO: No hacer autofocus
+            autoFocus={false}
           />
           <button className="btn btn-primary" onClick={send} title="Enviar (↩︎)">
             ➤
