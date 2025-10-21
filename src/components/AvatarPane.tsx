@@ -42,7 +42,7 @@ export default function AvatarPane() {
 
   // Timer de inactividad
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const INACTIVITY_TIMEOUT = 3 * 60 * 1000
+  const INACTIVITY_TIMEOUT = 35 * 1000
 
   useEffect(() => {
     if (ready) {
@@ -193,7 +193,7 @@ export default function AvatarPane() {
     setAvatarTalking(false)
   }
 
-  // ✅ FUNCIÓN MEJORADA: Solicitar permisos de micrófono de forma segura
+  // ✅ FUNCIÓN MEJORADA: Solicitar permisos de micrófono evitando dispositivos externos
   async function ensureMicChain() {
     console.log('🎤 Solicitando permisos de micrófono...')
     
@@ -204,8 +204,47 @@ export default function AvatarPane() {
     }
     
     try {
+      // ✅ PASO 1: Listar todos los dispositivos de audio disponibles
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const audioInputs = devices.filter(d => d.kind === 'audioinput')
+      
+      console.log('🎤 Dispositivos de audio encontrados:', audioInputs.length)
+      audioInputs.forEach(d => console.log(`  - ${d.label} (${d.deviceId.substring(0, 20)}...)`))
+      
+      // ✅ PASO 2: Filtrar dispositivos externos (iPhone, iPad vía Continuity)
+      // Buscar el micrófono integrado del dispositivo actual
+      const builtInMic = audioInputs.find(d => {
+        const label = d.label.toLowerCase()
+        // Patrones de micrófonos integrados
+        return (
+          label.includes('built-in') || 
+          label.includes('integrado') ||
+          label.includes('macbook') ||
+          label.includes('imac') ||
+          label.includes('internal') ||
+          label.includes('default') ||
+          label === 'micrófono' ||
+          label === 'microphone'
+        ) && (
+          // Excluir dispositivos iOS/externos
+          !label.includes('iphone') &&
+          !label.includes('ipad') &&
+          !label.includes('airpods') &&
+          !label.includes('bluetooth')
+        )
+      })
+      
+      if (builtInMic) {
+        console.log('✅ Micrófono integrado encontrado:', builtInMic.label)
+      } else {
+        console.log('⚠️ No se encontró micrófono integrado, usando el predeterminado')
+      }
+      
+      // ✅ PASO 3: Configurar constraints con el dispositivo específico
       const base: MediaStreamConstraints = { 
-        audio: { 
+        audio: {
+          // ✅ CRÍTICO: Forzar el dispositivo integrado si existe
+          ...(builtInMic && { deviceId: { exact: builtInMic.deviceId } }),
           echoCancellation: true, 
           noiseSuppression: true, 
           autoGainControl: false, 
@@ -214,14 +253,47 @@ export default function AvatarPane() {
         } 
       }
       
+      console.log('🎤 Solicitando acceso al micrófono...')
       const raw = await navigator.mediaDevices.getUserMedia(base)
-      rawStreamRef.current = raw // ✅ GUARDAR para poder cerrarlo después
-      console.log('✅ Permisos de micrófono obtenidos')
+      
+      // ✅ PASO 4: Verificar qué dispositivo se está usando
+      const track = raw.getAudioTracks()[0]
+      const settings = track.getSettings()
+      console.log('🎤 Micrófono activo:', track.label)
+      console.log('🎤 Settings:', settings)
+      
+      // ✅ PASO 5: Detectar si aún así se conectó un dispositivo externo
+      const isExternal = track.label.toLowerCase().includes('iphone') || 
+                        track.label.toLowerCase().includes('ipad') ||
+                        track.label.toLowerCase().includes('continuity')
+      
+      if (isExternal) {
+        console.warn('⚠️ Se detectó dispositivo externo vía Continuity')
+        raw.getTracks().forEach(t => t.stop())
+        
+        // ✅ Reintentar SIN especificar deviceId (usar el predeterminado del navegador)
+        console.log('🔄 Reintentando con dispositivo predeterminado...')
+        const fallbackConstraints: MediaStreamConstraints = {
+          audio: {
+            echoCancellation: true, 
+            noiseSuppression: true, 
+            autoGainControl: false, 
+            channelCount: 1, 
+            sampleRate: 48000
+          }
+        }
+        const fallbackRaw = await navigator.mediaDevices.getUserMedia(fallbackConstraints)
+        rawStreamRef.current = fallbackRaw
+        console.log('✅ Usando dispositivo predeterminado:', fallbackRaw.getAudioTracks()[0].label)
+      } else {
+        rawStreamRef.current = raw
+        console.log('✅ Permisos de micrófono obtenidos correctamente')
+      }
       
       const ctx = new AudioContext()
       audioCtxRef.current = ctx
       
-      const src = ctx.createMediaStreamSource(raw)
+      const src = ctx.createMediaStreamSource(rawStreamRef.current!)
       const comp = ctx.createDynamicsCompressor()
       comp.threshold.value = -28
       comp.knee.value = 22
@@ -233,7 +305,7 @@ export default function AvatarPane() {
       src.connect(comp).connect(dest)
       procStreamRef.current = dest.stream
       
-      console.log('✅ Cadena de audio configurada')
+      console.log('✅ Cadena de audio configurada correctamente')
     } catch(e) {
       console.error('❌ Error configurando micrófono:', e)
       throw e
