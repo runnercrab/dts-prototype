@@ -14,14 +14,9 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(
   nextConfig,
   {
-    // Para opciones adicionales de Sentry:
-    silent: true, // Suprime logs del plugin de Sentry
+    // Configuración del plugin de Sentry
+    silent: true, // Suprime logs del plugin
     org: "dts",
     project: "dts-prototype",
-  },
-  {
-    // Para opciones de upload de source maps:
-    hideSourceMaps: true, // Oculta source maps en producción
-    disableLogger: true, // Desactiva logs del SDK
   }
 );
