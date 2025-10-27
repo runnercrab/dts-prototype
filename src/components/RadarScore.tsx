@@ -49,7 +49,7 @@ export default function RadarScore({
             grid: { color: 'rgba(226, 232, 240, 0.5)' },       // grid más visible
             pointLabels: { 
               color: '#0f172a',  // texto oscuro para tema claro
-              font: { size: 12, weight: '600' } 
+              font: { size: 12, weight: 600 } 
             },
             ticks: {
               stepSize: 2,
@@ -63,7 +63,7 @@ export default function RadarScore({
           legend: { 
             labels: { 
               color: '#0f172a',  // texto oscuro para tema claro
-              font: { size: 13, weight: '600' }
+              font: { size: 13, weight: 600 }
             } 
           },
         },
