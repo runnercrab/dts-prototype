@@ -149,7 +149,7 @@ export default function DtsChat() {
               {/* Pregunta */}
               <h2 className="mb-3">
                 <span className="font-semibold">{step.dim}: </span>
-                <span className="font-normal text-neutral-300">{step.q}</span>
+                <span className="font-normal" style={{ color: '#475569' }}>{step.q}</span>
               </h2>
 
               {/* Slider */}
@@ -197,21 +197,21 @@ export default function DtsChat() {
               {/* Score preview */}
               <p className="mt-3 kpi">
                 Previsualización del score (0–100):{' '}
-                <span className="font-semibold text-neutral-200">{score}</span>
+                <span className="font-semibold" style={{ color: '#0f172a' }}>{score}</span>
               </p>
 
               {/* Explicación de la dimensión actual */}
-              <div className="mt-3 p-3 rounded-lg bg-neutral-800/50 border border-neutral-700">
-                <p className="text-sm text-neutral-300">
-                  <span className="font-semibold text-emerald-400">{step.dim}:</span>{' '}
+              <div className="mt-3 p-3 rounded-lg" style={{ background: '#eef2ff', border: '1px solid #c7d2fe' }}>
+                <p className="text-sm" style={{ color: '#0f172a' }}>
+                  <span className="font-semibold" style={{ color: '#2563eb' }}>{step.dim}:</span>{' '}
                   {step.explanation}
                 </p>
               </div>
 
               {/* Guía de escala específica por dimensión */}
-              <div className="mt-3 p-3 rounded-lg bg-neutral-900/50 border border-neutral-600">
-                <p className="text-xs text-neutral-400 mb-2 font-semibold">💡 Guía rápida:</p>
-                <ul className="text-xs text-neutral-300 space-y-1">
+              <div className="mt-3 p-3 rounded-lg" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <p className="text-xs mb-2 font-semibold" style={{ color: '#475569' }}>💡 Guía rápida:</p>
+                <ul className="text-xs space-y-1" style={{ color: '#64748b' }}>
                   {step.guide.map((g, i) => (
                     <li key={i}>• {g}</li>
                   ))}
@@ -220,21 +220,21 @@ export default function DtsChat() {
 
               {/* Resultado con consejos */}
               {finalScore !== null && (
-                <div className="mt-3 card border-green-700 bg-green-900/10">
+                <div className="mt-3 card" style={{ borderColor: '#2563eb', background: '#eff6ff' }}>
                   <div className="card-body">
-                    <h2 className="mb-2 text-green-300">Resultado</h2>
-                    <p>
+                    <h2 className="mb-2" style={{ color: '#2563eb' }}>Resultado</h2>
+                    <p style={{ color: '#0f172a' }}>
                       Tu <strong>DTS</strong> es{' '}
-                      <strong className="text-neutral-100">{finalScore}/100</strong>.
+                      <strong style={{ color: '#2563eb' }}>{finalScore}/100</strong>.
                     </p>
                     {tips && (
                       <div className="mt-4 grid md:grid-cols-2 gap-4">
                         {STEPS.map((s) => (
                           <div key={s.dim}>
-                            <p className="text-sm text-neutral-300 mb-1">
+                            <p className="text-sm mb-1" style={{ color: '#475569' }}>
                               <strong>{s.dim} —</strong> próximos pasos:
                             </p>
-                            <ul className="list-disc pl-5 text-sm text-neutral-200 space-y-1">
+                            <ul className="list-disc pl-5 text-sm space-y-1" style={{ color: '#0f172a' }}>
                               {tips[s.dim]?.map((t, i) => <li key={i}>{t}</li>)}
                             </ul>
                           </div>

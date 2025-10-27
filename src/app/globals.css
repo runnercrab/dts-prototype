@@ -37,9 +37,11 @@ body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Inter, Helvetica, Arial, sans-serif;
 }
 
-/* Contenedor principal */
+/* Contenedor principal - AJUSTADO PARA COINCIDIR CON NAVBAR */
 .container-page {
-  @apply max-w-7xl mx-auto px-6 py-6;
+  @apply max-w-7xl mx-auto py-6;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 /* ==========================================

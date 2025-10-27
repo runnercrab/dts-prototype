@@ -23,10 +23,10 @@ export default function RadarScore({
         {
           label: 'DTS',
           data: values,
-          borderColor: 'rgba(16,185,129,1)',      // emerald-500
-          backgroundColor: 'rgba(16,185,129,0.15)',
-          pointBackgroundColor: 'rgba(16,185,129,1)',
-          pointBorderColor: '#0f172a',            // slate-900
+          borderColor: 'rgba(37, 99, 235, 1)',      // azul corporativo #2563eb
+          backgroundColor: 'rgba(37, 99, 235, 0.15)', // azul corporativo con transparencia
+          pointBackgroundColor: 'rgba(37, 99, 235, 1)', // azul corporativo
+          pointBorderColor: '#ffffff',               // blanco para contraste
           pointHoverRadius: 5,
           borderWidth: 2,
         },
@@ -45,20 +45,27 @@ export default function RadarScore({
             beginAtZero: true,
             min: 0,
             max: 10,
-            angleLines: { color: 'rgba(255,255,255,0.08)' },
-            grid: { color: 'rgba(255,255,255,0.08)' },
-            pointLabels: { color: '#d4d4d4', font: { size: 12 } },
+            angleLines: { color: 'rgba(226, 232, 240, 0.3)' }, // líneas más visibles en tema claro
+            grid: { color: 'rgba(226, 232, 240, 0.5)' },       // grid más visible
+            pointLabels: { 
+              color: '#0f172a',  // texto oscuro para tema claro
+              font: { size: 12, weight: '600' } 
+            },
             ticks: {
               stepSize: 2,
-              color: '#a3a3a3',
-              // 👇 quita el fondo blanco de los números
+              color: '#64748b',  // texto gris para tema claro
               showLabelBackdrop: false,
               backdropColor: 'transparent',
             },
           },
         },
         plugins: {
-          legend: { labels: { color: '#e5e5e5' } },
+          legend: { 
+            labels: { 
+              color: '#0f172a',  // texto oscuro para tema claro
+              font: { size: 13, weight: '600' }
+            } 
+          },
         },
       },
     })
