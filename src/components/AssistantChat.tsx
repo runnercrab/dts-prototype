@@ -5,7 +5,7 @@ import { bus } from '../lib/bus'
 type Msg = { 
   role: 'user' | 'assistant'
   text: string
-  source?: 'text' | 'voice' // ✅ Nuevo: identificar origen
+  source?: 'voice' | 'text'
 }
 
 export default function AssistantChat() {
@@ -15,31 +15,13 @@ export default function AssistantChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  // ✅ DESACTIVADO: Auto-scroll solo cuando el usuario envía mensaje de TEXTO
-  // NO hacer scroll cuando llegan mensajes de VOZ para no mover el foco del avatar
+  // Escuchar eventos de voz desde el avatar
   useEffect(() => {
-    // Solo hacer scroll si el último mensaje es de texto del usuario
-    if (msgs.length > 0) {
-      const lastMsg = msgs[msgs.length - 1]
-      // Solo scroll si el usuario escribió (no por voz)
-      if (lastMsg.role === 'user' && lastMsg.source === 'text') {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-      }
-    }
-  }, [msgs])
-
-  // ✅ Escuchar eventos de voz del avatar
-  useEffect(() => {
-    // Cuando el usuario habla (voz)
     const handleUserVoice = (data: { text: string }) => {
       setMsgs(m => [...m, { role: 'user', text: data.text, source: 'voice' }])
-      // Mostrar "pensando" inmediatamente
-      setLoading(true)
     }
 
-    // Cuando el avatar responde (voz)
     const handleAvatarVoice = (data: { text: string }) => {
-      setLoading(false)
       setMsgs(m => [...m, { role: 'assistant', text: data.text, source: 'voice' }])
     }
 
@@ -52,11 +34,20 @@ export default function AssistantChat() {
     }
   }, [])
 
+  // Auto-scroll solo cuando el usuario escribe texto (no por voz)
+  useEffect(() => {
+    const lastMsg = msgs[msgs.length - 1]
+    // Solo scroll si el usuario escribió (no por voz)
+    if (lastMsg && lastMsg.role === 'user' && lastMsg.source === 'text') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [msgs])
+
   async function send() {
     const userText = input.trim()
     if (!userText) return
 
-    // Pinta el mensaje del usuario (texto)
+    // Marcar como fuente 'text'
     setMsgs(m => [...m, { role: 'user', text: userText, source: 'text' }])
     setInput('')
     setLoading(true)
@@ -89,11 +80,11 @@ export default function AssistantChat() {
           <h2>Asistente</h2>
           {msgs.length > 0 && (
             <button
-              className="btn btn-sm opacity-70 hover:opacity-100"
+              className="btn btn-muted text-xs"
               onClick={() => setMsgs([])}
               title="Limpiar historial"
             >
-              🗑️
+              🗑️ Limpiar
             </button>
           )}
         </div>
@@ -101,13 +92,13 @@ export default function AssistantChat() {
         {/* Zona de mensajes con scroll */}
         <div 
           ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto space-y-2 mb-3 min-h-0"
+          className="flex-1 overflow-y-auto space-y-3 mb-3 min-h-0"
         >
           {/* Mensaje de bienvenida */}
           {msgs.length === 0 && (
-            <div className="text-center text-neutral-400 py-8">
+            <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
               <div className="text-4xl mb-2">👋</div>
-              <p className="text-sm">Hola, soy tu asistente DTS.</p>
+              <p className="text-sm font-semibold">Hola, soy tu asistente DTS.</p>
               <p className="text-xs mt-1">¿En qué puedo ayudarte?</p>
             </div>
           )}
@@ -116,17 +107,11 @@ export default function AssistantChat() {
             <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
               <div className="inline-block text-left">
                 {/* Indicador de fuente (voz/texto) */}
-                <div className="text-xs text-neutral-500 mb-1">
+                <div className="message-label">
                   {m.role === 'user' ? '👤 Usuario' : '🤖 Avatar'}
                   {m.source === 'voice' && ' 🎤'}
                 </div>
-                <span
-                  className={`inline-block px-3 py-2 rounded-lg ${
-                    m.role === 'user'
-                      ? 'bg-emerald-700 text-white'
-                      : 'bg-neutral-800 text-neutral-200'
-                  }`}
-                >
+                <span className={m.role === 'user' ? 'message-user' : 'message-assistant'}>
                   {m.text}
                 </span>
               </div>
@@ -134,7 +119,7 @@ export default function AssistantChat() {
           ))}
           {loading && (
             <div className="text-left">
-              <span className="inline-block px-3 py-2 rounded-lg bg-neutral-700 text-neutral-300">
+              <span className="message-assistant animate-pulse">
                 💭 Pensando...
               </span>
             </div>
@@ -153,7 +138,6 @@ export default function AssistantChat() {
             onKeyDown={e => {
               if (e.key === 'Enter') send()
             }}
-            // ✅ CRÍTICO: No hacer autofocus
             autoFocus={false}
           />
           <button className="btn btn-primary" onClick={send} title="Enviar (↩︎)">
