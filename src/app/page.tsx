@@ -1,9 +1,24 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import ProblemaSection from '@/components/ProblemaSection'
+import SolucionSection from '@/components/SolucionSection'
 
 export default function Home() {
   return (
     <>
+      {/* HERO SECTION - Título + Subtítulo ENCIMA del video */}
+      <div className="w-full pt-12 pb-6 bg-gradient-to-b from-white to-blue-50">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6" style={{ color: '#0f172a' }}>
+            Transforma tu negocio con decisiones digitales inteligentes
+          </h1>
+          <p className="text-xl md:text-2xl mb-8" style={{ color: '#475569' }}>
+            Evaluación rápida + plan personalizado para crecer. Te mostramos exactamente qué hacer, 
+            paso a paso guiado por un avatar experto digital que habla tu idioma.
+          </p>
+        </div>
+      </div>
+
       {/* Video de bienvenida - FULL WIDTH con gradiente azul */}
       <div 
         className="w-full mb-6"
@@ -29,6 +44,12 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* NUEVA SECCIÓN 2: PROBLEMA */}
+      <ProblemaSection />
+
+      {/* NUEVA SECCIÓN 3: SOLUCIÓN 7 PASOS */}
+      <SolucionSection />
 
       <main className="container-page">
 
