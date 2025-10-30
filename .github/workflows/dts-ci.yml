@@ -1,0 +1,35 @@
+name: CI DTS          # Nombre del flujo, para que lo veas en GitHub
+
+on:                   # Cuándo se ejecuta este flujo
+  push:               # cada vez que haces git push...
+    branches: ["main"]   # ...a la rama main (puedes poner "master" o la que uses)
+
+jobs:
+  build-and-deploy:   # Nombre del trabajo (job)
+    runs-on: ubuntu-latest   # GitHub va a usar una máquina Linux para hacerlo
+
+    steps:
+      - name: 📥 Descargar código del repo
+        uses: actions/checkout@v4   # Baja tu código de GitHub para poder trabajarlo
+
+      - name: 🟦 Usar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"        # versión de Node; pon la misma que usas en Vercel
+
+      - name: 📦 Instalar dependencias
+        run: npm install            # igual que en tu ordenador: npm install
+
+      - name: 🧪 Pasar tests (opcional)
+        run: npm run test --if-present   # si tienes tests los ejecuta; si no, no falla
+
+      - name: 🏗️ Construir el proyecto
+        run: npm run build          # comprueba que tu Next.js compila
+
+      # 🔽 Esta parte es la que habla con Vercel 🔽
+      - name: 🚀 Deploy a Vercel
+        run: npx vercel --prod --yes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}      # tu token secreto de Vercel
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}    # id de tu organización en Vercel
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}  # id del proyecto
