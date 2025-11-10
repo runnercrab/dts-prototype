@@ -56,7 +56,7 @@ export default function Home() {
       {/* Título principal - Avatar experto digital */}
       <div className="mb-6">
         <h1 className="text-5xl md:text-6xl font-bold text-center" style={{ color: '#0f172a' }}>
-          Tu <span style={{ color: '#2563eb' }}>avatar experto</span> digital 24/7 · 365 que habla su idioma
+          Tu <span style={{ color: '#2563eb' }}>avatar experto</span> digital 24/7 · 365 que habla tu idioma
         </h1>
       </div>
 
@@ -149,7 +149,7 @@ export default function Home() {
                     </div>
                   </td>
                   <td className="py-4 px-4" style={{ color: '#475569' }}>
-                    DTS compara tus respuestas con las mejores prácticas.
+                    Gapply compara tus respuestas con las mejores prácticas internacionales.
                   </td>
                   <td className="py-4 px-4 font-semibold" style={{ color: '#0f172a' }}>
                     Tu punto de partida.
@@ -219,7 +219,7 @@ export default function Home() {
                     <strong>MIT CDO Candidate 2025.</strong>
                   </li>
                   <li className="text-lg leading-relaxed" style={{ color: '#0f172a' }}>
-                    DTS pone la transformación digital al alcance de cualquier pyme, 
+                    Gapply pone la transformación digital al alcance de cualquier pyme, 
                     en un lenguaje claro y orientado a resultados.
                   </li>
                 </ul>
@@ -257,12 +257,12 @@ export default function Home() {
       {/* Call to Action - Diagnóstico */}
       <div className="card">
         <div className="card-body">
-          <h2 className="text-2xl font-bold mb-3">Diagnóstico</h2>
+          <h2 className="text-2xl font-bold mb-3">Diagnóstico Digital</h2>
           <p className="mb-6" style={{ color: '#475569' }}>
-            Evalúa tu madurez digital en 6 dimensiones.
+            Evalúa tu madurez digital en 6 dimensiones y recibe un plan personalizado.
           </p>
           <Link href="/dts-chat" className="btn btn-primary">
-            Ir al Diagnóstico
+            Comenzar Diagnóstico
           </Link>
         </div>
       </div>
