@@ -25,12 +25,42 @@ export default function DiagnosticoFull() {
   const [phase, setPhase] = useState<Phase>('onboarding')
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null)
 
-  const handleOnboardingComplete = (data: OnboardingData) => {
+  const handleOnboardingComplete = async (data: OnboardingData) => {
     console.log('✅ Onboarding completado:', data)
     setOnboardingData(data)
     
-    // Avatar da bienvenida
-    const welcomeMessage = `
+    // Guardar en Supabase
+    try {
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      
+      // Guardar en Supabase
+      const { data: assessment, error } = await supabase
+        .from('dts_assessments')
+        .insert({
+          assessment_type: 'full',
+          status: 'in-progress',
+          phase_0_completed: true,
+          onboarding_data: data,
+          dmm_version_id: '4e95ce6c-adfc-4095-82a7-716953b4690f', // DMM v5.1 Full
+          started_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('❌ Error guardando assessment:', error)
+        alert('Error al guardar el diagnóstico. Por favor, intenta de nuevo.')
+        return
+      }
+      
+      console.log('✅ Assessment guardado en Supabase:', assessment.id)
+      
+      // Avatar da bienvenida
+      const welcomeMessage = `
 Perfecto ${data.companyName}. Vamos a comenzar el diagnóstico de tu madurez digital. 
 
 Te haré 40 preguntas clave (TIER 1) organizadas en 6 dimensiones y 27 subdimensiones.
@@ -41,14 +71,19 @@ Para cada criterio, evaluarás:
 3. Qué tan IMPORTANTE es (del 1 al 5)
 
 Puedes preguntarme cualquier duda cuando quieras. ¡Empecemos!
-    `.trim()
-    
-    bus.emit('avatar:voice', { text: welcomeMessage })
-    
-    // Pasar a la fase de assessment
-    setTimeout(() => {
-      setPhase('assessment')
-    }, 2000)
+      `.trim()
+      
+      bus.emit('avatar:voice', { text: welcomeMessage })
+      
+      // Pasar a la fase de assessment
+      setTimeout(() => {
+        setPhase('assessment')
+      }, 2000)
+      
+    } catch (e: any) {
+      console.error('❌ Error conectando a Supabase:', e)
+      alert('Error al guardar. Verifica tu conexión.')
+    }
   }
 
   return (
