@@ -1,18 +1,29 @@
-// Event bus mínimo para comunicar AssistantChat -> AvatarPane
-type Handler = (payload: any) => void
+type EventCallback = (data?: any) => void
 
-class Bus {
-  private map = new Map<string, Set<Handler>>()
-  on(evt: string, fn: Handler) {
-    if (!this.map.has(evt)) this.map.set(evt, new Set())
-    this.map.get(evt)!.add(fn)
-    return () => this.off(evt, fn)
+interface Events {
+  [key: string]: EventCallback[]
+}
+
+class EventBus {
+  private events: Events = {}
+
+  on(event: string, callback: EventCallback): void {
+    if (!this.events[event]) {
+      this.events[event] = []
+    }
+    this.events[event].push(callback)
   }
-  off(evt: string, fn: Handler) {
-    this.map.get(evt)?.delete(fn)
+
+  off(event: string, callback: EventCallback): void {
+    if (!this.events[event]) return
+    this.events[event] = this.events[event].filter(cb => cb !== callback)
   }
-  emit(evt: string, payload?: any) {
-    this.map.get(evt)?.forEach(fn => fn(payload))
+
+  emit(event: string, data?: any): void {
+    if (!this.events[event]) return
+    this.events[event].forEach(callback => callback(data))
   }
 }
-export const bus = new Bus()
+
+const bus = new EventBus()
+export default bus

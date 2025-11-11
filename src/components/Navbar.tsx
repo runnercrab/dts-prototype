@@ -9,8 +9,8 @@ export default function Navbar() {
         <Image
           src="/gapply-icon.png"
           alt="Gapply"
-          width={80}              // ← Mucho más grande (era 48)
-          height={80}             // ← Mucho más grande
+          width={80}
+          height={80}
           className="rounded-lg"
           priority
         />
@@ -20,8 +20,8 @@ export default function Navbar() {
       </div>
       <div className="navbar-menu">
         <Link href="/">Inicio</Link>
-        <Link href="/dts-chat">Diagnóstico</Link>
-        <Link href="#contacto">Contacto</Link>
+        <Link href="/diagnostico-full">Diagnóstico</Link>
+        <Link href="/contacto">Contacto</Link>
       </div>
     </nav>
   )

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { bus } from '../lib/bus'
+import bus from '../lib/bus'  // ✅ CORREGIDO: sin llaves
 
 type Msg = { 
   role: 'user' | 'assistant'

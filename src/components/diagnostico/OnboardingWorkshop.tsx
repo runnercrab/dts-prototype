@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 // Tipos
 interface OnboardingData {
@@ -26,11 +27,12 @@ interface OnboardingData {
 }
 
 interface Props {
-  onComplete: (data: OnboardingData) => void
+  onComplete: (assessmentId: string) => void
 }
 
 export default function OnboardingWorkshop({ onComplete }: Props) {
   const [step, setStep] = useState(1)
+  const [saving, setSaving] = useState(false)
   
   // Estado del formulario
   const [mainPurpose, setMainPurpose] = useState('')
@@ -97,6 +99,65 @@ export default function OnboardingWorkshop({ onComplete }: Props) {
     )
   }
 
+  const saveAssessment = async () => {
+    setSaving(true)
+    try {
+      const onboardingData: OnboardingData = {
+        mainPurpose,
+        digitalAmbition,
+        companyName,
+        sector,
+        numEmployees,
+        role,
+        evaluationScope,
+        specificArea: specificArea || undefined,
+        analysisLevel,
+        agreedToStart
+      }
+
+      console.log('💾 Guardando assessment en Supabase...')
+
+      const { data, error } = await supabase
+        .from('dts_assessments')
+        .insert({
+          dmm_version_id: '4e95ce5c-adfc-4095-82a7-715953b46906', // ID correcto
+          assessment_type: 'full',
+          status: 'in-progress',
+          phase_0_completed: true,
+          onboarding_data: onboardingData,
+          started_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        console.error('❌ Error guardando assessment:', error)
+        alert('Error al guardar el assessment. Por favor, intenta de nuevo.')
+        setSaving(false)
+        return
+      }
+
+      if (!data || !data.id) {
+        console.error('❌ No se recibió ID del assessment:', data)
+        alert('Error: No se pudo obtener el ID del assessment.')
+        setSaving(false)
+        return
+      }
+
+      const assessmentId = data.id as string
+      console.log('✅ Assessment guardado con ID:', assessmentId)
+      
+      // Llamar a onComplete con el ID como string
+      onComplete(assessmentId)
+    } catch (err) {
+      console.error('❌ Error inesperado:', err)
+      alert('Error inesperado. Por favor, intenta de nuevo.')
+      setSaving(false)
+    }
+  }
+
   const handleNext = () => {
     // Validaciones por paso
     if (step === 2 && (!mainPurpose || digitalAmbition.length === 0)) {
@@ -119,20 +180,8 @@ export default function OnboardingWorkshop({ onComplete }: Props) {
     if (step < TOTAL_STEPS) {
       setStep(step + 1)
     } else {
-      // Completar onboarding
-      const data: OnboardingData = {
-        mainPurpose,
-        digitalAmbition,
-        companyName,
-        sector,
-        numEmployees,
-        role,
-        evaluationScope,
-        specificArea: specificArea || undefined,
-        analysisLevel,
-        agreedToStart
-      }
-      onComplete(data)
+      // Guardar assessment y continuar
+      saveAssessment()
     }
   }
 
@@ -455,15 +504,16 @@ export default function OnboardingWorkshop({ onComplete }: Props) {
           <button
             className={`btn ${step === 1 ? 'opacity-50 pointer-events-none' : ''}`}
             onClick={handlePrev}
-            disabled={step === 1}
+            disabled={step === 1 || saving}
           >
             ← Anterior
           </button>
           <button
             className="btn btn-primary ml-auto"
             onClick={handleNext}
+            disabled={saving}
           >
-            {step === TOTAL_STEPS ? 'Comenzar Diagnóstico →' : 'Siguiente →'}
+            {saving ? 'Guardando...' : step === TOTAL_STEPS ? 'Comenzar Diagnóstico →' : 'Siguiente →'}
           </button>
         </div>
       </div>

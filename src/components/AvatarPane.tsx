@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import StreamingAvatar from '@heygen/streaming-avatar'
-import { bus } from '../lib/bus'
+import bus from '../lib/bus'  // ✅ CORREGIDO: sin llaves
 
 const ENV_AVATAR = (process.env.NEXT_PUBLIC_HEYGEN_AVATAR_NAME || '').trim() || 'Shawn_Therapist_public'
 const ENV_VOICE  = (process.env.NEXT_PUBLIC_HEYGEN_VOICE_ID || '').trim()

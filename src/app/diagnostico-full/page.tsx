@@ -1,219 +1,488 @@
 'use client'
 
-import { useState } from 'react'
-import AvatarPane from '../../components/AvatarPane'
-import AssistantChat from '../../components/AssistantChat'
-import OnboardingWorkshop from '../../components/diagnostico/OnboardingWorkshop'
-import { bus } from '../../lib/bus'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+import AvatarPane from '@/components/AvatarPane'
+import AssistantChat from '@/components/AssistantChat'
+import OnboardingWorkshop from '@/components/diagnostico/OnboardingWorkshop'
+import DimensionProgressMap from '@/components/diagnostico/DimensionProgressMapVisual'
+import CriterionQuestion from '@/components/diagnostico/CriterionQuestion'
+import bus from '@/lib/bus'
 
-type Phase = 'onboarding' | 'assessment' | 'scoring' | 'results'
-
-interface OnboardingData {
-  mainPurpose: string
-  digitalAmbition: string[]
-  companyName: string
-  sector: string
-  numEmployees: number
-  role: string
-  evaluationScope: string
-  specificArea?: string
-  analysisLevel: string
-  agreedToStart: boolean
+// Tipos
+interface Criterion {
+  id: string
+  code: string
+  description: string
+  short_label: string
+  focus_area: string
+  context?: string
+  subdimension_id: string
+  subdimension?: {
+    name: string
+    code: string
+    dimension_name: string
+  }
+  dimension?: {
+    name: string
+    code: string
+  }
 }
 
-export default function DiagnosticoFull() {
-  const [phase, setPhase] = useState<Phase>('onboarding')
-  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null)
+interface Response {
+  as_is_level: number
+  as_is_confidence: 'low' | 'medium' | 'high'
+  as_is_notes?: string
+  to_be_level: number
+  to_be_timeframe: '6months' | '1year' | '2years' | '3years+'
+  importance: number
+}
 
-  const handleOnboardingComplete = async (data: OnboardingData) => {
-    console.log('✅ Onboarding completado:', data)
-    setOnboardingData(data)
-    
-    // Guardar en Supabase
+interface Subdimension {
+  id: string
+  code: string
+  name: string
+  dimension_name: string
+  total_criteria: number
+  completed_criteria: number
+  is_completed: boolean
+  is_current: boolean
+}
+
+export default function DiagnosticoFullPage() {
+  // Estados principales
+  const [phase, setPhase] = useState<'onboarding' | 'assessment' | 'completed'>('onboarding')
+  const [assessmentId, setAssessmentId] = useState<string | null>(null)
+  const [showMap, setShowMap] = useState(true)
+  
+  // Datos del assessment
+  const [criteria, setCriteria] = useState<Criterion[]>([])
+  const [subdimensions, setSubdimensions] = useState<Subdimension[]>([])
+  const [currentCriterionIndex, setCurrentCriterionIndex] = useState(0)
+  const [responses, setResponses] = useState<Map<string, Response>>(new Map())
+  
+  // Estados de carga
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Cargar criterios TIER 1 desde Supabase
+  const loadTier1Criteria = async (assessmentId: string) => {
     try {
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-      
-      // Guardar en Supabase
-      const { data: assessment, error } = await supabase
+      setLoading(true)
+      setError(null)
+
+      console.log('🔍 Cargando criterios para assessment:', assessmentId)
+
+      // Obtener el DMM version ID del assessment
+      const { data: assessment, error: assessmentError } = await supabase
         .from('dts_assessments')
-        .insert({
-          assessment_type: 'full',
-          status: 'in-progress',
-          phase_0_completed: true,
-          onboarding_data: data,
-          dmm_version_id: '4e95ce6c-adfc-4095-82a7-716953b4690f', // DMM v5.1 Full
-          started_at: new Date().toISOString()
-        })
-        .select()
+        .select('dmm_version_id')
+        .eq('id', assessmentId)
         .single()
-      
-      if (error) {
-        console.error('❌ Error guardando assessment:', error)
-        alert('Error al guardar el diagnóstico. Por favor, intenta de nuevo.')
-        return
+
+      if (assessmentError) {
+        console.error('❌ Error obteniendo assessment:', assessmentError)
+        throw assessmentError
       }
-      
-      console.log('✅ Assessment guardado en Supabase:', assessment.id)
-      
-      // Avatar da bienvenida
-      const welcomeMessage = `
-Perfecto ${data.companyName}. Vamos a comenzar el diagnóstico de tu madurez digital. 
 
-Te haré 40 preguntas clave (TIER 1) organizadas en 6 dimensiones y 27 subdimensiones.
+      console.log('✅ Assessment encontrado, dmm_version_id:', assessment.dmm_version_id)
 
-Para cada criterio, evaluarás:
-1. Dónde estás HOY (As-Is, del 1 al 5)
-2. Dónde quieres ESTAR (To-Be, del 1 al 5)  
-3. Qué tan IMPORTANTE es (del 1 al 5)
+      // Cargar criterios TIER 1
+      console.log('🔍 Buscando criterios TIER 1...')
+      
+      // PASO 1: Cargar criterios básicos
+      const { data: criteriaData, error: criteriaError } = await supabase
+        .from('dts_criteria')
+        .select('id, code, description, short_label, focus_area, context, subdimension_id')
+        .eq('dmm_version_id', assessment.dmm_version_id)
+        .eq('tier', 'tier1')
+        .order('code')
 
-Puedes preguntarme cualquier duda cuando quieras. ¡Empecemos!
-      `.trim()
-      
-      bus.emit('avatar:voice', { text: welcomeMessage })
-      
-      // Pasar a la fase de assessment
-      setTimeout(() => {
-        setPhase('assessment')
-      }, 2000)
-      
-    } catch (e: any) {
-      console.error('❌ Error conectando a Supabase:', e)
-      alert('Error al guardar. Verifica tu conexión.')
+      if (criteriaError) {
+        console.error('❌ Error cargando criterios:', criteriaError)
+        throw new Error(`Error cargando criterios: ${criteriaError.message}`)
+      }
+
+      console.log('✅ Criterios base cargados:', criteriaData?.length || 0)
+
+      // PASO 2: Cargar subdimensiones
+      const subdimensionIds = [...new Set(criteriaData.map(c => c.subdimension_id))]
+      const { data: subdimensionsData, error: subError } = await supabase
+        .from('dts_subdimensions')
+        .select('id, code, name, dimension_id')
+        .in('id', subdimensionIds)
+
+      if (subError) {
+        console.error('❌ Error cargando subdimensiones:', subError)
+        throw new Error(`Error cargando subdimensiones: ${subError.message}`)
+      }
+
+      console.log('✅ Subdimensiones cargadas:', subdimensionsData?.length || 0)
+
+      // PASO 3: Cargar dimensiones
+      const dimensionIds = [...new Set(subdimensionsData.map(s => s.dimension_id))]
+      const { data: dimensionsData, error: dimError } = await supabase
+        .from('dts_dimensions')
+        .select('id, code, name')
+        .in('id', dimensionIds)
+
+      if (dimError) {
+        console.error('❌ Error cargando dimensiones:', dimError)
+        throw new Error(`Error cargando dimensiones: ${dimError.message}`)
+      }
+
+      console.log('✅ Dimensiones cargadas:', dimensionsData?.length || 0)
+
+      // PASO 4: Crear mapas para búsqueda rápida
+      const subdimensionsMap = new Map(subdimensionsData.map(s => [s.id, s]))
+      const dimensionsMap = new Map(dimensionsData.map(d => [d.id, d]))
+
+      // PASO 5: Combinar datos
+      const transformedCriteria: Criterion[] = criteriaData.map((c: any) => {
+        const sub = subdimensionsMap.get(c.subdimension_id)
+        const dim = sub ? dimensionsMap.get(sub.dimension_id) : null
+
+        return {
+          id: c.id,
+          code: c.code,
+          description: c.description,
+          short_label: c.short_label,
+          focus_area: c.focus_area,
+          context: c.context,
+          subdimension_id: c.subdimension_id,
+          subdimension: sub ? {
+            name: sub.name,
+            code: sub.code,
+            dimension_name: dim?.name || 'Unknown'
+          } : undefined,
+          dimension: dim ? {
+            name: dim.name,
+            code: dim.code
+          } : undefined
+        }
+      })
+
+      console.log('✅ Datos transformados correctamente')
+      setCriteria(transformedCriteria)
+
+      // Cargar respuestas existentes
+      const { data: existingResponses } = await supabase
+        .from('dts_responses')
+        .select('*')
+        .eq('assessment_id', assessmentId)
+        .eq('response_source', 'manual')
+
+      const responsesMap = new Map<string, Response>()
+      if (existingResponses) {
+        existingResponses.forEach((r: any) => {
+          responsesMap.set(r.criteria_id, {
+            as_is_level: r.as_is_level,
+            as_is_confidence: r.as_is_confidence,
+            as_is_notes: r.as_is_notes,
+            to_be_level: r.to_be_level,
+            to_be_timeframe: r.to_be_timeframe,
+            importance: r.importance
+          })
+        })
+        setResponses(responsesMap)
+      }
+
+      // Construir subdimensiones para el mapa
+      buildSubdimensionsMap(transformedCriteria, responsesMap)
+
+      // Encontrar el primer criterio sin respuesta
+      const firstUnanswered = transformedCriteria.findIndex(c => !responsesMap.has(c.id))
+      setCurrentCriterionIndex(firstUnanswered >= 0 ? firstUnanswered : 0)
+
+      setLoading(false)
+    } catch (err: any) {
+      console.error('❌ Error completo:', err)
+      const errorMessage = err?.message || err?.toString() || 'Error desconocido'
+      setError(`Error al cargar los criterios: ${errorMessage}`)
+      setLoading(false)
     }
   }
 
+  // Construir mapa de subdimensiones con progreso
+  const buildSubdimensionsMap = (criteriaList: Criterion[], responsesMap: Map<string, Response>) => {
+    const subMap = new Map<string, {
+      id: string
+      code: string
+      name: string
+      dimension_name: string
+      total: number
+      completed: number
+    }>()
+
+    criteriaList.forEach(criterion => {
+      const subId = criterion.subdimension_id
+      if (!subMap.has(subId)) {
+        subMap.set(subId, {
+          id: subId,
+          code: criterion.subdimension?.code || '',
+          name: criterion.subdimension?.name || '',
+          dimension_name: criterion.dimension?.name || '',
+          total: 0,
+          completed: 0
+        })
+      }
+      const sub = subMap.get(subId)!
+      sub.total++
+      if (responsesMap.has(criterion.id)) {
+        sub.completed++
+      }
+    })
+
+    // Convertir a array de Subdimension
+    const currentCriterion = criteriaList[currentCriterionIndex]
+    const subsArray: Subdimension[] = Array.from(subMap.values()).map(sub => ({
+      id: sub.id,
+      code: sub.code,
+      name: sub.name,
+      dimension_name: sub.dimension_name,
+      total_criteria: sub.total,
+      completed_criteria: sub.completed,
+      is_completed: sub.completed === sub.total,
+      is_current: currentCriterion?.subdimension_id === sub.id
+    }))
+
+    setSubdimensions(subsArray)
+  }
+
+  // Manejar completado del onboarding
+  const handleOnboardingComplete = async (assessmentId: string) => {
+    console.log('📥 Onboarding completado, assessment ID:', assessmentId)
+    
+    if (!assessmentId || typeof assessmentId !== 'string') {
+      console.error('❌ Assessment ID inválido:', assessmentId)
+      setError('Error: ID de assessment inválido')
+      return
+    }
+    
+    setAssessmentId(assessmentId)
+    await loadTier1Criteria(assessmentId)
+    setPhase('assessment')
+    
+    // Notificar al avatar
+    bus.emit('avatar:voice', {
+      text: '¡Perfecto! Ahora comenzaremos con el diagnóstico completo. Te haré 40 preguntas clave sobre tu madurez digital.'
+    })
+  }
+
+  // Guardar respuesta
+  const handleResponse = async (response: Response) => {
+    if (!assessmentId || !criteria[currentCriterionIndex]) return
+
+    const criterion = criteria[currentCriterionIndex]
+    
+    try {
+      // Guardar en Supabase
+      const { error } = await supabase
+        .from('dts_responses')
+        .upsert({
+          assessment_id: assessmentId,
+          criteria_id: criterion.id,
+          as_is_level: response.as_is_level,
+          as_is_confidence: response.as_is_confidence,
+          as_is_notes: response.as_is_notes,
+          to_be_level: response.to_be_level,
+          to_be_timeframe: response.to_be_timeframe,
+          importance: response.importance,
+          response_source: 'manual',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'assessment_id,criteria_id'
+        })
+
+      if (error) throw error
+
+      // Actualizar estado local
+      const newResponses = new Map(responses)
+      newResponses.set(criterion.id, response)
+      setResponses(newResponses)
+
+      // Reconstruir mapa de subdimensiones
+      buildSubdimensionsMap(criteria, newResponses)
+
+      // Notificar al avatar
+      const gap = response.to_be_level - response.as_is_level
+      if (gap > 2) {
+        bus.emit('avatar:voice', {
+          text: `Veo que has identificado un gap significativo de ${gap} niveles. Esto será importante para tu roadmap.`
+        })
+      }
+
+    } catch (err) {
+      console.error('Error saving response:', err)
+      setError('Error al guardar la respuesta')
+    }
+  }
+
+  // Navegación
+  const handleNext = () => {
+    if (currentCriterionIndex < criteria.length - 1) {
+      setCurrentCriterionIndex(currentCriterionIndex + 1)
+      setShowMap(false)
+    } else {
+      // Completado
+      completeAssessment()
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentCriterionIndex > 0) {
+      setCurrentCriterionIndex(currentCriterionIndex - 1)
+      setShowMap(false)
+    }
+  }
+
+  const handleSubdimensionClick = (subdimensionId: string) => {
+    const firstCriterionIndex = criteria.findIndex(c => c.subdimension_id === subdimensionId)
+    if (firstCriterionIndex >= 0) {
+      setCurrentCriterionIndex(firstCriterionIndex)
+      setShowMap(false)
+    }
+  }
+
+  // Completar assessment
+  const completeAssessment = async () => {
+    if (!assessmentId) return
+
+    try {
+      // Actualizar assessment como completado
+      await supabase
+        .from('dts_assessments')
+        .update({
+          phase_1_completed: true,
+          status: 'tier1-completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', assessmentId)
+
+      setPhase('completed')
+
+      bus.emit('avatar:voice', {
+        text: '¡Excelente! Has completado las 40 preguntas del TIER 1. Ahora voy a analizar tus respuestas para inferir el resto de criterios automáticamente.'
+      })
+
+    } catch (err) {
+      console.error('Error completing assessment:', err)
+    }
+  }
+
+  // Actualizar contexto del avatar cuando cambia el criterio
+  useEffect(() => {
+    if (phase === 'assessment' && criteria[currentCriterionIndex]) {
+      const criterion = criteria[currentCriterionIndex]
+      bus.emit('assessment:criterion-changed', {
+        criterion: {
+          code: criterion.code,
+          name: criterion.short_label,
+          dimension: criterion.dimension?.name,
+          subdimension: criterion.subdimension?.name
+        },
+        progress: {
+          current: currentCriterionIndex + 1,
+          total: criteria.length,
+          percentage: Math.round(((currentCriterionIndex + 1) / criteria.length) * 100)
+        }
+      })
+    }
+  }, [currentCriterionIndex, criteria, phase])
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="w-full px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Diagnóstico Digital FULL
-              </h1>
-              <p className="text-sm text-gray-600">
-                TM Forum DMM v5.1 - Estrategia TIER 1 + TIER 2
-              </p>
-            </div>
-            {phase !== 'onboarding' && onboardingData && (
-              <div className="text-sm text-gray-600 hidden md:block">
-                <strong>{onboardingData.companyName}</strong> • {onboardingData.sector}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Contenido */}
-      <div className="w-full px-4 py-4">
-        <div className="grid gap-4 lg:grid-cols-[650px_1fr] xl:grid-cols-[700px_1fr]">
+    <div className="min-h-screen bg-gray-50">
+      {/* Layout 2 columnas */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 p-4">
           
-          {/* COLUMNA IZQUIERDA: Avatar + Chat (Sticky) */}
-          <div className="lg:sticky lg:top-16 lg:self-start space-y-3 h-fit">
-            <AvatarPane />
-            <AssistantChat />
+          {/* COLUMNA IZQUIERDA: Avatar + Chat (sticky) - 40% */}
+          <div className="lg:col-span-2 lg:sticky lg:top-4 lg:self-start">
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+              <AvatarPane />
+              <div className="border-t border-gray-200">
+                <AssistantChat />
+              </div>
+            </div>
           </div>
 
-          {/* COLUMNA DERECHA: Contenido Principal */}
-          <div>
-            {phase === 'onboarding' && (
-              <OnboardingWorkshop onComplete={handleOnboardingComplete} />
-            )}
+          {/* COLUMNA DERECHA: Contenido dinámico - 60% */}
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              
+              {/* FASE 0: ONBOARDING */}
+              {phase === 'onboarding' && (
+                <OnboardingWorkshop onComplete={handleOnboardingComplete} />
+              )}
 
-            {phase === 'assessment' && (
-              <div className="card">
-                <div className="card-body">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="text-4xl">🎯</div>
-                    <div>
-                      <h2 className="text-xl font-bold" style={{ color: '#2563eb' }}>
-                        Fase 2: Assessment
-                      </h2>
-                      <p className="text-sm" style={{ color: '#64748b' }}>
-                        Evaluación de criterios TIER 1
-                      </p>
+              {/* FASE 1: ASSESSMENT */}
+              {phase === 'assessment' && (
+                <>
+                  {loading ? (
+                    <div className="text-center py-12">
+                      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                      <p className="mt-4 text-gray-600">Cargando criterios...</p>
                     </div>
-                  </div>
-                  
-                  <div className="p-4 rounded-lg mb-4" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                    <p className="text-sm mb-2 font-semibold" style={{ color: '#15803d' }}>
-                      ✓ Onboarding completado:
-                    </p>
-                    <div className="text-sm space-y-1" style={{ color: '#166534' }}>
-                      <p>• Empresa: <strong>{onboardingData?.companyName}</strong></p>
-                      <p>• Sector: <strong>{onboardingData?.sector}</strong></p>
-                      <p>• Empleados: <strong>{onboardingData?.numEmployees}</strong></p>
-                      <p>• Rol: <strong>{onboardingData?.role}</strong></p>
+                  ) : error ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                      {error}
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      {/* Toggle entre Mapa y Pregunta */}
+                      <div className="mb-4 flex justify-between items-center">
+                        <button
+                          onClick={() => setShowMap(!showMap)}
+                          className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium"
+                        >
+                          {showMap ? '📝 Ver Pregunta' : '🗺️ Ver Mapa'}
+                        </button>
+                        <div className="text-sm text-gray-600">
+                          {responses.size} / {criteria.length} completadas
+                        </div>
+                      </div>
 
-                  <div className="p-4 rounded-lg mb-4" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                    <p className="text-sm mb-2" style={{ color: '#1e40af' }}>
-                      <strong>📋 Próximos componentes a integrar:</strong>
-                    </p>
-                    <ul className="text-xs space-y-1 list-disc pl-5" style={{ color: '#475569' }}>
-                      <li>DimensionProgressMap - Mapa visual 6D + 27SD</li>
-                      <li>CriterionQuestion - Evaluación As-Is / To-Be / Importance</li>
-                      <li>Conectar Supabase para guardar respuestas</li>
-                      <li>Implementar inferencia TIER 2 con IA</li>
-                    </ul>
-                  </div>
+                      {showMap ? (
+                        <DimensionProgressMap
+                          subdimensions={subdimensions}
+                          onSubdimensionClick={handleSubdimensionClick}
+                        />
+                      ) : (
+                        criteria[currentCriterionIndex] && (
+                          <CriterionQuestion
+                            criterion={criteria[currentCriterionIndex]}
+                            currentIndex={currentCriterionIndex}
+                            totalCriteria={criteria.length}
+                            onResponse={handleResponse}
+                            onNext={handleNext}
+                            onPrevious={handlePrevious}
+                            initialResponse={responses.get(criteria[currentCriterionIndex].id)}
+                          />
+                        )
+                      )}
+                    </>
+                  )}
+                </>
+              )}
 
-                  <p className="text-sm" style={{ color: '#64748b' }}>
-                    Aquí aparecerán las preguntas de los 40 criterios TIER 1.
-                  </p>
-
-                  <div className="mt-6 flex gap-3">
-                    <button 
-                      className="btn"
-                      onClick={() => setPhase('onboarding')}
-                    >
-                      ← Volver al onboarding
-                    </button>
-                    <button 
-                      className="btn btn-primary"
-                      onClick={() => alert('Próximamente: Preguntas de criterios')}
-                    >
-                      Siguiente paso →
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {phase === 'scoring' && (
-              <div className="card">
-                <div className="card-body">
-                  <h2 className="text-xl font-bold mb-4">
-                    Fase 3: Scoring (Pendiente)
+              {/* FASE COMPLETADA */}
+              {phase === 'completed' && (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">🎉</div>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                    ¡Diagnóstico TIER 1 Completado!
                   </h2>
-                  <p style={{ color: '#64748b' }}>
-                    Aquí se calculará tu puntuación de madurez digital usando las fórmulas TM Forum.
+                  <p className="text-gray-600 mb-8">
+                    Has completado las 40 preguntas clave. Ahora procesaremos tus respuestas.
                   </p>
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  <p className="mt-4 text-gray-600">Analizando tus respuestas...</p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {phase === 'results' && (
-              <div className="card">
-                <div className="card-body">
-                  <h2 className="text-xl font-bold mb-4">
-                    Fase 4: Resultados (Pendiente)
-                  </h2>
-                  <p style={{ color: '#64748b' }}>
-                    Aquí verás tu radar de madurez, gaps y roadmap personalizado.
-                  </p>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
+
         </div>
-      </div>
-    </main>
+    </div>
   )
 }
