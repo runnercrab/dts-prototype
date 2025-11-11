@@ -9,6 +9,9 @@ import DimensionProgressMap from '@/components/diagnostico/DimensionProgressMapV
 import CriterionQuestion from '@/components/diagnostico/CriterionQuestion'
 import bus from '@/lib/bus'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // Tipos
 interface Criterion {
   id: string
