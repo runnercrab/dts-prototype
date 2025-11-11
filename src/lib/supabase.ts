@@ -1,15 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Debug: Log las variables
-console.log('🔍 SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-console.log('🔍 SUPABASE_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20) + '...')
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Faltan variables de Supabase!')
-}
+// HARDCODED TEMPORALMENTE - cambiar después
+const supabaseUrl = 'https://fgczfshqldxkyowbyuzq.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnY3pmc2hxbGR4a3lvd2J5dXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwMTU1MzMsImV4cCI6MjA3NzU5MTUzM30.nCxVjHv5A8vQawfpUK-SWFbUCTHiHghcYfZfgH7GTFs'
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: true, autoRefreshToken: true }
