@@ -16,6 +16,7 @@ interface Subdimension {
 interface Props {
   subdimensions: Subdimension[]
   onStartAssessment: () => void
+  onSubdimensionClick?: (subdimensionId: string) => void
 }
 
 // Iconos para cada dimensión
@@ -119,61 +120,68 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
       </div>
 
       {/* GRID DE SUBDIMENSIONES */}
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
         {DIMENSION_ORDER.map(dimName => {
           const subs = groupedByDimension[dimName] || []
-          if (subs.length === 0) return null
+          const completed = subs.filter(s => s.is_completed).length
 
           return (
             <div key={dimName}>
               {/* Dimensión header */}
               <div 
-                className="px-4 py-2 rounded-t-lg font-semibold text-white text-sm"
+                className="px-4 py-2 rounded-t-lg font-semibold text-white text-sm flex items-center justify-between"
                 style={{ background: '#334155' }}
               >
-                {dimName}
+                <span>{DIMENSION_ICONS[dimName]} {dimName}</span>
+                <span className="text-xs opacity-80">{completed}/{subs.length}</span>
               </div>
 
-              {/* Subdimensiones grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2 p-2 border border-gray-200 rounded-b-lg bg-gray-50">
-                {subs.map(sub => {
-                  // Determinar color
-                  let bgColor = '#ef4444' // Rojo - pendiente
-                  let textColor = 'white'
-                  
-                  if (sub.is_current) {
-                    bgColor = '#10b981' // Verde - en curso
-                    textColor = 'white'
-                  } else if (sub.is_completed) {
-                    bgColor = '#fecaca' // Rosa claro - completada
-                    textColor = '#7f1d1d'
-                  }
+              {/* Subdimensiones grid o mensaje vacío */}
+              {subs.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2 p-2 border border-gray-200 rounded-b-lg bg-gray-50">
+                  {subs.map(sub => {
+                    // Determinar color
+                    let bgColor = '#ef4444' // Rojo - pendiente
+                    let textColor = 'white'
+                    
+                    if (sub.is_current) {
+                      bgColor = '#10b981' // Verde - en curso
+                      textColor = 'white'
+                    } else if (sub.is_completed) {
+                      bgColor = '#fecaca' // Rosa claro - completada
+                      textColor = '#7f1d1d'
+                    }
 
-                  return (
-                    <div
-                      key={sub.id}
-                      className="px-3 py-2 rounded-lg text-sm font-medium transition-all"
-                      style={{ 
-                        background: bgColor,
-                        color: textColor,
-                        border: sub.is_current ? '3px solid #059669' : 'none',
-                        boxShadow: sub.is_current ? '0 0 0 3px rgba(16, 185, 129, 0.2)' : 'none'
-                      }}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold">{sub.code}</span>
-                        {sub.is_current && <span className="text-lg">▶</span>}
+                    return (
+                      <div
+                        key={sub.id}
+                        className="px-3 py-2 rounded-lg text-sm font-medium transition-all"
+                        style={{ 
+                          background: bgColor,
+                          color: textColor,
+                          border: sub.is_current ? '3px solid #059669' : 'none',
+                          boxShadow: sub.is_current ? '0 0 0 3px rgba(16, 185, 129, 0.2)' : 'none'
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold">{sub.code}</span>
+                          {sub.is_current && <span className="text-lg">▶</span>}
+                        </div>
+                        <div className="mt-1 text-xs leading-tight">
+                          {sub.name}
+                        </div>
+                        <div className="mt-1 text-xs opacity-80">
+                          {sub.completed_criteria}/{sub.total_criteria}
+                        </div>
                       </div>
-                      <div className="mt-1 text-xs leading-tight">
-                        {sub.name}
-                      </div>
-                      <div className="mt-1 text-xs opacity-80">
-                        {sub.completed_criteria}/{sub.total_criteria}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 border border-gray-200 rounded-b-lg bg-gray-50 text-center text-sm text-gray-500 italic">
+                  Sin subdimensiones cargadas aún
+                </div>
+              )}
             </div>
           )
         })}

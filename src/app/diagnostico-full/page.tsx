@@ -444,7 +444,7 @@ export default function DiagnosticoFullPage() {
                       {showMap ? (
                         <DimensionProgressMap
                           subdimensions={subdimensions}
-                          onSubdimensionClick={handleSubdimensionClick}
+                          onStartAssessment={() => setShowMap(false)}
                         />
                       ) : (
                         criteria[currentCriterionIndex] && (
