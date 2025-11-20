@@ -68,6 +68,52 @@ export default function DiagnosticoFullPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // ✅ NUEVO: Verificar si hay assessment guardado al cargar la página
+  useEffect(() => {
+    const checkExistingAssessment = async () => {
+      try {
+        // Intentar recuperar assessment ID guardado
+        const savedAssessmentId = localStorage.getItem('dts_assessment_id')
+        
+        if (savedAssessmentId) {
+          console.log('📂 Recuperando assessment guardado:', savedAssessmentId)
+          
+          // Verificar que el assessment existe en Supabase
+          const { data: assessment, error } = await supabase
+            .from('dts_assessments')
+            .select('id, status')
+            .eq('id', savedAssessmentId)
+            .single()
+          
+          if (error || !assessment) {
+            console.log('⚠️ Assessment guardado no encontrado, limpiando localStorage')
+            localStorage.removeItem('dts_assessment_id')
+            return
+          }
+          
+          // Si el assessment existe, recuperarlo
+          console.log('✅ Assessment válido encontrado, recuperando...')
+          setAssessmentId(savedAssessmentId)
+          await loadTier1Criteria(savedAssessmentId)
+          setPhase('assessment')
+          
+          // Mensaje al avatar
+          bus.emit('avatar:voice', {
+            text: 'Bienvenido de nuevo. Continuemos con tu diagnóstico donde lo dejamos.'
+          })
+        } else {
+          console.log('ℹ️ No hay assessment guardado, mostrando onboarding')
+        }
+      } catch (err) {
+        console.error('❌ Error verificando assessment existente:', err)
+        // En caso de error, limpiar y empezar de cero
+        localStorage.removeItem('dts_assessment_id')
+      }
+    }
+    
+    checkExistingAssessment()
+  }, []) // Solo ejecutar una vez al montar el componente
+
   // Cargar criterios TIER 1 desde Supabase
   const loadTier1Criteria = async (assessmentId: string) => {
     try {
@@ -188,6 +234,7 @@ export default function DiagnosticoFullPage() {
           })
         })
         setResponses(responsesMap)
+        console.log('✅ Respuestas existentes recuperadas:', responsesMap.size)
       }
 
       // Construir subdimensiones para el mapa
@@ -262,6 +309,10 @@ export default function DiagnosticoFullPage() {
       return
     }
     
+    // ✅ NUEVO: Guardar en localStorage
+    localStorage.setItem('dts_assessment_id', assessmentId)
+    console.log('💾 Assessment ID guardado en localStorage')
+    
     setAssessmentId(assessmentId)
     await loadTier1Criteria(assessmentId)
     setPhase('assessment')
@@ -298,6 +349,8 @@ export default function DiagnosticoFullPage() {
         })
 
       if (error) throw error
+
+      console.log('✅ Respuesta guardada correctamente')
 
       // Actualizar estado local
       const newResponses = new Map(responses)
@@ -362,6 +415,10 @@ export default function DiagnosticoFullPage() {
         })
         .eq('id', assessmentId)
 
+      // ✅ NUEVO: Limpiar localStorage cuando se completa
+      localStorage.removeItem('dts_assessment_id')
+      console.log('🗑️ Assessment completado, localStorage limpiado')
+
       setPhase('completed')
 
       bus.emit('avatar:voice', {
@@ -371,6 +428,17 @@ export default function DiagnosticoFullPage() {
     } catch (err) {
       console.error('Error completing assessment:', err)
     }
+  }
+
+  // ✅ NUEVO: Función para reiniciar assessment (opcional, útil para testing)
+  const resetAssessment = () => {
+    localStorage.removeItem('dts_assessment_id')
+    setAssessmentId(null)
+    setPhase('onboarding')
+    setCriteria([])
+    setResponses(new Map())
+    setCurrentCriterionIndex(0)
+    console.log('🔄 Assessment reiniciado')
   }
 
   // Actualizar contexto del avatar cuando cambia el criterio
