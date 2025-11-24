@@ -4,19 +4,21 @@ import Image from 'next/image'
 
 export default function Navbar() {
   return (
-    <nav className="navbar">
+    <nav 
+      className="navbar sticky top-0 bg-white shadow-md"
+      style={{ zIndex: 9999 }}
+    >
       <div className="navbar-brand">
-        <Image
-          src="/gapply-icon.png"
-          alt="Gapply"
-          width={80}
-          height={80}
-          className="rounded-lg"
-          priority
-        />
-        <span className="navbar-title" style={{ fontSize: '1.75rem', fontWeight: '700' }}>
-          Gapply
-        </span>
+        <Link href="/">
+          <Image
+            src="/gapply-logo.png"
+            alt="Gapply - Transformación Digital"
+            width={120}
+            height={120}
+            className="object-contain"
+            priority
+          />
+        </Link>
       </div>
       <div className="navbar-menu">
         <Link href="/">Inicio</Link>

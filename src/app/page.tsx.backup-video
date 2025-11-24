@@ -21,12 +21,11 @@ export default function Home() {
 
       {/* Video de bienvenida - FULL WIDTH con gradiente azul */}
       <div 
-        className="w-full mb-6 relative"
+        className="w-full mb-6"
         style={{ 
           background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 25%, #bfdbfe 50%, #93c5fd 75%, #60a5fa 100%)',
           paddingTop: '24px',
-          paddingBottom: '24px',
-          zIndex: 1
+          paddingBottom: '24px'
         }}
       >
         <div className="max-w-7xl mx-auto px-6">
