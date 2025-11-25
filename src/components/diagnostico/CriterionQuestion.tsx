@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 interface Criterion {
   id: string
@@ -17,6 +19,11 @@ interface Criterion {
     name: string
     code: string
   }
+  level_1_description_es?: string
+  level_2_description_es?: string
+  level_3_description_es?: string
+  level_4_description_es?: string
+  level_5_description_es?: string
 }
 
 interface Response {
@@ -32,9 +39,11 @@ interface CriterionQuestionProps {
   criterion: Criterion
   currentIndex: number
   totalCriteria: number
-  onResponse: (response: Response) => void
+  assessmentId: string
+  chatMessages: Array<{ role: 'user' | 'assistant'; content: string }>
+  onResponse: (response: Response) => Promise<void>
   onNext: () => void
-  onPrevious: () => void
+  onPrevious?: () => void
   initialResponse?: Response
 }
 
@@ -42,6 +51,8 @@ export default function CriterionQuestion({
   criterion,
   currentIndex,
   totalCriteria,
+  assessmentId,
+  chatMessages = [],
   onResponse,
   onNext,
   onPrevious,
@@ -59,6 +70,9 @@ export default function CriterionQuestion({
   )
   
   const [importance, setImportance] = useState<number>(initialResponse?.importance || 3)
+  
+  const [showLevelGuide, setShowLevelGuide] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   // Reset cuando cambia el criterio
   useEffect(() => {
@@ -81,30 +95,53 @@ export default function CriterionQuestion({
 
   const gap = toBeLevel - asIsLevel
 
-  const handleSaveAndNext = () => {
-    const response: Response = {
-      as_is_level: asIsLevel,
-      as_is_confidence: asIsConfidence,
-      as_is_notes: asIsNotes,
-      to_be_level: toBeLevel,
-      to_be_timeframe: toBeTimeframe,
-      importance: importance
+  // ========================================
+  // FUNCIÓN ÚNICA QUE GUARDA TODO
+  // ========================================
+  const guardarTodo = async () => {
+    setSaving(true)
+    
+    try {
+      // 1. Guardar respuesta del criterio (AS-IS, TO-BE, Importancia)
+      const response: Response = {
+        as_is_level: asIsLevel,
+        as_is_confidence: asIsConfidence,
+        as_is_notes: asIsNotes,
+        to_be_level: toBeLevel,
+        to_be_timeframe: toBeTimeframe,
+        importance: importance
+      }
+      
+      await onResponse(response)
+      console.log('✅ Respuesta guardada')
+
+      // NOTA: Los mensajes ya se guardan en tiempo real via evento chatMessage
+      // No es necesario guardarlos aquí de nuevo
+
+      return true
+    } catch (error) {
+      console.error('❌ Error guardando:', error)
+      alert('Error al guardar. Por favor, intenta de nuevo.')
+      return false
+    } finally {
+      setSaving(false)
     }
-    onResponse(response)
-    onNext()
   }
 
-  const handleSaveAndPrevious = () => {
-    const response: Response = {
-      as_is_level: asIsLevel,
-      as_is_confidence: asIsConfidence,
-      as_is_notes: asIsNotes,
-      to_be_level: toBeLevel,
-      to_be_timeframe: toBeTimeframe,
-      importance: importance
+  const handleSaveAndNext = async () => {
+    const success = await guardarTodo()
+    if (success) {
+      onNext()
     }
-    onResponse(response)
-    onPrevious()
+  }
+
+  const handleSaveAndPrevious = async () => {
+    if (!onPrevious) return
+    
+    const success = await guardarTodo()
+    if (success) {
+      onPrevious()
+    }
   }
 
   const getLevelLabel = (level: number): string => {
@@ -130,6 +167,35 @@ export default function CriterionQuestion({
     if (gap === 1) return 'bg-green-50'
     if (gap === 2) return 'bg-yellow-50'
     return 'bg-red-50'
+  }
+
+  const getLevelDescription = (level: number): string | null => {
+    const key = `level_${level}_description_es` as keyof Criterion
+    return (criterion[key] as string) || null
+  }
+
+  const hasLevelDescriptions = !!(
+    criterion.level_1_description_es ||
+    criterion.level_2_description_es ||
+    criterion.level_3_description_es ||
+    criterion.level_4_description_es ||
+    criterion.level_5_description_es
+  )
+
+  const LEVEL_COLORS = {
+    1: 'border-red-200 bg-red-50',
+    2: 'border-orange-200 bg-orange-50',
+    3: 'border-yellow-200 bg-yellow-50',
+    4: 'border-blue-200 bg-blue-50',
+    5: 'border-green-200 bg-green-50'
+  }
+
+  const LEVEL_BADGE_COLORS = {
+    1: 'bg-red-100 text-red-800',
+    2: 'bg-orange-100 text-orange-800',
+    3: 'bg-yellow-100 text-yellow-800',
+    4: 'bg-blue-100 text-blue-800',
+    5: 'bg-green-100 text-green-800'
   }
 
   return (
@@ -165,6 +231,83 @@ export default function CriterionQuestion({
           </div>
         )}
       </div>
+
+      {/* Guía de Niveles de Madurez */}
+      {hasLevelDescriptions && (
+        <div className="mb-6 p-6 bg-white border border-gray-200 rounded-lg">
+          <button
+            onClick={() => setShowLevelGuide(!showLevelGuide)}
+            className="flex items-center justify-between w-full text-left mb-4"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Info className="w-5 h-5 text-blue-600" />
+              Guía de Niveles de Madurez
+            </h3>
+            {showLevelGuide ? (
+              <ChevronUp className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
+
+          {showLevelGuide && (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600 mb-4">
+                Lee estas descripciones para evaluar con precisión en qué nivel se encuentra tu organización:
+              </p>
+              
+              {[1, 2, 3, 4, 5].map((level) => {
+                const description = getLevelDescription(level)
+                if (!description) return null
+
+                const isCurrentAsIs = asIsLevel === level
+                const isCurrentToBe = toBeLevel === level
+
+                return (
+                  <div
+                    key={level}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      isCurrentAsIs || isCurrentToBe
+                        ? `ring-2 ring-offset-2 ${isCurrentAsIs ? 'ring-blue-500' : 'ring-green-500'} ${LEVEL_COLORS[level as keyof typeof LEVEL_COLORS]}`
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
+                          LEVEL_BADGE_COLORS[level as keyof typeof LEVEL_BADGE_COLORS]
+                        }`}>
+                          {level}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-900">
+                            Nivel {level} - {getLevelLabel(level)}
+                          </h4>
+                          {isCurrentAsIs && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                              Tu nivel actual
+                            </span>
+                          )}
+                          {isCurrentToBe && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                              Tu objetivo
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Gap Analysis Summary */}
       {gap > 0 && (
@@ -219,27 +362,6 @@ export default function CriterionQuestion({
             <span className="inline-block px-4 py-2 bg-blue-100 text-blue-800 rounded-full font-semibold">
               Nivel {asIsLevel}: {getLevelLabel(asIsLevel)}
             </span>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            ¿Qué tan seguro estás de esta evaluación?
-          </label>
-          <div className="flex gap-2">
-            {(['low', 'medium', 'high'] as const).map((level) => (
-              <button
-                key={level}
-                onClick={() => setAsIsConfidence(level)}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                  asIsConfidence === level
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {level === 'low' ? 'Baja' : level === 'medium' ? 'Media' : 'Alta'}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -354,20 +476,44 @@ export default function CriterionQuestion({
 
       {/* Botones de navegación */}
       <div className="flex gap-4">
-        <button
-          onClick={handleSaveAndPrevious}
-          disabled={currentIndex === 0}
-          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          ← Anterior
-        </button>
+        {onPrevious && (
+          <button
+            onClick={handleSaveAndPrevious}
+            disabled={saving}
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700"></div>
+                Guardando...
+              </>
+            ) : (
+              '← Anterior'
+            )}
+          </button>
+        )}
         <button
           onClick={handleSaveAndNext}
-          className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+          disabled={saving}
+          className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {currentIndex === totalCriteria - 1 ? 'Finalizar' : 'Siguiente →'}
+          {saving ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              Guardando...
+            </>
+          ) : (
+            currentIndex === totalCriteria - 1 ? 'Finalizar' : 'Siguiente →'
+          )}
         </button>
       </div>
+
+      {/* Indicador de mensajes */}
+      {chatMessages.length > 0 && (
+        <div className="mt-4 text-center text-sm text-gray-600">
+          💬 {chatMessages.length} mensaje{chatMessages.length > 1 ? 's' : ''} del chat será{chatMessages.length > 1 ? 'n' : ''} guardado{chatMessages.length > 1 ? 's' : ''}
+        </div>
+      )}
     </div>
   )
 }
