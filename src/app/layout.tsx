@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Montserrat } from 'next/font/google'
 import './globals.css'
-import Navbar from '@/components/Navbar'
+import Header from '@/components/Header'
 
 const montserrat = Montserrat({
   weight: ['400', '600', '700'],
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={montserrat.className}>
-        <Navbar />
+        <Header />
         {children}
       </body>
     </html>

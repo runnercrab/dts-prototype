@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import LoginDemo from '@/components/LoginDemo'
 
 export default function Header() {
@@ -12,12 +13,16 @@ export default function Header() {
       <div className="w-full bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="text-3xl">🔷</div>
-            <span className="text-2xl font-bold" style={{ color: '#0066CC' }}>
-              Gapply
-            </span>
-          </div>
+          <a href="/">
+            <Image 
+              src="/gapply-logo.png" 
+              alt="Gapply - Transformación Digital" 
+              width={150} 
+              height={150}
+              className="object-contain"
+              priority
+            />
+          </a>
           
           {/* Navegación + Login Demo */}
           <div className="flex items-center gap-6">

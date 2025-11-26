@@ -1,14 +1,12 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import Header from '@/components/Header'
 import ProblemaSection from '@/components/ProblemaSection'
 import SolucionSection from '@/components/SolucionSection'
 
 export default function Home() {
   return (
     <>
-      {/* Header con Login Demo (Client Component separado) */}
-      <Header />
+      
 
       {/* HERO SECTION - Título + Subtítulo */}
       <div id="inicio" className="w-full pt-12 pb-6 bg-gradient-to-b from-white to-blue-50">
