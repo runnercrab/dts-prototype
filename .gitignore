@@ -12,3 +12,7 @@ dist
 coverage
 
 ayuda
+*.backup
+*.backup.*
+backups/
+*.OLD

@@ -19,8 +19,15 @@ interface Props {
   onSubdimensionClick?: (subdimensionId: string) => void
 }
 
-// Iconos para cada dimensión
+// 🌟 ACTUALIZADO: Iconos para cada dimensión EN ESPAÑOL
 const DIMENSION_ICONS: Record<string, string> = {
+  'Cliente': '🛒',
+  'Estrategia': '📈',
+  'Tecnología': '🧮',
+  'Operaciones': '⚙️',
+  'Cultura': '👥',
+  'Datos': '📊',
+  // Fallbacks en inglés por si acaso
   'Customer': '🛒',
   'Strategy': '📈',
   'Technology': '🧮',
@@ -29,8 +36,8 @@ const DIMENSION_ICONS: Record<string, string> = {
   'Data': '📊'
 }
 
-// Orden de las dimensiones
-const DIMENSION_ORDER = ['Customer', 'Strategy', 'Technology', 'Operations', 'Culture', 'Data']
+// 🌟 ACTUALIZADO: Orden de las dimensiones EN ESPAÑOL
+const DIMENSION_ORDER = ['Cliente', 'Estrategia', 'Tecnología', 'Operaciones', 'Cultura', 'Datos']
 
 export default function DimensionProgressMapVisual({ subdimensions, onStartAssessment }: Props) {
   
@@ -57,7 +64,7 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
   const totalProgress = useMemo(() => {
     const completed = subdimensions.filter(s => s.is_completed).length
     const total = subdimensions.length
-    return { completed, total, percentage: Math.round((completed / total) * 100) }
+    return { completed, total, percentage: total > 0 ? Math.round((completed / total) * 100) : 0 }
   }, [subdimensions])
 
   // Encontrar subdimensión actual
@@ -88,8 +95,11 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
       </div>
 
       {/* Barra de progreso global */}
-      <div className="progress">
-        <span style={{ width: `${totalProgress.percentage}%` }} />
+      <div className="w-full bg-gray-200 rounded-full h-3">
+        <div 
+          className="bg-blue-600 h-3 rounded-full transition-all duration-500"
+          style={{ width: `${totalProgress.percentage}%` }} 
+        />
       </div>
 
       {/* ICONOS DE DIMENSIONES */}
@@ -108,7 +118,7 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
                   color: 'white'
                 }}
               >
-                {DIMENSION_ICONS[dimName]}
+                {DIMENSION_ICONS[dimName] || '📋'}
               </div>
               <div className="text-xs font-semibold text-gray-700">{dimName}</div>
               <div className="text-xs text-gray-500">
@@ -132,7 +142,7 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
                 className="px-4 py-2 rounded-t-lg font-semibold text-white text-sm flex items-center justify-between"
                 style={{ background: '#334155' }}
               >
-                <span>{DIMENSION_ICONS[dimName]} {dimName}</span>
+                <span>{DIMENSION_ICONS[dimName] || '📋'} {dimName}</span>
                 <span className="text-xs opacity-80">{completed}/{subs.length}</span>
               </div>
 
