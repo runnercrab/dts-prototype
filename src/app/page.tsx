@@ -1,13 +1,17 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import Header from '@/components/Header'
 import ProblemaSection from '@/components/ProblemaSection'
 import SolucionSection from '@/components/SolucionSection'
 
 export default function Home() {
   return (
     <>
+      {/* Header con Login Demo (Client Component separado) */}
+      <Header />
+
       {/* HERO SECTION - Título + Subtítulo */}
-      <div className="w-full pt-12 pb-6 bg-gradient-to-b from-white to-blue-50">
+      <div id="inicio" className="w-full pt-12 pb-6 bg-gradient-to-b from-white to-blue-50">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6" style={{ color: '#0f172a' }}>
             ¿Y si pudieras controlar la transformación digital de tu empresa de forma sencilla?
@@ -330,7 +334,7 @@ export default function Home() {
       </div>
 
       {/* SECCIÓN 8: FAQ */}
-      <div className="card mb-12">
+      <div id="faq" className="card mb-12">
         <div className="card-body">
           <h2 className="text-3xl font-bold mb-8 text-center" style={{ color: '#0f172a' }}>
             Preguntas Frecuentes
