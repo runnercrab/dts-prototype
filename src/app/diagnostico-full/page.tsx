@@ -581,10 +581,10 @@ export default function DiagnosticoFullPage() {
                 className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-4 flex flex-col"
                 style={{ height: 'calc(100vh - 120px)' }}
               >
-                {/* Avatar - Altura adaptativa: 220px en laptops, 350px en pantallas grandes */}
+                {/* Avatar - Altura adaptativa: 180px en laptops, 320px en pantallas 24"+ */}
                 <div 
-                  className="flex-shrink-0 bg-gray-50 border-b border-gray-200 2xl:h-[350px]"
-                  style={{ height: '220px' }}
+                  className="flex-shrink-0 bg-gray-50 border-b border-gray-200 2xl:h-[320px]"
+                  style={{ height: '180px' }}
                 >
                   <AvatarPane />
                 </div>

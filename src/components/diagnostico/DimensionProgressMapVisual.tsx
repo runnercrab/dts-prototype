@@ -73,12 +73,12 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
   return (
     <div className="space-y-3">
       
-      {/* Header compacto */}
+      {/* Header compacto - Texto adaptativo */}
       <div>
-        <h2 className="text-sm font-bold text-gray-900">
+        <h2 className="text-sm 2xl:text-base font-bold text-gray-900">
           Progreso del Diagnóstico
         </h2>
-        <p className="text-xs text-gray-600 mt-1">
+        <p className="text-xs 2xl:text-sm text-gray-600 mt-1">
           {totalProgress.completed}/{totalProgress.total} completadas ({totalProgress.percentage}%)
         </p>
       </div>
@@ -91,7 +91,7 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
         />
       </div>
 
-      {/* ICONOS DE DIMENSIONES - Compactos en 2 filas de 3 */}
+      {/* ICONOS DE DIMENSIONES - Compactos en 2 filas de 3, más grandes en 24" */}
       <div className="grid grid-cols-3 gap-2">
         {DIMENSION_ORDER.map(dimName => {
           const subs = groupedByDimension[dimName] || []
@@ -101,7 +101,7 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
           return (
             <div key={dimName} className="text-center">
               <div 
-                className="w-10 h-10 rounded-full mx-auto flex items-center justify-center text-lg mb-1"
+                className="w-10 h-10 2xl:w-14 2xl:h-14 rounded-full mx-auto flex items-center justify-center text-lg 2xl:text-2xl mb-1"
                 style={{ 
                   background: hasCurrent ? '#10b981' : completed > 0 ? '#3b82f6' : '#6b7280',
                   color: 'white'
@@ -109,8 +109,8 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
               >
                 {DIMENSION_ICONS[dimName] || '📋'}
               </div>
-              <div className="text-[10px] font-semibold text-gray-700 leading-tight">{dimName}</div>
-              <div className="text-[9px] text-gray-500">
+              <div className="text-[10px] 2xl:text-xs font-semibold text-gray-700 leading-tight">{dimName}</div>
+              <div className="text-[9px] 2xl:text-xs text-gray-500">
                 {completed}/{subs.length}
               </div>
             </div>
@@ -130,13 +130,13 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
 
           return (
             <div key={dimName}>
-              {/* Dimensión header - MÁS COMPACTO */}
+              {/* Dimensión header - MÁS COMPACTO, texto adaptativo */}
               <div 
-                className="px-2 py-1 rounded-t-lg font-semibold text-white text-xs flex items-center justify-between"
+                className="px-2 py-1 rounded-t-lg font-semibold text-white text-xs 2xl:text-sm flex items-center justify-between"
                 style={{ background: '#334155' }}
               >
                 <span>{DIMENSION_ICONS[dimName] || '📋'} {dimName}</span>
-                <span className="text-[10px] opacity-80">{completed}/{subs.length}</span>
+                <span className="text-[10px] 2xl:text-xs opacity-80">{completed}/{subs.length}</span>
               </div>
 
               {/* Subdimensiones grid - MÁS COMPACTO */}
@@ -158,7 +158,7 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
                     return (
                       <div
                         key={sub.id}
-                        className="px-2 py-1 rounded text-xs transition-all"
+                        className="px-2 py-1 2xl:px-3 2xl:py-2 rounded text-xs 2xl:text-sm transition-all"
                         style={{ 
                           background: bgColor,
                           color: textColor,
@@ -166,13 +166,13 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
                         }}
                       >
                         <div className="flex items-center justify-between gap-1">
-                          <span className="text-[10px] font-bold">{sub.code}</span>
-                          {sub.is_current && <span className="text-sm">▶</span>}
+                          <span className="text-[10px] 2xl:text-xs font-bold">{sub.code}</span>
+                          {sub.is_current && <span className="text-sm 2xl:text-base">▶</span>}
                         </div>
-                        <div className="mt-0.5 text-[9px] leading-tight line-clamp-2">
+                        <div className="mt-0.5 text-[9px] 2xl:text-xs leading-tight line-clamp-2">
                           {sub.name}
                         </div>
-                        <div className="mt-0.5 text-[9px] opacity-80">
+                        <div className="mt-0.5 text-[9px] 2xl:text-xs opacity-80">
                           {sub.completed_criteria}/{sub.total_criteria}
                         </div>
                       </div>
