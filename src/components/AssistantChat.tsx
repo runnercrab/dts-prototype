@@ -96,10 +96,11 @@ export default function AssistantChat({ messages = [] }: AssistantChatProps) {
         <h3 className="text-xs font-semibold text-gray-900">Chat con Asistente</h3>
       </div>
 
-      {/* Messages */}
+      {/* Messages - Con padding bottom GRANDE para evitar solapamiento con botón del avatar */}
       <div 
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-3 py-3 space-y-2"
+        style={{ paddingBottom: '100px' }}
       >
         {msgs.length === 0 ? (
           <div className="text-center text-gray-500 text-xs mt-4">

@@ -581,14 +581,14 @@ export default function DiagnosticoFullPage() {
                 className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-4 flex flex-col"
                 style={{ height: 'calc(100vh - 120px)' }}
               >
-                {/* Avatar - Altura adaptativa: 180px en laptops, 320px en pantallas 24"+ */}
+                {/* Avatar - Altura fija razonable: 250px en laptops, 380px en 24" */}
                 <div 
-                  className="flex-shrink-0 bg-gray-50 border-b border-gray-200 2xl:h-[320px]"
-                  style={{ height: '180px' }}
+                  className="flex-shrink-0 bg-gray-50 border-b border-gray-200 2xl:h-[380px]"
+                  style={{ height: '250px' }}
                 >
                   <AvatarPane />
                 </div>
-                <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 relative">
                   <AssistantChat messages={currentChatMessages} />
                 </div>
               </div>
