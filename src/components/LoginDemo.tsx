@@ -19,21 +19,53 @@ export default function LoginDemo({ onClose }: LoginDemoProps) {
     setError('')
     setLoading(true)
 
-    // Credenciales hardcoded para demo
-    if (username.toLowerCase() === 'gapply' && password === 'demo') {
-      // Assessment ID completo de Gapply con 129 respuestas
-      const GAPPLY_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
-      
-      // Guardar en localStorage
-      localStorage.setItem('dts_assessment_id', GAPPLY_ASSESSMENT_ID)
-      
-      // Pequeña pausa para feedback visual
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Redirigir al diagnóstico
-      router.push('/diagnostico-full')
-    } else {
-      setError('Usuario o contraseña incorrectos')
+    try {
+      // Credenciales hardcoded para demo
+      if (username.toLowerCase() === 'gapply' && password === 'demo') {
+        // Assessment ID completo de Gapply con 129 respuestas
+        const GAPPLY_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
+        
+        console.log('✅ Login exitoso, guardando assessment ID:', GAPPLY_ASSESSMENT_ID)
+        
+        // CRÍTICO: Limpiar cualquier estado previo
+        localStorage.removeItem('dts_assessment_id')
+        
+        // Pequeña pausa para asegurar limpieza
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        // Guardar en localStorage
+        localStorage.setItem('dts_assessment_id', GAPPLY_ASSESSMENT_ID)
+        
+        // Verificar que se guardó correctamente
+        const saved = localStorage.getItem('dts_assessment_id')
+        console.log('✅ Assessment ID guardado en localStorage:', saved)
+        
+        // Pausa para feedback visual
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        // Cerrar modal primero
+        onClose()
+        
+        // Esperar un frame
+        await new Promise(resolve => setTimeout(resolve, 50))
+        
+        // Redirigir al diagnóstico con refresh forzado
+        console.log('🚀 Redirigiendo a /diagnostico-full')
+        
+        // Opción 1: Redirección directa (prueba primero esta)
+        window.location.href = '/diagnostico-full'
+        
+        // Opción 2: Si la Opción 1 no funciona, usa esto en su lugar:
+        // router.push('/diagnostico-full')
+        // router.refresh()
+        
+      } else {
+        setError('Usuario o contraseña incorrectos')
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error('❌ Error en login:', err)
+      setError('Error al iniciar sesión. Por favor intenta de nuevo.')
       setLoading(false)
     }
   }
@@ -88,13 +120,13 @@ export default function LoginDemo({ onClose }: LoginDemoProps) {
             </label>
             <input
               id="password"
-              type="password"
+              type="text"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="demo"
               required
-              autoComplete="current-password"
+              autoComplete="off"
             />
           </div>
 
@@ -119,7 +151,11 @@ export default function LoginDemo({ onClose }: LoginDemoProps) {
         <div className="mt-6 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-500 text-center">
             💡 <strong>Credenciales demo:</strong><br />
-            Usuario: Gapply | Contraseña: demo
+            Usuario: <code className="bg-gray-100 px-1 rounded">Gapply</code> | 
+            Contraseña: <code className="bg-gray-100 px-1 rounded">demo</code>
+          </p>
+          <p className="text-xs text-gray-400 text-center mt-2">
+            Assessment ID: b4b63b9b-4412-4628-8a9a-527b0696426a
           </p>
         </div>
       </div>
