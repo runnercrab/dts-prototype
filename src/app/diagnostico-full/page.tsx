@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation' // ⭐ NUEVO
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AvatarPane from '@/components/AvatarPane'
 import AssistantChat from '@/components/AssistantChat'
@@ -62,16 +62,15 @@ interface Subdimension {
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
-  saved?: boolean  // Flag para saber si ya está en BD
+  saved?: boolean
 }
 
 export default function DiagnosticoFullPage() {
-  const router = useRouter() // ⭐ NUEVO
+  const router = useRouter()
   const [phase, setPhase] = useState<'onboarding' | 'assessment' | 'completed'>('onboarding')
   const [assessmentId, setAssessmentId] = useState<string | null>(null)
   const [onboardingData, setOnboardingData] = useState<any>(null)
   
-  // Debug: log cuando cambia assessmentId
   useEffect(() => {
     console.log('🆔 assessmentId cambió a:', assessmentId)
     if (assessmentId) {
@@ -79,6 +78,7 @@ export default function DiagnosticoFullPage() {
       localStorage.setItem('dts_assessment_id', assessmentId)
     }
   }, [assessmentId])
+  
   const [showMap, setShowMap] = useState(true)
   const [criteria, setCriteria] = useState<Criterion[]>([])
   const [subdimensions, setSubdimensions] = useState<Subdimension[]>([])
@@ -88,16 +88,11 @@ export default function DiagnosticoFullPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ========================================
-  // AGREGAR y GUARDAR mensajes del chat
-  // ========================================
   useEffect(() => {
     const handleChatMessage = async (message: { role: 'user' | 'assistant' | 'system'; content: string }) => {
-      // Agregar a UI inmediatamente (nuevo = saved: false)
       const newMessage = { ...message, saved: false }
       setCurrentChatMessages(prev => [...prev, newMessage])
       
-      // Guardar en BD (es un mensaje nuevo)
       if (assessmentId && criteria[currentCriterionIndex]) {
         try {
           const currentCriterion = criteria[currentCriterionIndex]
@@ -109,7 +104,6 @@ export default function DiagnosticoFullPage() {
           })
           console.log('💾 Mensaje nuevo guardado en BD')
           
-          // Marcar como guardado en el estado
           setCurrentChatMessages(prev => 
             prev.map(msg => 
               msg.content === message.content && msg.role === message.role
@@ -127,9 +121,6 @@ export default function DiagnosticoFullPage() {
     return () => bus.off('chatMessage', handleChatMessage)
   }, [assessmentId, criteria, currentCriterionIndex])
 
-  // ========================================
-  // CARGAR mensajes guardados al cambiar criterio
-  // ========================================
   useEffect(() => {
     const loadMessagesForCriterion = async () => {
       console.log('🔍 useEffect disparado - currentCriterionIndex:', currentCriterionIndex)
@@ -171,7 +162,7 @@ export default function DiagnosticoFullPage() {
           const messages = data.map(msg => ({
             role: msg.role as 'user' | 'assistant' | 'system',
             content: msg.content,
-            saved: true  // Ya están en BD
+            saved: true
           }))
           console.log('📋 Mensajes que se van a cargar:', messages)
           setCurrentChatMessages(messages)
@@ -353,7 +344,6 @@ export default function DiagnosticoFullPage() {
     console.log('💾 Guardando en localStorage:', newAssessmentId)
     localStorage.setItem('dts_assessment_id', newAssessmentId)
     
-    // Cargar onboarding_data del assessment
     const { data: assessment } = await supabase
       .from('dts_assessments')
       .select('onboarding_data')
@@ -385,16 +375,6 @@ export default function DiagnosticoFullPage() {
     
     try {
       console.log('💾 Guardando respuesta para criterio:', criterion.code)
-      console.log('📊 Datos a guardar:', {
-        assessment_id: assessmentId,
-        criteria_id: criterion.id,
-        as_is_level: response.as_is_level,
-        as_is_confidence: response.as_is_confidence,
-        as_is_notes: response.as_is_notes || null,
-        to_be_level: response.to_be_level,
-        to_be_timeframe: response.to_be_timeframe,
-        importance: response.importance
-      })
       
       const { error } = await supabase.from('dts_responses').upsert({
         assessment_id: assessmentId,
@@ -478,7 +458,7 @@ export default function DiagnosticoFullPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-4">🎉 ¡Diagnóstico Completado!</h1>
           <p className="text-gray-600 mb-8">Tus respuestas han sido guardadas.</p>
           <button 
-            onClick={() => window.location.href = '/resultados'}
+            onClick={() => router.push('/resultados')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Ver Resultados
@@ -511,7 +491,6 @@ export default function DiagnosticoFullPage() {
               >
                 📋 Ver Onboarding
               </button>
-              {/* ⭐ NUEVO - Botón Ver Resultados */}
               <span className="text-gray-300">|</span>
               <button
                 onClick={() => router.push('/resultados')}
@@ -537,10 +516,11 @@ export default function DiagnosticoFullPage() {
       <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
           
+          {/* SIDEBAR IZQUIERDO - Mapa de Progreso (2 columnas) */}
           {showMap && (
-            <div className="lg:col-span-3 order-2 lg:order-1">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-4 max-h-[calc(100vh-120px)] overflow-y-auto">
-                <h3 className="text-sm font-bold text-gray-900 mb-3">Mapa de Progreso</h3>
+            <div className="lg:col-span-2 order-2 lg:order-1">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sticky top-4 max-h-[calc(100vh-120px)] overflow-y-auto">
+                <h3 className="text-xs font-bold text-gray-900 mb-2">Progreso</h3>
                 <DimensionProgressMap 
                   subdimensions={subdimensions}
                   totalCriteria={criteria.length}
@@ -551,7 +531,8 @@ export default function DiagnosticoFullPage() {
             </div>
           )}
 
-          <div className={`order-1 lg:order-2 ${showMap ? 'lg:col-span-6' : 'lg:col-span-9'}`}>
+          {/* CONTENIDO CENTRAL - Pregunta (7 columnas con mapa, 9 sin mapa) */}
+          <div className={`order-1 lg:order-2 ${showMap ? 'lg:col-span-7' : 'lg:col-span-9'}`}>
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
@@ -586,18 +567,21 @@ export default function DiagnosticoFullPage() {
             ) : null}
           </div>
 
+          {/* SIDEBAR DERECHO - Avatar + Chat (3 columnas) */}
           {showMap && (
             <div className="lg:col-span-3 order-3">
               <div 
                 className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-4 flex flex-col"
                 style={{ height: 'calc(100vh - 120px)' }}
               >
+                {/* Avatar compacto */}
                 <div 
                   className="flex-shrink-0 bg-gray-50 border-b border-gray-200"
-                  style={{ height: '500px' }}
+                  style={{ height: '350px' }}
                 >
                   <AvatarPane />
                 </div>
+                {/* Chat expandido */}
                 <div className="flex-1 min-h-0">
                   <AssistantChat messages={currentChatMessages} />
                 </div>
