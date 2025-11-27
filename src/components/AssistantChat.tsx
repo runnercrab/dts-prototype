@@ -92,19 +92,19 @@ export default function AssistantChat({ messages = [] }: AssistantChatProps) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 bg-gray-50">
-        <h3 className="text-sm font-semibold text-gray-900">Chat con Asistente</h3>
+      <div className="flex-shrink-0 px-3 py-2 border-b border-gray-200 bg-gray-50">
+        <h3 className="text-xs font-semibold text-gray-900">Chat con Asistente</h3>
       </div>
 
       {/* Messages */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+        className="flex-1 overflow-y-auto px-3 py-3 space-y-2"
       >
         {msgs.length === 0 ? (
-          <div className="text-center text-gray-500 text-sm mt-8">
+          <div className="text-center text-gray-500 text-xs mt-4">
             <p>👋 Hola, soy tu asistente DTS.</p>
-            <p className="mt-2">¿En qué puedo ayudarte?</p>
+            <p className="mt-1">¿En qué puedo ayudarte?</p>
           </div>
         ) : (
           msgs.map((msg, i) => (
@@ -113,15 +113,15 @@ export default function AssistantChat({ messages = [] }: AssistantChatProps) {
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] px-4 py-2 rounded-lg ${
+                className={`max-w-[85%] px-3 py-2 rounded-lg ${
                   msg.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-900'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                <p className="text-xs whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                 {msg.source === 'voice' && (
-                  <span className="text-xs opacity-70 mt-1 block">🎤 Por voz</span>
+                  <span className="text-[10px] opacity-70 mt-1 block">🎤 Por voz</span>
                 )}
               </div>
             </div>
@@ -129,10 +129,10 @@ export default function AssistantChat({ messages = [] }: AssistantChatProps) {
         )}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 px-4 py-2 rounded-lg">
+            <div className="bg-gray-100 px-3 py-2 rounded-lg">
               <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                <span className="text-sm text-gray-600">Escribiendo...</span>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600"></div>
+                <span className="text-xs text-gray-600">Escribiendo...</span>
               </div>
             </div>
           </div>
@@ -140,8 +140,8 @@ export default function AssistantChat({ messages = [] }: AssistantChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="flex-shrink-0 px-4 py-3 border-t border-gray-200">
+      {/* Input - Con posición relativa y sin absolute */}
+      <div className="flex-shrink-0 px-3 py-2 border-t border-gray-200 bg-white">
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -153,14 +153,14 @@ export default function AssistantChat({ messages = [] }: AssistantChatProps) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu mensaje..."
+            placeholder="Escribe..."
             disabled={loading}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           >
             ▶
           </button>

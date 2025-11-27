@@ -185,19 +185,19 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
         })}
       </div>
 
-      {/* Leyenda - MÁS COMPACTA */}
-      <div className="flex items-center gap-3 text-[10px] pt-2 border-t border-gray-200">
+      {/* Leyenda - CON TEXTO CLARO */}
+      <div className="grid grid-cols-3 gap-1 text-[9px] pt-2 border-t border-gray-200">
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded" style={{ background: '#fecaca' }} />
-          <span className="text-gray-700">✓</span>
+          <div className="w-3 h-3 rounded flex-shrink-0" style={{ background: '#fecaca' }} />
+          <span className="text-gray-700">Completa</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded" style={{ background: '#10b981' }} />
-          <span className="text-gray-700">▶</span>
+          <div className="w-3 h-3 rounded flex-shrink-0" style={{ background: '#10b981' }} />
+          <span className="text-gray-700">En curso</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded" style={{ background: '#ef4444' }} />
-          <span className="text-gray-700">⏳</span>
+          <div className="w-3 h-3 rounded flex-shrink-0" style={{ background: '#ef4444' }} />
+          <span className="text-gray-700">Pendiente</span>
         </div>
       </div>
 
