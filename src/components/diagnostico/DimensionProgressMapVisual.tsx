@@ -19,7 +19,7 @@ interface Props {
   onSubdimensionClick?: (subdimensionId: string) => void
 }
 
-// 🌟 ACTUALIZADO: Iconos para cada dimensión EN ESPAÑOL
+// Iconos para cada dimensión EN ESPAÑOL
 const DIMENSION_ICONS: Record<string, string> = {
   'Cliente': '🛒',
   'Estrategia': '📈',
@@ -27,7 +27,7 @@ const DIMENSION_ICONS: Record<string, string> = {
   'Operaciones': '⚙️',
   'Cultura': '👥',
   'Datos': '📊',
-  // Fallbacks en inglés por si acaso
+  // Fallbacks en inglés
   'Customer': '🛒',
   'Strategy': '📈',
   'Technology': '🧮',
@@ -36,7 +36,7 @@ const DIMENSION_ICONS: Record<string, string> = {
   'Data': '📊'
 }
 
-// 🌟 ACTUALIZADO: Orden de las dimensiones EN ESPAÑOL
+// Orden de las dimensiones EN ESPAÑOL
 const DIMENSION_ORDER = ['Cliente', 'Estrategia', 'Tecnología', 'Operaciones', 'Cultura', 'Datos']
 
 export default function DimensionProgressMapVisual({ subdimensions, onStartAssessment }: Props) {
@@ -71,39 +71,28 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
   const currentSub = subdimensions.find(s => s.is_current)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       
-      {/* Header con progreso total */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Mapa de Progreso - Diagnóstico Digital
-          </h2>
-          <p className="text-sm text-gray-600 mt-1">
-            {totalProgress.completed} de {totalProgress.total} subdimensiones completadas ({totalProgress.percentage}%)
-          </p>
-        </div>
-        
-        {currentSub && (
-          <button
-            onClick={onStartAssessment}
-            className="btn btn-primary"
-          >
-            👉 Ver Pregunta
-          </button>
-        )}
+      {/* Header compacto */}
+      <div>
+        <h2 className="text-sm font-bold text-gray-900">
+          Progreso del Diagnóstico
+        </h2>
+        <p className="text-xs text-gray-600 mt-1">
+          {totalProgress.completed}/{totalProgress.total} completadas ({totalProgress.percentage}%)
+        </p>
       </div>
 
       {/* Barra de progreso global */}
-      <div className="w-full bg-gray-200 rounded-full h-3">
+      <div className="w-full bg-gray-200 rounded-full h-2">
         <div 
-          className="bg-blue-600 h-3 rounded-full transition-all duration-500"
+          className="bg-blue-600 h-2 rounded-full transition-all duration-500"
           style={{ width: `${totalProgress.percentage}%` }} 
         />
       </div>
 
-      {/* ICONOS DE DIMENSIONES */}
-      <div className="grid grid-cols-6 gap-4">
+      {/* ICONOS DE DIMENSIONES - Compactos en 2 filas de 3 */}
+      <div className="grid grid-cols-3 gap-2">
         {DIMENSION_ORDER.map(dimName => {
           const subs = groupedByDimension[dimName] || []
           const completed = subs.filter(s => s.is_completed).length
@@ -112,7 +101,7 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
           return (
             <div key={dimName} className="text-center">
               <div 
-                className="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl mb-2"
+                className="w-10 h-10 rounded-full mx-auto flex items-center justify-center text-lg mb-1"
                 style={{ 
                   background: hasCurrent ? '#10b981' : completed > 0 ? '#3b82f6' : '#6b7280',
                   color: 'white'
@@ -120,8 +109,8 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
               >
                 {DIMENSION_ICONS[dimName] || '📋'}
               </div>
-              <div className="text-xs font-semibold text-gray-700">{dimName}</div>
-              <div className="text-xs text-gray-500">
+              <div className="text-[10px] font-semibold text-gray-700 leading-tight">{dimName}</div>
+              <div className="text-[9px] text-gray-500">
                 {completed}/{subs.length}
               </div>
             </div>
@@ -129,26 +118,30 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
         })}
       </div>
 
-      {/* GRID DE SUBDIMENSIONES */}
-      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+      {/* ACCORDION DE SUBDIMENSIONES - Solo mostrar dimensión activa */}
+      <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
         {DIMENSION_ORDER.map(dimName => {
           const subs = groupedByDimension[dimName] || []
           const completed = subs.filter(s => s.is_completed).length
+          const hasCurrent = subs.some(s => s.is_current)
+          
+          // Solo mostrar dimensión si tiene subdimensión activa O está completa
+          if (!hasCurrent && completed === 0) return null
 
           return (
             <div key={dimName}>
-              {/* Dimensión header */}
+              {/* Dimensión header - MÁS COMPACTO */}
               <div 
-                className="px-4 py-2 rounded-t-lg font-semibold text-white text-sm flex items-center justify-between"
+                className="px-2 py-1 rounded-t-lg font-semibold text-white text-xs flex items-center justify-between"
                 style={{ background: '#334155' }}
               >
                 <span>{DIMENSION_ICONS[dimName] || '📋'} {dimName}</span>
-                <span className="text-xs opacity-80">{completed}/{subs.length}</span>
+                <span className="text-[10px] opacity-80">{completed}/{subs.length}</span>
               </div>
 
-              {/* Subdimensiones grid o mensaje vacío */}
+              {/* Subdimensiones grid - MÁS COMPACTO */}
               {subs.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2 p-2 border border-gray-200 rounded-b-lg bg-gray-50">
+                <div className="grid grid-cols-2 gap-1 p-1 border border-gray-200 rounded-b-lg bg-gray-50">
                   {subs.map(sub => {
                     // Determinar color
                     let bgColor = '#ef4444' // Rojo - pendiente
@@ -165,51 +158,46 @@ export default function DimensionProgressMapVisual({ subdimensions, onStartAsses
                     return (
                       <div
                         key={sub.id}
-                        className="px-3 py-2 rounded-lg text-sm font-medium transition-all"
+                        className="px-2 py-1 rounded text-xs transition-all"
                         style={{ 
                           background: bgColor,
                           color: textColor,
-                          border: sub.is_current ? '3px solid #059669' : 'none',
-                          boxShadow: sub.is_current ? '0 0 0 3px rgba(16, 185, 129, 0.2)' : 'none'
+                          border: sub.is_current ? '2px solid #059669' : 'none'
                         }}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold">{sub.code}</span>
-                          {sub.is_current && <span className="text-lg">▶</span>}
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[10px] font-bold">{sub.code}</span>
+                          {sub.is_current && <span className="text-sm">▶</span>}
                         </div>
-                        <div className="mt-1 text-xs leading-tight">
+                        <div className="mt-0.5 text-[9px] leading-tight line-clamp-2">
                           {sub.name}
                         </div>
-                        <div className="mt-1 text-xs opacity-80">
+                        <div className="mt-0.5 text-[9px] opacity-80">
                           {sub.completed_criteria}/{sub.total_criteria}
                         </div>
                       </div>
                     )
                   })}
                 </div>
-              ) : (
-                <div className="p-4 border border-gray-200 rounded-b-lg bg-gray-50 text-center text-sm text-gray-500 italic">
-                  Sin subdimensiones cargadas aún
-                </div>
-              )}
+              ) : null}
             </div>
           )
         })}
       </div>
 
-      {/* Leyenda */}
-      <div className="flex items-center gap-6 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ background: '#fecaca' }} />
-          <span className="text-gray-700">Completada</span>
+      {/* Leyenda - MÁS COMPACTA */}
+      <div className="flex items-center gap-3 text-[10px] pt-2 border-t border-gray-200">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded" style={{ background: '#fecaca' }} />
+          <span className="text-gray-700">✓</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ background: '#10b981' }} />
-          <span className="text-gray-700">En curso</span>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded" style={{ background: '#10b981' }} />
+          <span className="text-gray-700">▶</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ background: '#ef4444' }} />
-          <span className="text-gray-700">Pendiente</span>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded" style={{ background: '#ef4444' }} />
+          <span className="text-gray-700">⏳</span>
         </div>
       </div>
 
