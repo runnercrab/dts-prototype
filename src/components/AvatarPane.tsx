@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import StreamingAvatar from '@heygen/streaming-avatar'
-import bus from '../lib/bus'  // ✅ CORREGIDO: sin llaves
+import bus from '../lib/bus'
 
 const ENV_AVATAR = (process.env.NEXT_PUBLIC_HEYGEN_AVATAR_NAME || '').trim() || 'Shawn_Therapist_public'
 const ENV_VOICE  = (process.env.NEXT_PUBLIC_HEYGEN_VOICE_ID || '').trim()
@@ -14,15 +14,13 @@ export default function AvatarPane() {
   const videoRef  = useRef<HTMLVideoElement>(null)
   const avatarRef = useRef<any>(null)
 
-  // Audio PTT
   const audioCtxRef    = useRef<AudioContext | null>(null)
-  const rawStreamRef   = useRef<MediaStream | null>(null) // ✅ NUEVO: guardar el stream raw
+  const rawStreamRef   = useRef<MediaStream | null>(null)
   const procStreamRef  = useRef<MediaStream | null>(null)
   const recRef         = useRef<MediaRecorder | null>(null)
   const recChunksRef   = useRef<BlobPart[]>([])
   const recStartTsRef  = useRef<number>(0)
 
-  // VAD avatar
   const avatarAudioCtxRef = useRef<AudioContext | null>(null)
   const avatarAnalyserRef = useRef<AnalyserNode | null>(null)
   const [avatarTalking, setAvatarTalking] = useState(false)
@@ -40,7 +38,6 @@ export default function AvatarPane() {
     setTimeout(() => setCooldownTick(t => t + 1), ms + 30)
   }
 
-  // Timer de inactividad
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const INACTIVITY_TIMEOUT = 35 * 1000
 
@@ -104,11 +101,9 @@ export default function AvatarPane() {
     }
   }, [])
 
-  // ✅ FUNCIÓN MEJORADA: Detener audio completamente
   function stopAudio() {
     console.log('🛑 Deteniendo audio completamente...')
     
-    // Detener MediaRecorder
     try { 
       if (recRef.current && recRef.current.state !== 'inactive') {
         recRef.current.stop() 
@@ -120,7 +115,6 @@ export default function AvatarPane() {
     recChunksRef.current = []
     setPttState('idle')
     
-    // ✅ Cerrar AudioContext
     if (audioCtxRef.current) { 
       try { 
         audioCtxRef.current.close() 
@@ -131,7 +125,6 @@ export default function AvatarPane() {
     }
     audioCtxRef.current = null
     
-    // ✅ CRÍTICO: Detener TODAS las pistas del stream raw
     if (rawStreamRef.current) {
       rawStreamRef.current.getTracks().forEach(track => {
         track.stop()
@@ -140,7 +133,6 @@ export default function AvatarPane() {
       rawStreamRef.current = null
     }
     
-    // ✅ Limpiar stream procesado
     if (procStreamRef.current) {
       procStreamRef.current.getTracks().forEach(track => {
         track.stop()
@@ -193,29 +185,23 @@ export default function AvatarPane() {
     setAvatarTalking(false)
   }
 
-  // ✅ FUNCIÓN MEJORADA: Solicitar permisos de micrófono evitando dispositivos externos
   async function ensureMicChain() {
     console.log('🎤 Solicitando permisos de micrófono...')
     
-    // ✅ Si ya existe, no volver a crear
     if (procStreamRef.current && rawStreamRef.current) {
       console.log('✅ Micrófono ya configurado')
       return
     }
     
     try {
-      // ✅ PASO 1: Listar todos los dispositivos de audio disponibles
       const devices = await navigator.mediaDevices.enumerateDevices()
       const audioInputs = devices.filter(d => d.kind === 'audioinput')
       
       console.log('🎤 Dispositivos de audio encontrados:', audioInputs.length)
       audioInputs.forEach(d => console.log(`  - ${d.label} (${d.deviceId.substring(0, 20)}...)`))
       
-      // ✅ PASO 2: Filtrar dispositivos externos (iPhone, iPad vía Continuity)
-      // Buscar el micrófono integrado del dispositivo actual
       const builtInMic = audioInputs.find(d => {
         const label = d.label.toLowerCase()
-        // Patrones de micrófonos integrados
         return (
           label.includes('built-in') || 
           label.includes('integrado') ||
@@ -226,7 +212,6 @@ export default function AvatarPane() {
           label === 'micrófono' ||
           label === 'microphone'
         ) && (
-          // Excluir dispositivos iOS/externos
           !label.includes('iphone') &&
           !label.includes('ipad') &&
           !label.includes('airpods') &&
@@ -240,10 +225,8 @@ export default function AvatarPane() {
         console.log('⚠️ No se encontró micrófono integrado, usando el predeterminado')
       }
       
-      // ✅ PASO 3: Configurar constraints con el dispositivo específico
       const base: MediaStreamConstraints = { 
         audio: {
-          // ✅ CRÍTICO: Forzar el dispositivo integrado si existe
           ...(builtInMic && { deviceId: { exact: builtInMic.deviceId } }),
           echoCancellation: true, 
           noiseSuppression: true, 
@@ -256,13 +239,11 @@ export default function AvatarPane() {
       console.log('🎤 Solicitando acceso al micrófono...')
       const raw = await navigator.mediaDevices.getUserMedia(base)
       
-      // ✅ PASO 4: Verificar qué dispositivo se está usando
       const track = raw.getAudioTracks()[0]
       const settings = track.getSettings()
       console.log('🎤 Micrófono activo:', track.label)
       console.log('🎤 Settings:', settings)
       
-      // ✅ PASO 5: Detectar si aún así se conectó un dispositivo externo
       const isExternal = track.label.toLowerCase().includes('iphone') || 
                         track.label.toLowerCase().includes('ipad') ||
                         track.label.toLowerCase().includes('continuity')
@@ -271,7 +252,6 @@ export default function AvatarPane() {
         console.warn('⚠️ Se detectó dispositivo externo vía Continuity')
         raw.getTracks().forEach(t => t.stop())
         
-        // ✅ Reintentar SIN especificar deviceId (usar el predeterminado del navegador)
         console.log('🔄 Reintentando con dispositivo predeterminado...')
         const fallbackConstraints: MediaStreamConstraints = {
           audio: {
@@ -320,13 +300,11 @@ export default function AvatarPane() {
     return { text:(j?.text||'').trim(), lang }
   }
 
-  // ✅ Variable para evitar múltiples llamadas simultáneas
   const isRecordingRef = useRef(false)
 
   async function startRecord() {
     console.log('🎤 Iniciando grabación...')
     
-    // ✅ Evitar múltiples llamadas simultáneas
     if (isRecordingRef.current) {
       console.log('⚠️ Ya hay una grabación en curso')
       return
@@ -337,11 +315,9 @@ export default function AvatarPane() {
     if (avatarTalking) return
     if (Date.now() < cooldownUntilRef.current) return
     
-    // ✅ Marcar que estamos grabando
     isRecordingRef.current = true
     
     try {
-      // ✅ CRÍTICO: Solo verificar que existe, NO volver a solicitar permisos
       if (!procStreamRef.current || !rawStreamRef.current) {
         console.log('⚠️ El micrófono no está configurado. Esto no debería pasar.')
         isRecordingRef.current = false
@@ -369,7 +345,7 @@ export default function AvatarPane() {
       rec.start(0)
     } catch(e) {
       console.error('❌ Error al iniciar grabación:', e)
-      isRecordingRef.current = false // ✅ Liberar en caso de error
+      isRecordingRef.current = false
       setPttState('idle')
     }
   }
@@ -377,7 +353,6 @@ export default function AvatarPane() {
   async function stopRecordAndSend() {
     console.log('🛑 stopRecordAndSend llamado')
     
-    // ✅ Si no estamos grabando, no hacer nada
     if (!isRecordingRef.current) {
       console.log('⚠️ No hay grabación activa')
       return
@@ -387,7 +362,7 @@ export default function AvatarPane() {
     if (!rec || rec.state === 'inactive') { 
       console.log('⚠️ Recorder ya estaba inactivo')
       setPttState('idle')
-      isRecordingRef.current = false // ✅ Liberar
+      isRecordingRef.current = false
       return 
     }
     
@@ -406,7 +381,6 @@ export default function AvatarPane() {
       } 
     })
     
-    // ✅ Liberar flag de grabación
     isRecordingRef.current = false
 
     const blob = new Blob(recChunksRef.current, { type: (rec.mimeType.includes('webm') ? 'audio/webm' : 'audio/mp4') })
@@ -448,8 +422,6 @@ export default function AvatarPane() {
       const tj = await tr.json()
       if (!tr.ok || !tj?.token) { setStarting(false); return }
 
-      // ✅ CRÍTICO: Solicitar permisos de micrófono ANTES de iniciar el avatar
-      // Esto evita que se grabe automáticamente al conceder permisos
       console.log('2.5️⃣ Solicitando permisos de micrófono...')
       try {
         await ensureMicChain()
@@ -505,13 +477,11 @@ export default function AvatarPane() {
     }
   }
 
-  // ✅ FUNCIÓN MEJORADA: Cerrar sesión completamente
   const closeSession = () => {
     console.log('🚪 Cerrando sesión del avatar...')
     
     setReady(false)
     
-    // ✅ IMPORTANTE: Detener audio ANTES de cerrar avatar
     stopAudio()
     stopAvatarMonitor()
     
@@ -569,7 +539,7 @@ export default function AvatarPane() {
           />
           {ready && (
             <button
-              className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-16 h-16 rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30
+              className={`absolute bottom-20 left-1/2 -translate-x-1/2 z-10 w-16 h-16 rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30
                           ${recActive ? 'bg-red-600 text-white' : (avatarTalking || cooldownActive) ? 'bg-neutral-400 text-white cursor-not-allowed' : 'bg-white text-black'}`}
               title={(avatarTalking || cooldownActive) ? 'Espera a que el avatar termine…' : 'Mantén pulsado para hablar'}
               disabled={avatarTalking || cooldownActive}
