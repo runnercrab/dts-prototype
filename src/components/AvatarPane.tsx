@@ -514,7 +514,7 @@ export default function AvatarPane() {
           )}
         </div>
 
-        <div className="relative w-full h-[420px] rounded-xl border border-neutral-800 bg-black overflow-hidden">
+        <div className="relative w-full h-[240px] rounded-xl border border-neutral-800 bg-black overflow-hidden">
           {starting && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 z-20">
               <div className="flex flex-col items-center space-y-4">
