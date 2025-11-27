@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { calculateAllDimensionScores, calculateAllEfforts, generateRoadmap, type DimensionScore as DimScoreType, type EffortResult } from '@/lib/scoring-utils'
 import KPICards from '@/components/KPICards'
 import RadarChartComponent from '@/components/RadarChartComponent'
+import HeatMapChart from '@/components/HeatMapChart'
+import TimelineRoadmap from '@/components/TimelineRoadmap'
 
 interface DimensionScore {
   dimension: string
@@ -19,6 +21,29 @@ interface RoadmapPhase {
   criteria: any[]
 }
 
+// Tipos para HeatMap
+interface HeatMapCriterion {
+  id: string
+  code: string
+  title: string
+  dimension: string
+  importance: number
+  effort: number
+  gap: number
+  category: 'quick-win' | 'foundation' | 'transformational' | 'maintenance'
+}
+
+// Tipos para Timeline
+interface TimelineInitiative {
+  id: string
+  code: string
+  title: string
+  dimension: string
+  timeframe: '6months' | '1year' | '2years' | '3years+'
+  importance: number
+  gap: number
+}
+
 export default function ResultadosPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -27,6 +52,10 @@ export default function ResultadosPage() {
   const [roadmap, setRoadmap] = useState<RoadmapPhase[]>([])
   const [distribution, setDistribution] = useState<Record<string, number>>({})
   const [companyName, setCompanyName] = useState('')
+  
+  // Nuevos estados para HeatMap y Timeline
+  const [heatMapData, setHeatMapData] = useState<HeatMapCriterion[]>([])
+  const [timelineData, setTimelineData] = useState<TimelineInitiative[]>([])
 
   useEffect(() => {
     loadResults()
@@ -37,6 +66,13 @@ export default function ResultadosPage() {
     if (impact >= 40 || (impact >= 25 && effort > 50)) return 'Transformacional'
     if (impact >= 15 && impact < 40 && effort <= 70) return 'Foundation'
     return 'Mantenimiento'
+  }
+
+  const categorizeCriterionForHeatMap = (impact: number, effort: number): 'quick-win' | 'foundation' | 'transformational' | 'maintenance' => {
+    if (impact >= 25 && effort <= 50) return 'quick-win'
+    if (impact >= 40 || (impact >= 25 && effort > 50)) return 'transformational'
+    if (impact >= 15 && impact < 40 && effort <= 70) return 'foundation'
+    return 'maintenance'
   }
 
   const loadResults = async () => {
@@ -62,7 +98,6 @@ export default function ResultadosPage() {
 
       console.log('🔍 Cargando criterios con dimensiones...')
       
-      // JOIN TRIPLE para obtener el código de dimensión
       const { data: allCriteriaData, error: allCriteriaError } = await supabase
         .from('dts_criteria')
         .select(`
@@ -87,8 +122,6 @@ export default function ResultadosPage() {
       }
       
       console.log('✅ Criterios cargados:', allCriteriaData?.length || 0)
-      console.log('📋 Primer criterio completo:', JSON.stringify(allCriteriaData[0], null, 2))
-      console.log('📋 Código de dimensión:', allCriteriaData[0]?.dts_subdimensions?.dts_dimensions?.code)
 
       console.log('🔍 Cargando respuestas para assessment:', assessmentId)
       const { data: responsesData, error: responsesError } = await supabase
@@ -111,7 +144,6 @@ export default function ResultadosPage() {
         throw new Error('No se encontraron respuestas para este assessment')
       }
 
-      // Mapeo de códigos BD (D1-D6) a códigos TM Forum
       const dimensionCodeMap: Record<string, string> = {
         'D1': 'strategy',
         'D2': 'customer',
@@ -121,7 +153,6 @@ export default function ResultadosPage() {
         'D6': 'data'
       }
 
-      // Preparar criteria con el código correcto de dimensión
       const criteria = allCriteriaData.map(c => {
         const dbCode = c.dts_subdimensions?.dts_dimensions?.code || 'D1'
         const tmForumCode = dimensionCodeMap[dbCode] || 'strategy'
@@ -135,30 +166,20 @@ export default function ResultadosPage() {
         }
       })
 
-      console.log('📊 Primer criterio mapeado:', criteria[0])
-      console.log('📊 Dimension IDs únicos (convertidos):', [...new Set(criteria.map(c => c.dimension_id))])
-      console.log('📊 Conversión ejemplo: D1 →', dimensionCodeMap['D1'])
-
       const responses = responsesData.map(r => ({
         criteria_id: r.criteria_id,
         as_is_level: r.as_is_level,
         to_be_level: r.to_be_level,
         importance: r.importance || 3,
-        to_be_timeframe: r.to_be_timeframe || 2
+        to_be_timeframe: r.to_be_timeframe || '1year'
       }))
 
-      console.log('📊 Primera respuesta:', responses[0])
-
       const dimScores = calculateAllDimensionScores(responses, criteria)
-      
-      console.log('📈 Scores calculados:', dimScores)
       
       let gScore = 0
       dimScores.forEach(dim => {
         gScore += dim.as_is_score * dim.weight
       })
-      
-      console.log('🎯 Score global calculado:', gScore)
       
       setGlobalScore(Math.round(gScore))
       
@@ -177,6 +198,61 @@ export default function ResultadosPage() {
         assessment?.onboarding_data?.sector || 'Technology',
         gScore
       )
+
+      // Preparar datos para HeatMap
+      const heatMapCriteria: HeatMapCriterion[] = efforts.map(effort => {
+        const criterion = criteria.find(c => c.id === effort.criteria_id)!
+        const response = responses.find(r => r.criteria_id === effort.criteria_id)!
+        const gap = response.to_be_level - response.as_is_level
+        
+        // Normalizar importance (1-5) y effort (0-100) para el scatter plot
+        const normalizedImportance = response.importance // Ya está en 1-5
+        const normalizedEffort = Math.min(5, Math.max(1, Math.round((effort.effort_final / 20)))) // Convertir 0-100 a 1-5
+        
+        return {
+          id: criterion.id,
+          code: criterion.code,
+          title: criterion.title,
+          dimension: criterion.dimension_id,
+          importance: normalizedImportance,
+          effort: normalizedEffort,
+          gap: gap,
+          category: categorizeCriterionForHeatMap(effort.impact, effort.effort_final)
+        }
+      })
+      setHeatMapData(heatMapCriteria)
+
+      // Preparar datos para Timeline usando la misma lógica del roadmap viejo
+      const timelineInitiatives: TimelineInitiative[] = efforts
+        .filter(effort => {
+          const response = responses.find(r => r.criteria_id === effort.criteria_id)!
+          return response.to_be_level > response.as_is_level // Solo iniciativas con gap
+        })
+        .map(effort => {
+          const criterion = criteria.find(c => c.id === effort.criteria_id)!
+          const response = responses.find(r => r.criteria_id === effort.criteria_id)!
+          
+          // Mapear categoría a timeframe
+          let timeframe: '6months' | '1year' | '2years' | '3years+'
+          if (effort.category === 'Quick Win') {
+            timeframe = '6months' // 30 días
+          } else if (effort.category === 'Foundation') {
+            timeframe = '1year' // 60 días
+          } else {
+            timeframe = '2years' // 90 días (Transformacional + Mantenimiento)
+          }
+          
+          return {
+            id: criterion.id,
+            code: criterion.code,
+            title: criterion.title,
+            dimension: criterion.dimension_id,
+            timeframe: timeframe,
+            importance: response.importance,
+            gap: response.to_be_level - response.as_is_level
+          }
+        })
+      setTimelineData(timelineInitiatives)
 
       const roadmapData = generateRoadmap(responses, criteria, efforts)
       
@@ -264,8 +340,9 @@ export default function ResultadosPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         
+        {/* KPI Cards */}
         <KPICards
           globalScore={globalScore}
           totalInitiatives={totalInitiatives}
@@ -273,9 +350,33 @@ export default function ResultadosPage() {
           quickWins={quickWins}
         />
 
+        {/* Radar Chart */}
         <RadarChartComponent scores={dimensionScores} />
 
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        {/* NUEVO: Heat Map */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            🎯 Matriz de Priorización: Impacto vs Esfuerzo
+          </h2>
+          <p className="text-gray-600 text-sm mb-6">
+            Visualiza las {heatMapData.length} iniciativas según su impacto y esfuerzo requerido
+          </p>
+          <HeatMapChart criteria={heatMapData} />
+        </div>
+
+        {/* NUEVO: Timeline Roadmap */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            🗓️ Roadmap de Implementación 30/60/90 Días
+          </h2>
+          <p className="text-gray-600 text-sm mb-6">
+            Plan de acción organizado por fases temporales
+          </p>
+          <TimelineRoadmap initiatives={timelineData} />
+        </div>
+
+        {/* Scores por Dimensión */}
+        <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             📈 Scores por Dimensión
           </h2>
@@ -313,7 +414,8 @@ export default function ResultadosPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        {/* Distribución de Iniciativas */}
+        <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             🎯 Distribución de Iniciativas
           </h2>
@@ -353,65 +455,6 @@ export default function ResultadosPage() {
                   <div className="text-xs text-gray-600 mt-1">
                     {Math.round((count / 129) * 100)}% del total
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            🗺️ Roadmap 30/60/90 Días
-          </h2>
-          
-          <div className="space-y-6">
-            {roadmap.map((phase, index) => {
-              const phaseColors: Record<string, { bg: string; text: string; border: string }> = {
-                '30': { bg: '#d1fae5', text: '#065f46', border: '#10b981' },
-                '60': { bg: '#dbeafe', text: '#1e40af', border: '#3b82f6' },
-                '90': { bg: '#e9d5ff', text: '#6b21a8', border: '#a855f7' }
-              }
-              
-              const color = phaseColors[phase.phase]
-              
-              return (
-                <div key={index} className="border border-gray-200 rounded-lg p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div
-                      className="px-4 py-2 rounded-lg font-bold"
-                      style={{
-                        backgroundColor: color.bg,
-                        color: color.text
-                      }}
-                    >
-                      {phase.phase} días
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {phase.criteria.length} iniciativas
-                    </div>
-                  </div>
-                  
-                  {phase.criteria.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {phase.criteria.slice(0, 6).map((criterion, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-gray-50 rounded p-3 text-sm"
-                        >
-                          <div className="font-semibold text-gray-800 mb-1">
-                            {criterion.code}
-                          </div>
-                          <div className="text-gray-600 text-xs">
-                            Impact: {Math.round(criterion.impact)} | Effort: {Math.round(criterion.effort)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-sm italic">
-                      No hay iniciativas planificadas para esta fase
-                    </p>
-                  )}
                 </div>
               )
             })}
