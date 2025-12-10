@@ -3,7 +3,17 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { calculateAllDimensionScores, calculateAllEfforts, generateRoadmap, type DimensionScore as DimScoreType, type EffortResult } from '@/lib/scoring-utils'
+import { 
+  calculateAllDimensionScores, 
+  calculateAllEfforts, 
+  generateRoadmap, 
+  calculateGlobalScore,
+  formatMaturityIndex,
+  getMaturityLabel,
+  maturityIndexToPercentage,
+  type DimensionScore as DimScoreType, 
+  type EffortResult 
+} from '@/lib/scoring-utils'
 import KPICards from '@/components/KPICards'
 import RadarChartComponent from '@/components/RadarChartComponent'
 import HeatMapChart from '@/components/HeatMapChart'
@@ -11,7 +21,8 @@ import TimelineRoadmap from '@/components/TimelineRoadmap'
 
 interface DimensionScore {
   dimension: string
-  asIs: number
+  maturityIndex: number  // NUEVO: 1-5 scale
+  asIs: number          // Legacy: 0-100 scale
   toBe: number
   gap: number
 }
@@ -21,7 +32,6 @@ interface RoadmapPhase {
   criteria: any[]
 }
 
-// Tipos para HeatMap
 interface HeatMapCriterion {
   id: string
   code: string
@@ -33,7 +43,6 @@ interface HeatMapCriterion {
   category: 'quick-win' | 'foundation' | 'transformational' | 'maintenance'
 }
 
-// Tipos para Timeline
 interface TimelineInitiative {
   id: string
   code: string
@@ -47,13 +56,19 @@ interface TimelineInitiative {
 export default function ResultadosPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  
+  // NUEVO: Maturity Index (1-5)
+  const [globalMaturityIndex, setGlobalMaturityIndex] = useState(0)
+  const [maturityLabel, setMaturityLabel] = useState('')
+  
+  // Legacy: Para compatibilidad
   const [globalScore, setGlobalScore] = useState(0)
+  
   const [dimensionScores, setDimensionScores] = useState<DimensionScore[]>([])
   const [roadmap, setRoadmap] = useState<RoadmapPhase[]>([])
   const [distribution, setDistribution] = useState<Record<string, number>>({})
   const [companyName, setCompanyName] = useState('')
   
-  // Nuevos estados para HeatMap y Timeline
   const [heatMapData, setHeatMapData] = useState<HeatMapCriterion[]>([])
   const [timelineData, setTimelineData] = useState<TimelineInitiative[]>([])
 
@@ -174,29 +189,44 @@ export default function ResultadosPage() {
         to_be_timeframe: r.to_be_timeframe || '1year'
       }))
 
+      // ============================================
+      // NUEVO: Calcular con metodología TM Forum
+      // ============================================
+      
       const dimScores = calculateAllDimensionScores(responses, criteria)
       
-      let gScore = 0
-      dimScores.forEach(dim => {
-        gScore += dim.as_is_score * dim.weight
-      })
+      // Score global usando NUEVA metodología (1-5)
+      const globalMaturity = calculateGlobalScore(dimScores)
+      setGlobalMaturityIndex(globalMaturity)
+      setMaturityLabel(getMaturityLabel(globalMaturity))
       
-      setGlobalScore(Math.round(gScore))
+      // Score legacy (0-100) para KPI cards
+      const legacyScore = maturityIndexToPercentage(globalMaturity)
+      setGlobalScore(Math.round(legacyScore))
       
+      console.log(`✅ Global Maturity Index: ${globalMaturity.toFixed(2)}/5 (${maturityLabel})`)
+      console.log(`   Legacy score: ${legacyScore.toFixed(1)}%`)
+      
+      // Preparar scores para visualización
       const radarScores: DimensionScore[] = dimScores.map(d => ({
         dimension: d.dimension_id,
-        asIs: Math.round(d.as_is_score),
-        toBe: Math.round(d.to_be_score),
-        gap: Math.round(d.gap)
+        maturityIndex: d.maturity_index,  // NUEVO
+        asIs: Math.round(d.as_is_score),  // Legacy
+        toBe: Math.round(d.to_be_score),  // Legacy
+        gap: Math.round(d.gap)            // Legacy
       }))
       setDimensionScores(radarScores)
 
+      // ============================================
+      // Calcular efforts (usa globalMaturity 1-5)
+      // ============================================
+      
       const efforts = calculateAllEfforts(
         responses,
         criteria,
         assessment?.onboarding_data?.employees || 50,
         assessment?.onboarding_data?.sector || 'Technology',
-        gScore
+        globalMaturity  // Ahora pasa 1-5
       )
 
       // Preparar datos para HeatMap
@@ -205,9 +235,8 @@ export default function ResultadosPage() {
         const response = responses.find(r => r.criteria_id === effort.criteria_id)!
         const gap = response.to_be_level - response.as_is_level
         
-        // Normalizar importance (1-5) y effort (0-100) para el scatter plot
-        const normalizedImportance = response.importance // Ya está en 1-5
-        const normalizedEffort = Math.min(5, Math.max(1, Math.round((effort.effort_final / 20)))) // Convertir 0-100 a 1-5
+        const normalizedImportance = response.importance
+        const normalizedEffort = Math.min(5, Math.max(1, Math.round((effort.effort_final / 20))))
         
         return {
           id: criterion.id,
@@ -222,24 +251,23 @@ export default function ResultadosPage() {
       })
       setHeatMapData(heatMapCriteria)
 
-      // Preparar datos para Timeline usando la misma lógica del roadmap viejo
+      // Preparar datos para Timeline
       const timelineInitiatives: TimelineInitiative[] = efforts
         .filter(effort => {
           const response = responses.find(r => r.criteria_id === effort.criteria_id)!
-          return response.to_be_level > response.as_is_level // Solo iniciativas con gap
+          return response.to_be_level > response.as_is_level
         })
         .map(effort => {
           const criterion = criteria.find(c => c.id === effort.criteria_id)!
           const response = responses.find(r => r.criteria_id === effort.criteria_id)!
           
-          // Mapear categoría a timeframe
           let timeframe: '6months' | '1year' | '2years' | '3years+'
           if (effort.category === 'Quick Win') {
-            timeframe = '6months' // 30 días
+            timeframe = '6months'
           } else if (effort.category === 'Foundation') {
-            timeframe = '1year' // 60 días
+            timeframe = '1year'
           } else {
-            timeframe = '2years' // 90 días (Transformacional + Mantenimiento)
+            timeframe = '2years'
           }
           
           return {
@@ -302,7 +330,7 @@ export default function ResultadosPage() {
   }
 
   const criticalDimension = dimensionScores.reduce((min, current) => 
-    current.asIs < min.asIs ? current : min
+    current.maturityIndex < min.maturityIndex ? current : min
   , dimensionScores[0])
 
   const dimensionLabels: Record<string, string> = {
@@ -342,7 +370,34 @@ export default function ResultadosPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         
-        {/* KPI Cards */}
+        {/* ============================================ */}
+        {/* NUEVO: Maturity Index Hero Section */}
+        {/* ============================================ */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-8 text-white">
+          <div className="text-center">
+            <p className="text-blue-100 text-sm font-semibold uppercase tracking-wide mb-2">
+              Overall Maturity Index
+            </p>
+            <div className="flex items-center justify-center gap-4 mb-3">
+              <div className="text-6xl font-bold">
+                {formatMaturityIndex(globalMaturityIndex, 1)}
+              </div>
+              <div className="text-left">
+                <div className="text-2xl font-semibold">
+                  {maturityLabel}
+                </div>
+                <div className="text-blue-200 text-sm">
+                  ({globalScore}%)
+                </div>
+              </div>
+            </div>
+            <p className="text-blue-100 text-sm max-w-2xl mx-auto">
+              Basado en la metodología oficial TM Forum DMM v5.0.1
+            </p>
+          </div>
+        </div>
+
+        {/* KPI Cards - Mantener para compatibilidad */}
         <KPICards
           globalScore={globalScore}
           totalInitiatives={totalInitiatives}
@@ -350,10 +405,10 @@ export default function ResultadosPage() {
           quickWins={quickWins}
         />
 
-        {/* Radar Chart */}
+        {/* Radar Chart - Actualizar para usar maturity index */}
         <RadarChartComponent scores={dimensionScores} />
 
-        {/* NUEVO: Heat Map */}
+        {/* Heat Map */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             🎯 Matriz de Priorización: Impacto vs Esfuerzo
@@ -364,7 +419,7 @@ export default function ResultadosPage() {
           <HeatMapChart criteria={heatMapData} />
         </div>
 
-        {/* NUEVO: Timeline Roadmap */}
+        {/* Timeline Roadmap */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             🗓️ Roadmap de Implementación 30/60/90 Días
@@ -375,10 +430,12 @@ export default function ResultadosPage() {
           <TimelineRoadmap initiatives={timelineData} />
         </div>
 
-        {/* Scores por Dimensión */}
+        {/* ============================================ */}
+        {/* ACTUALIZADO: Scores por Dimensión */}
+        {/* ============================================ */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            📈 Scores por Dimensión
+            📈 Madurez por Dimensión
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -391,22 +448,38 @@ export default function ResultadosPage() {
                   {dimensionLabels[dim.dimension]}
                 </h3>
                 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">AS-IS:</span>
-                    <span className="font-bold text-amber-600">{dim.asIs}/100</span>
+                <div className="space-y-3">
+                  {/* NUEVO: Maturity Index destacado */}
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-blue-900">
+                        Maturity Index:
+                      </span>
+                      <span className="text-2xl font-bold text-blue-600">
+                        {formatMaturityIndex(dim.maturityIndex, 1)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-blue-700 mt-1">
+                      {getMaturityLabel(dim.maturityIndex)}
+                    </div>
                   </div>
                   
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">TO-BE:</span>
-                    <span className="font-bold text-blue-600">{dim.toBe}/100</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
-                    <span className="text-gray-600">Gap:</span>
-                    <span className={`font-bold ${dim.gap > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {dim.gap > 0 ? '+' : ''}{dim.gap} pts
-                    </span>
+                  {/* Legacy scores (smaller) */}
+                  <div className="space-y-1 text-xs text-gray-600">
+                    <div className="flex items-center justify-between">
+                      <span>AS-IS (0-100):</span>
+                      <span className="font-semibold text-amber-600">{dim.asIs}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>TO-BE (0-100):</span>
+                      <span className="font-semibold text-blue-600">{dim.toBe}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                      <span>Gap:</span>
+                      <span className={`font-semibold ${dim.gap > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {dim.gap > 0 ? '+' : ''}{dim.gap} pts
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -414,7 +487,7 @@ export default function ResultadosPage() {
           </div>
         </div>
 
-        {/* Distribución de Iniciativas */}
+        {/* Distribución de Iniciativas - Sin cambios */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             🎯 Distribución de Iniciativas

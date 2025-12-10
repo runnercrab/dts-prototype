@@ -1,6 +1,14 @@
 // ============================================
 // SCORING & EFFORT CALCULATION UTILITIES
-// Basado en TM Forum DMM v5.1 + DTS Methodology
+// Basado en TM Forum DMM v5.0.1 + DTS Methodology
+// ============================================
+//
+// CAMBIOS PRINCIPALES (v2.0):
+// 1. Scoring basado en WEIGHTED GAP (to_be - as_is) × importance
+// 2. Output: Maturity Index (1-5) en vez de porcentaje (0-100)
+// 3. Pesos de dimensiones IGUALES (16.67% cada una)
+// 4. Metodología oficial TM Forum validada por Alfred Karlsson
+//
 // ============================================
 
 // ============================================
@@ -26,11 +34,12 @@ export interface Criterion {
 export interface DimensionScore {
   dimension_id: string
   dimension_name: string
-  as_is_score: number
-  to_be_score: number
-  gap: number
-  weight: number
-  weighted_score: number
+  maturity_index: number      // 1-5 scale (NUEVO)
+  weighted_gap_avg: number    // Para referencia
+  as_is_score: number         // Legacy (0-100)
+  to_be_score: number         // Legacy (0-100)
+  gap: number                 // Legacy
+  weight: number              // Siempre 1/6 (0.1667)
 }
 
 export interface EffortResult {
@@ -48,17 +57,32 @@ export interface EffortResult {
   category: 'Quick Win' | 'Transformacional' | 'Foundation' | 'Mantenimiento'
 }
 
-// Pesos oficiales TM Forum DMM v5.1
+// ============================================
+// PESOS DE DIMENSIONES (TM FORUM OFICIAL)
+// ============================================
+// TODOS LOS PESOS SON IGUALES (1/6 = 16.67%)
+// Confirmado por Alfred Karlsson (Nov 2024):
+// "There are no weights assigned to subdimensions for the purpose of scoring maturity"
+
 export const DIMENSION_WEIGHTS: Record<string, number> = {
-  'strategy': 0.20,
-  'customer': 0.15,
-  'technology': 0.15,
-  'operations': 0.15,
-  'culture': 0.15,
-  'data': 0.20
+  'strategy': 1/6,     // 16.67% (antes 20% ❌)
+  'customer': 1/6,     // 16.67% (antes 15% ❌)
+  'technology': 1/6,   // 16.67% (antes 15% ❌)
+  'operations': 1/6,   // 16.67% (antes 15% ❌)
+  'culture': 1/6,      // 16.67% (antes 15% ❌)
+  'data': 1/6          // 16.67% (antes 20% ❌)
 }
 
-// Effort base por tipo de acción (simplificado - en producción vendría de BD)
+// Labels de madurez TM Forum
+export const MATURITY_LABELS: Record<number, string> = {
+  1: 'Inicial',
+  2: 'Emergente',
+  3: 'Definido',
+  4: 'Gestionado',
+  5: 'Optimizado'
+}
+
+// Effort base por tipo de acción (sin cambios - funciona bien)
 export const EFFORT_BASE_CATALOG: Record<string, number> = {
   // Strategy
   'strategic_planning': 70,
@@ -104,16 +128,106 @@ export const EFFORT_BASE_CATALOG: Record<string, number> = {
 }
 
 // ============================================
-// SCORING FUNCTIONS (TM Forum DMM v5.1)
+// NUEVAS FUNCIONES: WEIGHTED GAP METHODOLOGY
+// ============================================
+
+/**
+ * Calcula weighted gap para un criterio
+ * Formula TM Forum: weighted_gap = (to_be - as_is) × importance
+ * 
+ * @param asIsLevel - Nivel actual (1-5)
+ * @param toBeLevel - Nivel objetivo (1-5)
+ * @param importance - Importancia (1-5)
+ * @returns Weighted gap (0-20)
+ */
+export function calculateWeightedGap(
+  asIsLevel: number,
+  toBeLevel: number,
+  importance: number
+): number {
+  // Validar inputs
+  if (asIsLevel < 1 || asIsLevel > 5) {
+    console.warn(`Invalid as_is_level: ${asIsLevel}. Clamping to [1,5]`)
+    asIsLevel = Math.max(1, Math.min(5, asIsLevel))
+  }
+  
+  if (toBeLevel < 1 || toBeLevel > 5) {
+    console.warn(`Invalid to_be_level: ${toBeLevel}. Clamping to [1,5]`)
+    toBeLevel = Math.max(1, Math.min(5, toBeLevel))
+  }
+  
+  if (importance < 1 || importance > 5) {
+    console.warn(`Invalid importance: ${importance}. Clamping to [1,5]`)
+    importance = Math.max(1, Math.min(5, importance))
+  }
+  
+  // Calcular gap
+  const gap = toBeLevel - asIsLevel
+  
+  // Manejar gaps negativos (no debería pasar pero ser defensivo)
+  if (gap < 0) {
+    console.warn(`Negative gap: to_be(${toBeLevel}) < as_is(${asIsLevel}). Setting to 0.`)
+    return 0
+  }
+  
+  // Weighted gap = gap × importance
+  return gap * importance
+}
+
+/**
+ * Convierte weighted gap promedio a Maturity Index (1-5)
+ * 
+ * Formula: maturity = 5 - (weighted_gap / MAX_GAP) × 4
+ * 
+ * Lógica inversa:
+ * - weighted_gap alto → maturity bajo
+ * - weighted_gap bajo → maturity alto
+ * 
+ * @param weightedGapAvg - Promedio de weighted gaps
+ * @returns Maturity index (1-5)
+ */
+export function convertWeightedGapToMaturityIndex(weightedGapAvg: number): number {
+  const MAX_WEIGHTED_GAP = 20  // gap=4, importance=5
+  
+  // Mapeo lineal inverso
+  const maturity = 5 - (weightedGapAvg / MAX_WEIGHTED_GAP) * 4
+  
+  // Clamp a rango [1, 5]
+  return Math.max(1, Math.min(5, maturity))
+}
+
+/**
+ * Obtiene label de madurez según index
+ */
+export function getMaturityLabel(index: number): string {
+  if (index < 1.5) return MATURITY_LABELS[1]
+  if (index < 2.5) return MATURITY_LABELS[2]
+  if (index < 3.5) return MATURITY_LABELS[3]
+  if (index < 4.5) return MATURITY_LABELS[4]
+  return MATURITY_LABELS[5]
+}
+
+/**
+ * Formatea maturity index para display
+ */
+export function formatMaturityIndex(index: number, decimals: number = 1): string {
+  return `${index.toFixed(decimals)}/5`
+}
+
+/**
+ * Convierte maturity index a porcentaje (para compatibilidad)
+ */
+export function maturityIndexToPercentage(index: number): number {
+  return ((index - 1) / 4) * 100
+}
+
+// ============================================
+// FUNCIONES LEGACY (Mantener para compatibilidad)
 // ============================================
 
 /**
  * Convierte nivel TM Forum (1-5) a escala 0-100
- * Nivel 1 (Inicial) = 0
- * Nivel 2 (Emergente) = 25
- * Nivel 3 (Definido) = 50
- * Nivel 4 (Gestionado) = 75
- * Nivel 5 (Optimizado) = 100
+ * LEGACY: Solo para mostrar comparación
  */
 export function levelToScore(level: number): number {
   if (level < 1) return 0
@@ -121,41 +235,56 @@ export function levelToScore(level: number): number {
   return (level - 1) * 25
 }
 
+// ============================================
+// SCORING FUNCTIONS (NUEVA METODOLOGÍA)
+// ============================================
+
 /**
- * Calcula el score de una subdimensión
- * Promedio de los scores de sus criterios
+ * Calcula score de subdimensión usando weighted gaps
  */
 export function calculateSubdimensionScore(
   responses: CriterionResponse[],
-  subdimensionId: string,
-  useToBeValues: boolean = false
-): number {
+  subdimensionId: string
+): { maturity_index: number; weighted_gap_avg: number; as_is_score: number } {
   const subdimResponses = responses.filter(r => {
-    // Necesitamos matchear por subdimension - asumimos que criteria_id contiene info
-    // En producción, esto vendría de un join con la tabla criteria
-    return true // Por ahora calculamos con todos
+    // En producción esto vendría de join con criteria
+    return true
   })
 
-  if (subdimResponses.length === 0) return 0
+  if (subdimResponses.length === 0) {
+    return { maturity_index: 1, weighted_gap_avg: 0, as_is_score: 0 }
+  }
 
-  const totalScore = subdimResponses.reduce((sum, r) => {
-    const level = useToBeValues ? r.to_be_level : r.as_is_level
-    return sum + levelToScore(level)
-  }, 0)
+  // Calcular weighted gaps
+  const weightedGaps = subdimResponses.map(r =>
+    calculateWeightedGap(r.as_is_level, r.to_be_level, r.importance)
+  )
+  
+  // Promedio de weighted gaps
+  const weightedGapAvg = weightedGaps.reduce((a, b) => a + b, 0) / weightedGaps.length
+  
+  // Convertir a maturity index
+  const maturityIndex = convertWeightedGapToMaturityIndex(weightedGapAvg)
+  
+  // Calcular AS-IS score legacy (para compatibilidad)
+  const asIsScores = subdimResponses.map(r => levelToScore(r.as_is_level))
+  const asIsScore = asIsScores.reduce((a, b) => a + b, 0) / asIsScores.length
 
-  return totalScore / subdimResponses.length
+  return {
+    maturity_index: maturityIndex,
+    weighted_gap_avg: weightedGapAvg,
+    as_is_score: asIsScore
+  }
 }
 
 /**
- * Calcula el score de una dimensión
- * Promedio ponderado de sus subdimensiones
+ * Calcula score de dimensión usando weighted gaps
  */
 export function calculateDimensionScore(
   responses: CriterionResponse[],
   criteria: Criterion[],
-  dimensionId: string,
-  useToBeValues: boolean = false
-): number {
+  dimensionId: string
+): DimensionScore {
   // Filtrar criterios de esta dimensión
   const dimensionCriteria = criteria.filter(c => c.dimension_id === dimensionId)
   const dimensionCriteriaIds = dimensionCriteria.map(c => c.id)
@@ -165,29 +294,81 @@ export function calculateDimensionScore(
     dimensionCriteriaIds.includes(r.criteria_id)
   )
 
-  if (dimensionResponses.length === 0) return 0
+  if (dimensionResponses.length === 0) {
+    return {
+      dimension_id: dimensionId,
+      dimension_name: dimensionId,
+      maturity_index: 1,
+      weighted_gap_avg: 0,
+      as_is_score: 0,
+      to_be_score: 0,
+      gap: 0,
+      weight: 1/6
+    }
+  }
 
-  // Calcular promedio de scores
-  const totalScore = dimensionResponses.reduce((sum, r) => {
-    const level = useToBeValues ? r.to_be_level : r.as_is_level
-    return sum + levelToScore(level)
-  }, 0)
+  // Calcular weighted gaps
+  const weightedGaps = dimensionResponses.map(r =>
+    calculateWeightedGap(r.as_is_level, r.to_be_level, r.importance)
+  )
+  
+  // Promedio de weighted gaps
+  const weightedGapAvg = weightedGaps.reduce((a, b) => a + b, 0) / weightedGaps.length
+  
+  // Convertir a maturity index
+  const maturityIndex = convertWeightedGapToMaturityIndex(weightedGapAvg)
+  
+  // Calcular scores legacy (para compatibilidad)
+  const asIsScores = dimensionResponses.map(r => levelToScore(r.as_is_level))
+  const toBeScores = dimensionResponses.map(r => levelToScore(r.to_be_level))
+  
+  const asIsScore = asIsScores.reduce((a, b) => a + b, 0) / asIsScores.length
+  const toBeScore = toBeScores.reduce((a, b) => a + b, 0) / toBeScores.length
 
-  return totalScore / dimensionResponses.length
+  return {
+    dimension_id: dimensionId,
+    dimension_name: dimensionId,
+    maturity_index: maturityIndex,
+    weighted_gap_avg: weightedGapAvg,
+    as_is_score: asIsScore,
+    to_be_score: toBeScore,
+    gap: toBeScore - asIsScore,
+    weight: 1/6  // TODOS IGUALES
+  }
 }
 
 /**
- * Calcula el score global (0-100)
- * Promedio ponderado de las 6 dimensiones según pesos TM Forum
+ * Calcula score global usando nueva metodología
+ * TODOS LOS PESOS SON IGUALES (1/6)
  */
 export function calculateGlobalScore(
   dimensionScores: DimensionScore[]
 ): number {
-  const weightedSum = dimensionScores.reduce((sum, dim) => {
-    return sum + (dim.as_is_score * dim.weight)
-  }, 0)
+  if (dimensionScores.length === 0) return 0
+  
+  // Promedio simple de maturity indexes
+  const totalMaturity = dimensionScores.reduce(
+    (sum, dim) => sum + dim.maturity_index,
+    0
+  )
+  
+  return totalMaturity / dimensionScores.length
+}
 
-  return weightedSum
+/**
+ * Calcula scores legacy (compatibilidad)
+ * Usa AS-IS scores con pesos iguales
+ */
+export function calculateGlobalScoreLegacy(
+  dimensionScores: DimensionScore[]
+): number {
+  // Promedio simple (todos los pesos iguales)
+  const totalScore = dimensionScores.reduce(
+    (sum, dim) => sum + dim.as_is_score,
+    0
+  )
+  
+  return totalScore / dimensionScores.length
 }
 
 /**
@@ -207,61 +388,43 @@ export function calculateAllDimensionScores(
   ]
 
   return dimensions.map(dim => {
-    const asIsScore = calculateDimensionScore(responses, criteria, dim.id, false)
-    const toBeScore = calculateDimensionScore(responses, criteria, dim.id, true)
-    const weight = DIMENSION_WEIGHTS[dim.id] || 0.15
-
+    const dimScore = calculateDimensionScore(responses, criteria, dim.id)
     return {
-      dimension_id: dim.id,
-      dimension_name: dim.name,
-      as_is_score: asIsScore,
-      to_be_score: toBeScore,
-      gap: toBeScore - asIsScore,
-      weight: weight,
-      weighted_score: asIsScore * weight
+      ...dimScore,
+      dimension_name: dim.name
     }
   })
 }
 
 // ============================================
-// EFFORT CALCULATION (DTS Methodology)
+// EFFORT CALCULATION (Sin cambios - funciona bien)
 // ============================================
 
-/**
- * Calcula Δ_gap según tamaño de brecha
- */
 function calculateDeltaGap(gapLevels: number): number {
   if (gapLevels >= 3) return 0.10
   if (gapLevels === 2) return 0.05
   if (gapLevels === 1) return 0.0
-  return -0.10 // No hay cambio o negativo
+  return -0.10
 }
 
-/**
- * Calcula Δ_size según número de empleados
- */
 function calculateDeltaSize(numEmployees: number): number {
   if (numEmployees <= 10) return 0.05
   if (numEmployees <= 50) return 0.0
-  return -0.05 // Empresas grandes tienen más recursos
+  return -0.05
 }
 
-/**
- * Calcula Δ_maturity según madurez digital global
- */
 function calculateDeltaMaturity(globalMaturity: number): number {
-  if (globalMaturity < 30) return 0.10
-  if (globalMaturity <= 60) return 0.0
-  return -0.05 // Alta madurez facilita cambios
+  // Ahora globalMaturity es 1-5, convertir a 0-100 para comparación
+  const maturityPercent = maturityIndexToPercentage(globalMaturity)
+  
+  if (maturityPercent < 30) return 0.10
+  if (maturityPercent <= 60) return 0.0
+  return -0.05
 }
 
-/**
- * Calcula Δ_sector según tipo de sector
- */
 function calculateDeltaSector(sector: string): number {
   const sectorLower = sector.toLowerCase()
   
-  // Sectores tradicionales/industriales
   if (sectorLower.includes('manufactura') || 
       sectorLower.includes('industrial') ||
       sectorLower.includes('logística') ||
@@ -269,7 +432,6 @@ function calculateDeltaSector(sector: string): number {
     return 0.05
   }
   
-  // Sectores digitales
   if (sectorLower.includes('tecnología') ||
       sectorLower.includes('software') ||
       sectorLower.includes('digital') ||
@@ -277,105 +439,67 @@ function calculateDeltaSector(sector: string): number {
     return -0.05
   }
   
-  return 0.0 // Sectores neutros
+  return 0.0
 }
 
-/**
- * Obtiene effort base según el criterio
- * En producción vendría de BD con mapping real
- */
 function getEffortBase(criterionCode: string): number {
-  // Simplificado: asignar según dimensión y subdimensión
   const parts = criterionCode.split('.')
   if (parts.length < 2) return EFFORT_BASE_CATALOG.default
   
   const dimension = parseInt(parts[0])
   
-  // Mapeo simplificado por dimensión
   switch(dimension) {
-    case 1: return 65 // Strategy
-    case 2: return 60 // Customer
-    case 3: return 80 // Technology (más complejo)
-    case 4: return 65 // Operations
-    case 5: return 55 // Culture (más soft)
-    case 6: return 85 // Data (muy complejo)
+    case 1: return 65
+    case 2: return 60
+    case 3: return 80
+    case 4: return 65
+    case 5: return 55
+    case 6: return 85
     default: return 60
   }
 }
 
-/**
- * Calcula Impact de un criterio
- * Impact = (Gap_normalized * Importance) / 5 * 100
- */
 function calculateImpact(gapLevels: number, importance: number): number {
-  const gapNorm = gapLevels / 4 // Max gap = 4 (de nivel 1 a 5)
+  const gapNorm = gapLevels / 4
   const impact = (gapNorm * importance) / 5 * 100
   return Math.min(Math.max(impact, 0), 100)
 }
 
-/**
- * Calcula Priority Score
- * PriorityScore = Impact × (1 - Effort_final/100)
- */
 function calculatePriorityScore(impact: number, effortFinal: number): number {
   if (effortFinal === 0) return impact
   return impact * (1 - effortFinal / 100)
 }
 
-/**
- * Categoriza un criterio según Impact y Effort
- * Umbrales ajustados para datos reales (gaps pequeños)
- */
 function categorizeCriterion(impact: number, effort: number): EffortResult['category'] {
-  // Quick Win: Impacto decente, esfuerzo bajo
   if (impact >= 25 && effort <= 50) return 'Quick Win'
-  
-  // Transformacional: Alto impacto O (impacto medio con alto esfuerzo)
   if (impact >= 40 || (impact >= 25 && effort > 50)) return 'Transformacional'
-  
-  // Foundation: Impacto medio, esfuerzo moderado
   if (impact >= 15 && impact < 40 && effort <= 70) return 'Foundation'
-  
-  // Mantenimiento: Bajo impacto
   return 'Mantenimiento'
 }
 
-/**
- * Calcula el effort completo para un criterio
- */
 export function calculateCriterionEffort(
   response: CriterionResponse,
   criterion: Criterion,
   numEmployees: number,
   sector: string,
-  globalMaturity: number
+  globalMaturity: number  // Ahora 1-5
 ): EffortResult {
-  // 1. Gap
   const gapLevels = response.to_be_level - response.as_is_level
-
-  // 2. Effort base
   const effortBase = getEffortBase(criterion.code)
-
-  // 3. Deltas
+  
   const deltaGap = calculateDeltaGap(gapLevels)
   const deltaSize = calculateDeltaSize(numEmployees)
   const deltaMaturity = calculateDeltaMaturity(globalMaturity)
   const deltaSector = calculateDeltaSector(sector)
   const deltaTotal = deltaGap + deltaSize + deltaMaturity + deltaSector
-
-  // 4. Effort final
+  
   const effortFinal = Math.min(Math.max(
     effortBase * (1 + deltaTotal),
     0
   ), 100)
-
-  // 5. Impact
+  
   const impact = calculateImpact(gapLevels, response.importance)
-
-  // 6. Priority Score
   const priorityScore = calculatePriorityScore(impact, effortFinal)
-
-  // 7. Category
   const category = categorizeCriterion(impact, effortFinal)
 
   return {
@@ -394,15 +518,12 @@ export function calculateCriterionEffort(
   }
 }
 
-/**
- * Calcula efforts para todos los criterios
- */
 export function calculateAllEfforts(
   responses: CriterionResponse[],
   criteria: Criterion[],
   numEmployees: number,
   sector: string,
-  globalMaturity: number
+  globalMaturity: number  // Ahora 1-5
 ): EffortResult[] {
   return responses.map(response => {
     const criterion = criteria.find(c => c.id === response.criteria_id)
@@ -414,7 +535,7 @@ export function calculateAllEfforts(
 }
 
 // ============================================
-// ROADMAP GENERATION
+// ROADMAP GENERATION (Sin cambios)
 // ============================================
 
 export interface RoadmapPhase {
@@ -426,41 +547,59 @@ export interface RoadmapPhase {
   }>
 }
 
-/**
- * Genera roadmap 30/60/90 días basado en PriorityScore
- */
 export function generateRoadmap(
   responses: CriterionResponse[],
   criteria: Criterion[],
   efforts: EffortResult[]
 ): RoadmapPhase[] {
-  // Combinar toda la información
   const items = responses.map(response => {
     const criterion = criteria.find(c => c.id === response.criteria_id)!
     const effort = efforts.find(e => e.criteria_id === response.criteria_id)!
     return { criterion, response, effort }
   })
 
-  // Ordenar por priority score descendente
   const sorted = items.sort((a, b) => b.effort.priority_score - a.effort.priority_score)
 
-  // Distribuir en fases
-  // 30 días: Top Quick Wins (effort bajo, impact alto)
   const quickWins = sorted.filter(item => item.effort.category === 'Quick Win').slice(0, 5)
-  
-  // 60 días: Foundation projects (impact medio, effort moderado)
-  const foundation = sorted
-    .filter(item => item.effort.category === 'Foundation')
-    .slice(0, 8)
-  
-  // 90 días: Transformacional (alto impacto, alto esfuerzo)
-  const transformacional = sorted
-    .filter(item => item.effort.category === 'Transformacional')
-    .slice(0, 5)
+  const foundation = sorted.filter(item => item.effort.category === 'Foundation').slice(0, 8)
+  const transformacional = sorted.filter(item => item.effort.category === 'Transformacional').slice(0, 5)
 
   return [
     { phase: '30-days', criteria: quickWins },
     { phase: '60-days', criteria: foundation },
     { phase: '90-days', criteria: transformacional }
   ]
+}
+
+// ============================================
+// UTILIDADES DE COMPARACIÓN (Para migración)
+// ============================================
+
+/**
+ * Compara metodología vieja vs nueva
+ * Útil para verificar migración
+ */
+export function compareMethodologies(
+  responses: CriterionResponse[]
+): {
+  old_percentage: number
+  new_maturity_index: number
+  difference: string
+} {
+  // Método viejo: promedio AS-IS normalizado
+  const oldScores = responses.map(r => levelToScore(r.as_is_level))
+  const old_percentage = oldScores.reduce((a, b) => a + b, 0) / oldScores.length
+  
+  // Método nuevo: weighted gaps
+  const weightedGaps = responses.map(r => 
+    calculateWeightedGap(r.as_is_level, r.to_be_level, r.importance)
+  )
+  const avgWeightedGap = weightedGaps.reduce((a, b) => a + b, 0) / weightedGaps.length
+  const new_maturity_index = convertWeightedGapToMaturityIndex(avgWeightedGap)
+  
+  return {
+    old_percentage,
+    new_maturity_index,
+    difference: `${old_percentage.toFixed(1)}% vs ${new_maturity_index.toFixed(2)}/5`
+  }
 }
