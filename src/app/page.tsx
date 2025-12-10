@@ -15,7 +15,7 @@ export default function Home() {
             ¿Y si pudieras controlar la transformación digital de tu empresa de forma sencilla?
           </h1>
           <h2 className="text-2xl md:text-3xl font-semibold mb-8" style={{ color: '#475569' }}>
-            Nosotros te guiamos para salir del laberinto digital.
+            tu GPS empresarial
           </h2>
         </div>
       </div>
