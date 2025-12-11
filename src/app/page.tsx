@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import ClaridadSection from '@/components/ClaridadSection'
 import ProblemaSection from '@/components/ProblemaSection'
 import SolucionSection from '@/components/SolucionSection'
 
@@ -12,10 +13,10 @@ export default function Home() {
       <div id="inicio" className="w-full pt-12 pb-6 bg-gradient-to-b from-white to-blue-50">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6" style={{ color: '#0f172a' }}>
-            ¿Y si pudieras controlar la transformación digital de tu empresa de forma sencilla?
+            La transformación digital no tiene que ser un laberinto
           </h1>
           <h2 className="text-2xl md:text-3xl font-semibold mb-8" style={{ color: '#475569' }}>
-            tu GPS empresarial
+            Tu GPS empresarial que te muestra el camino, paso a paso.
           </h2>
         </div>
       </div>
@@ -45,6 +46,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* NUEVA SECCIÓN: Claridad (después del video) */}
+      <ClaridadSection />
 
       {/* SECCIÓN 2: PROBLEMA */}
       <ProblemaSection />
@@ -219,7 +223,7 @@ export default function Home() {
       </div>
 
       {/* SECCIÓN 6: Cómo funciona */}
-      <div className="card mb-12">
+      <div id="como-funciona" className="card mb-12">
         <div className="card-body">
           <h2 className="text-3xl font-bold mb-8 text-center" style={{ color: '#0f172a' }}>
             ¿Cómo funciona?
