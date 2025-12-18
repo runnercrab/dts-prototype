@@ -5,32 +5,50 @@ const ClaridadSection: React.FC = () => {
     {
       number: "①",
       titulo: "Lo que realmente te frena",
-      contenido: "Estás en todo. Quieres delegar, pero no sabes en quién. Sabes que necesitas digitalizarte, pero no tienes claro por dónde empezar ni qué ganarás."
+      contenido: "Diriges el negocio, tomas decisiones cada día y apagas fuegos. Sabes que deberías mejorar procesos, tecnología y datos… pero nadie te dice por dónde empezar ni qué ganarás."
     },
     {
       number: "②",
       titulo: "La confusión del mundo digital",
-      contenido: "Transformación digital, madurez del dato, IA... Demasiadas palabras bonitas, poca claridad práctica."
+      contenido: "Transformación digital, IA, madurez del dato… Demasiadas palabras bonitas, poca claridad práctica."
     },
     {
       number: "③",
       titulo: "Tu problema no es la tecnología. Es la falta de dirección.",
-      contenido: "Nadie te dice qué pasos dar, en qué orden, cuánto costará ni qué impacto tendrá en ventas, costes o eficiencia."
+      contenido: "Nadie te dice qué pasos dar, en qué orden, cuánto costará ni qué impacto tendrá en ventas, costes o eficiencia. Analizamos tu empresa con una metodología internacional y la traducimos a decisiones simples: qué mejorar, en qué orden y qué impacto económico tiene."
     },
     {
       number: "④",
-      titulo: "Un plan claro, realista y sin humo",
-      contenido: "Gapply analiza tu empresa en 6 áreas clave y te ofrece un camino ordenado para avanzar con seguridad."
+      titulo: "Un plan claro, realista",
+      lista: [
+        "Te hacemos unas pocas preguntas clave para entender tu negocio y calcular impacto real.",
+        "Diagnosticamos tu empresa en 6 áreas clave, con 129 criterios objetivos.",
+        "Detectamos tus brechas reales, no las teóricas.",
+        "Calculamos impacto en horas y en ingresos.",
+        "Ordenamos las iniciativas según impacto y esfuerzo, empezando por las que más valor dan con menos complejidad, y construimos un roadmap realista.",
+        "Te acompañamos en todo momento, ajustando el plan según lo que ocurre de verdad."
+      ]
     },
     {
       number: "⑤",
       titulo: "No avanzas solo",
-      contenido: "Tu Avatar Digital te guía 24/7, explicando cada paso con un lenguaje claro y humano."
+      contenido: "Tu Avatar Digital te guía 24/7, explicando cada paso con tu lenguaje, es como un copiloto, Tu avatar no espera a que preguntes, te avisa:",
+      lista: [
+        "qué significa cada brecha",
+        "qué decisiones debes tomar",
+        "cuándo te estás desviando del plan"
+      ]
     },
     {
       number: "⑥",
-      titulo: "Esto es lo que te llevas con Gapply",
-      contenido: "Descubrimos tus brechas. Te damos un camino para resolverlas. Te acompañamos con un avatar digital que habla tu idioma."
+      titulo: "Esto no es un informe. Es un sistema vivo.",
+      subtitle: "Cada mes, Gapply:",
+      lista: [
+        "recalcula el impacto que ya has conseguido",
+        "detecta lo que se está bloqueando",
+        "ajusta prioridades",
+        "te avisa cuando hay que decidir"
+      ]
     }
   ];
 
@@ -55,19 +73,41 @@ const ClaridadSection: React.FC = () => {
               key={index}
               className="relative p-6 rounded-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-white hover:shadow-lg transition-all duration-300"
             >
-              {/* Número en círculo - MÁS GRANDE */}
-              <div className="absolute -top-5 -left-5 flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white text-3xl font-bold shadow-lg">
+              {/* Número en círculo - TODOS IGUALES, MÁS GRANDES */}
+              <div className="absolute -top-6 -left-6 flex items-center justify-center w-20 h-20 rounded-full bg-blue-600 text-white text-4xl font-bold shadow-lg">
                 {step.number}
               </div>
 
               {/* Contenido */}
-              <div className="pt-6">
+              <div className="pt-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
                   {step.titulo}
                 </h3>
-                <p className="text-lg text-gray-700 leading-relaxed">
-                  {step.contenido}
-                </p>
+                
+                {step.contenido && (
+                  <p className="text-lg text-gray-700 leading-relaxed mb-4">
+                    {step.contenido}
+                  </p>
+                )}
+
+                {step.subtitle && (
+                  <p className="text-lg font-semibold text-gray-800 mb-3">
+                    {step.subtitle}
+                  </p>
+                )}
+
+                {step.lista && (
+                  <ul className="space-y-2 mb-4">
+                    {step.lista.map((item, i) => (
+                      <li key={i} className="flex items-start text-base text-gray-700">
+                        <span className="text-blue-600 mr-3 mt-1 flex-shrink-0">
+                          •
+                        </span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           ))}
@@ -85,12 +125,8 @@ const ClaridadSection: React.FC = () => {
           <div className="absolute bottom-0 right-0 w-40 h-40 bg-white opacity-5 rounded-full translate-x-1/2 translate-y-1/2"></div>
           
           <div className="relative z-10">
-            <div className="inline-block px-4 py-2 bg-white bg-opacity-20 rounded-full text-white text-sm font-semibold mb-4">
-              Nuestra Promesa
-            </div>
-            
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Hacemos claridad
+              Te decimos qué mejorar, en qué orden y con qué impacto
             </h3>
             
             <p className="text-xl text-blue-100 mb-6 max-w-2xl mx-auto">
@@ -102,19 +138,15 @@ const ClaridadSection: React.FC = () => {
                 href="/diagnostico-full"
                 className="inline-block px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-gray-100 transition-colors shadow-lg"
               >
-                Comenzar Diagnóstico →
+                Ver dónde está mi empresa
               </a>
               <a
                 href="#como-funciona"
                 className="inline-block px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-blue-600 transition-colors"
               >
-                Cómo funciona
+                Ver cómo tomamos decisiones
               </a>
             </div>
-
-            <p className="text-sm text-blue-200 mt-6">
-              ✓ 45-60 minutos · ✓ Sin tarjeta de crédito · ✓ Resultados inmediatos
-            </p>
           </div>
         </div>
 
