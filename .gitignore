@@ -16,3 +16,4 @@ ayuda
 *.backup.*
 backups/
 *.OLD
+backup_local/
