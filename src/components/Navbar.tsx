@@ -38,7 +38,7 @@ export default function Navbar() {
 
           {/* CTA principal */}
           <Link
-            href="/diagnostico-full"
+            href="/diagnostico-full?demo=1"
             className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 font-medium transition-all shadow-sm hover:shadow-md"
           >
             Ver ejemplo completo

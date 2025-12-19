@@ -12,6 +12,9 @@ import bus from '@/lib/bus'
 
 export const dynamic = 'force-dynamic'
 
+// ✅ DEMO: assessment con 129 respuestas
+const DEMO_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
+
 interface Criterion {
   id: string
   code: string
@@ -74,6 +77,15 @@ export default function DiagnosticoFullPage() {
   useEffect(() => {
     console.log('🆔 assessmentId cambió a:', assessmentId)
     if (assessmentId) {
+      const isDemo =
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('demo') === '1'
+
+      if (isDemo) {
+        console.log('🧪 Demo: NO guardo dts_assessment_id en localStorage')
+        return
+      }
+
       console.log('✅ Guardando en localStorage:', assessmentId)
       localStorage.setItem('dts_assessment_id', assessmentId)
     }
@@ -183,6 +195,18 @@ export default function DiagnosticoFullPage() {
   useEffect(() => {
     const checkExistingAssessment = async () => {
       try {
+        const isDemo =
+          typeof window !== 'undefined' &&
+          new URLSearchParams(window.location.search).get('demo') === '1'
+
+        if (isDemo) {
+          console.log('🎯 Modo DEMO activado: forzando assessment demo')
+          setAssessmentId(DEMO_ASSESSMENT_ID)
+          await loadFullCriteria(DEMO_ASSESSMENT_ID)
+          setPhase('assessment')
+          return
+        }
+
         const savedAssessmentId = localStorage.getItem('dts_assessment_id')
         if (savedAssessmentId) {
           const { data: assessment, error } = await supabase
@@ -306,7 +330,16 @@ export default function DiagnosticoFullPage() {
         calculateSubdimensions(sortedCriteria, new Map())
       }
     } catch (err: any) {
-      setError(err.message)
+      console.error('❌ Error cargando criterios (raw):', err)
+      console.error('❌ Error details:', {
+        message: err?.message,
+        code: err?.code,
+        details: err?.details,
+        hint: err?.hint,
+        status: err?.status
+      })
+      try { console.error('❌ Error JSON:', JSON.stringify(err)) } catch {}
+      setError(err?.message || 'Error cargando criterios')
     } finally {
       setLoading(false)
     }
@@ -503,7 +536,7 @@ export default function DiagnosticoFullPage() {
               </button>
               <span className="text-gray-300">|</span>
               <button
-                onClick={() => router.push('/resultados')}
+                onClick={() => router.push(new URLSearchParams(window.location.search).get('demo') === '1' ? '/resultados?demo=1' : '/resultados')}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-sm"
                 title="Ver resultados del diagnóstico"
               >

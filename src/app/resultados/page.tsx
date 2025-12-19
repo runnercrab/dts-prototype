@@ -19,6 +19,8 @@ import RadarChartComponent from '@/components/RadarChartComponent'
 import HeatMapChart from '@/components/HeatMapChart'
 import TimelineRoadmap from '@/components/TimelineRoadmap'
 
+const DEMO_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
+
 interface DimensionScore {
   dimension: string
   maturityIndex: number  // NUEVO: 1-5 scale
@@ -92,13 +94,20 @@ export default function ResultadosPage() {
 
   const loadResults = async () => {
     try {
-      const assessmentId = localStorage.getItem('dts_assessment_id')
+      const isDemo =
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('demo') === '1'
+
+      const assessmentId = isDemo
+        ? DEMO_ASSESSMENT_ID
+        : localStorage.getItem('dts_assessment_id')
       
       if (!assessmentId) {
         router.push('/diagnostico-full')
         return
       }
 
+      console.log('🧪 Demo mode:', isDemo)
       console.log('🔍 Assessment ID:', assessmentId)
 
       const { data: assessment } = await supabase
@@ -169,24 +178,24 @@ export default function ResultadosPage() {
       }
 
       const criteria = allCriteriaData.map(c => {
-        const dbCode = c.dts_subdimensions?.dts_dimensions?.code || 'D1'
+        const dbCode = (c as any).dts_subdimensions?.dts_dimensions?.code || 'D1'
         const tmForumCode = dimensionCodeMap[dbCode] || 'strategy'
         
         return {
-          id: c.id,
-          code: c.code,
+          id: (c as any).id,
+          code: (c as any).code,
           dimension_id: tmForumCode,
-          subdimension_id: c.subdimension_id,
-          title: c.short_label || c.code
+          subdimension_id: (c as any).subdimension_id,
+          title: (c as any).short_label || (c as any).code
         }
       })
 
       const responses = responsesData.map(r => ({
-        criteria_id: r.criteria_id,
-        as_is_level: r.as_is_level,
-        to_be_level: r.to_be_level,
-        importance: r.importance || 3,
-        to_be_timeframe: r.to_be_timeframe || '1year'
+        criteria_id: (r as any).criteria_id,
+        as_is_level: (r as any).as_is_level,
+        to_be_level: (r as any).to_be_level,
+        importance: (r as any).importance || 3,
+        to_be_timeframe: (r as any).to_be_timeframe || '1year'
       }))
 
       // ============================================
@@ -204,16 +213,16 @@ export default function ResultadosPage() {
       const legacyScore = maturityIndexToPercentage(globalMaturity)
       setGlobalScore(Math.round(legacyScore))
       
-      console.log(`✅ Global Maturity Index: ${globalMaturity.toFixed(2)}/5 (${maturityLabel})`)
+      console.log(`✅ Global Maturity Index: ${globalMaturity.toFixed(2)}/5 (${getMaturityLabel(globalMaturity)})`)
       console.log(`   Legacy score: ${legacyScore.toFixed(1)}%`)
       
       // Preparar scores para visualización
       const radarScores: DimensionScore[] = dimScores.map(d => ({
-        dimension: d.dimension_id,
-        maturityIndex: d.maturity_index,  // NUEVO
-        asIs: Math.round(d.as_is_score),  // Legacy
-        toBe: Math.round(d.to_be_score),  // Legacy
-        gap: Math.round(d.gap)            // Legacy
+        dimension: (d as any).dimension_id,
+        maturityIndex: (d as any).maturity_index,  // NUEVO
+        asIs: Math.round((d as any).as_is_score),  // Legacy
+        toBe: Math.round((d as any).to_be_score),  // Legacy
+        gap: Math.round((d as any).gap)            // Legacy
       }))
       setDimensionScores(radarScores)
 
@@ -224,15 +233,15 @@ export default function ResultadosPage() {
       const efforts = calculateAllEfforts(
         responses,
         criteria,
-        assessment?.onboarding_data?.employees || 50,
-        assessment?.onboarding_data?.sector || 'Technology',
+        (assessment as any)?.onboarding_data?.employees || 50,
+        (assessment as any)?.onboarding_data?.sector || 'Technology',
         globalMaturity  // Ahora pasa 1-5
       )
 
       // Preparar datos para HeatMap
-      const heatMapCriteria: HeatMapCriterion[] = efforts.map(effort => {
-        const criterion = criteria.find(c => c.id === effort.criteria_id)!
-        const response = responses.find(r => r.criteria_id === effort.criteria_id)!
+      const heatMapCriteria: HeatMapCriterion[] = (efforts as any).map((effort: any) => {
+        const criterion = criteria.find((c: any) => c.id === effort.criteria_id)!
+        const response = responses.find((r: any) => r.criteria_id === effort.criteria_id)!
         const gap = response.to_be_level - response.as_is_level
         
         const normalizedImportance = response.importance
@@ -252,14 +261,14 @@ export default function ResultadosPage() {
       setHeatMapData(heatMapCriteria)
 
       // Preparar datos para Timeline
-      const timelineInitiatives: TimelineInitiative[] = efforts
-        .filter(effort => {
-          const response = responses.find(r => r.criteria_id === effort.criteria_id)!
+      const timelineInitiatives: TimelineInitiative[] = (efforts as any)
+        .filter((effort: any) => {
+          const response = responses.find((r: any) => r.criteria_id === effort.criteria_id)!
           return response.to_be_level > response.as_is_level
         })
-        .map(effort => {
-          const criterion = criteria.find(c => c.id === effort.criteria_id)!
-          const response = responses.find(r => r.criteria_id === effort.criteria_id)!
+        .map((effort: any) => {
+          const criterion = criteria.find((c: any) => c.id === effort.criteria_id)!
+          const response = responses.find((r: any) => r.criteria_id === effort.criteria_id)!
           
           let timeframe: '6months' | '1year' | '2years' | '3years+'
           if (effort.category === 'Quick Win') {
@@ -282,13 +291,13 @@ export default function ResultadosPage() {
         })
       setTimelineData(timelineInitiatives)
 
-      const roadmapData = generateRoadmap(responses, criteria, efforts)
+      const roadmapData = generateRoadmap(responses, criteria, efforts as any)
       
-      const formattedRoadmap: RoadmapPhase[] = roadmapData.map(phase => {
+      const formattedRoadmap: RoadmapPhase[] = (roadmapData as any).map((phase: any) => {
         const phaseNumber = phase.phase === '30-days' ? '30' : phase.phase === '60-days' ? '60' : '90'
         return {
           phase: phaseNumber,
-          criteria: phase.criteria.map(item => ({
+          criteria: phase.criteria.map((item: any) => ({
             code: item.criterion.code,
             impact: item.effort.impact,
             effort: item.effort.effort_final
@@ -304,7 +313,7 @@ export default function ResultadosPage() {
         'Mantenimiento': 0
       }
 
-      efforts.forEach(effort => {
+      ;(efforts as any).forEach((effort: any) => {
         const category = categorizeCriterion(effort.impact, effort.effort_final)
         dist[category] = (dist[category] || 0) + 1
       })
@@ -345,6 +354,10 @@ export default function ResultadosPage() {
   const totalInitiatives = dimensionScores.reduce((sum, d) => sum + (d.gap > 0 ? 1 : 0), 0) * 21
   const quickWins = distribution['Quick Win'] || 0
 
+  const isDemo =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('demo') === '1'
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 shadow-sm">
@@ -359,7 +372,7 @@ export default function ResultadosPage() {
               </p>
             </div>
             <button
-              onClick={() => router.push('/diagnostico-full')}
+              onClick={() => router.push(new URLSearchParams(window.location.search).get('demo') === '1' ? '/diagnostico-full?demo=1' : '/diagnostico-full')}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               ← Volver al Diagnóstico
