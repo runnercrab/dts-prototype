@@ -20,7 +20,6 @@ export async function GET(req: Request) {
 
     const supabase = supabaseService()
 
-    // 1) Score global
     const { data: assessmentScore, error: aErr } = await supabase
       .from('dts_assessment_scores')
       .select('*')
@@ -41,7 +40,6 @@ export async function GET(req: Request) {
       )
     }
 
-    // 2) Score por dimensión (6 filas)
     const { data: dimensionScores, error: dErr } = await supabase
       .from('dts_dimension_scores')
       .select('*')
@@ -68,7 +66,12 @@ export async function GET(req: Request) {
     })
   } catch (e: any) {
     return NextResponse.json(
-      { ok: false, error: 'Unexpected server error', requestId, message: e?.message || String(e) },
+      {
+        ok: false,
+        error: 'Unexpected server error',
+        requestId,
+        message: e?.message || String(e),
+      },
       { status: 500 }
     )
   }
