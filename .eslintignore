@@ -1,0 +1,12 @@
+# No lint de backups / basura local
+backup_local/**
+backups/**
+**/*.backup.tsx
+**/*.backup.ts
+**/*.old.tsx
+**/*.old.ts
+**/*.WORKING.tsx
+**/*.WORKING.ts
+
+# macOS
+**/.DS_Store
