@@ -1,20 +1,34 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import ClaridadSection from '@/components/ClaridadSection'
 import ProblemaSection from '@/components/ProblemaSection'
 import SolucionSection from '@/components/SolucionSection'
 
+const DEMO_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
+
 export default function Home() {
   return (
     <>
-      {/* HERO SECTION - Título + Subtítulo */}
+      {/* HERO SECTION - Título + Subtítulo + CTA */}
       <div id="inicio" className="w-full pt-12 pb-6 bg-gradient-to-b from-white to-blue-50">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6" style={{ color: '#0f172a' }}>
             La transformación digital no tiene que ser un laberinto
           </h1>
+
           <h2 className="text-2xl md:text-3xl font-semibold mb-8" style={{ color: '#475569' }}>
             Tu GPS empresarial que te muestra el camino, paso a paso.
           </h2>
+
+          {/* CTA del HERO: Ejemplo completo (sin demo=1) */}
+          <div className="flex justify-center">
+            <Link
+              href={`/diagnostico-full?assessmentId=${DEMO_ASSESSMENT_ID}`}
+              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl hover:from-blue-700 hover:to-blue-800 font-semibold transition-all shadow-md hover:shadow-lg"
+            >
+              Ver ejemplo completo
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -291,7 +305,13 @@ export default function Home() {
               <div className="flex items-start gap-4">
                 <div
                   className="flex-shrink-0"
-                  style={{ width: '8px', height: '100%', minHeight: '120px', background: '#2563eb', borderRadius: '4px' }}
+                  style={{
+                    width: '8px',
+                    height: '100%',
+                    minHeight: '120px',
+                    background: '#2563eb',
+                    borderRadius: '4px',
+                  }}
                 />
 
                 <div className="flex-1">

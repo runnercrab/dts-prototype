@@ -10,9 +10,8 @@ export default function Navbar() {
       style={{ zIndex: 9999 }}
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-
         {/* Logo (SIEMPRE vuelve a /) */}
-        <Link href="/">
+        <Link href="/" className="flex items-center">
           <Image
             src="/gapply-logo.png"
             alt="Gapply - Transformación Digital"
@@ -26,25 +25,12 @@ export default function Navbar() {
         {/* Navegación */}
         <div className="flex items-center gap-6">
           <nav className="hidden md:flex items-center gap-8">
-            {/* ❌ ELIMINADO: Inicio */}
-
-            <a
-              href="#faq"
-              className="text-gray-600 hover:text-gray-900 transition-colors"
-            >
+            <a href="#faq" className="text-gray-600 hover:text-gray-900 transition-colors">
               FAQ
             </a>
           </nav>
 
-          {/* CTA principal */}
-          <Link
-            href="/diagnostico-full?demo=1"
-            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 font-medium transition-all shadow-sm hover:shadow-md"
-          >
-            Ver ejemplo completo
-          </Link>
-
-          {/* CTA secundario */}
+          {/* CTA principal: Empezar diagnóstico */}
           <Link
             href="/start"
             className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition-all"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AvatarPane from '@/components/AvatarPane'
@@ -11,9 +11,6 @@ import CriterionQuestion from '@/components/diagnostico/CriterionQuestion'
 import bus from '@/lib/bus'
 
 export const dynamic = 'force-dynamic'
-
-// ✅ DEMO: assessment con 129 respuestas
-const DEMO_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
 
 interface Criterion {
   id: string
@@ -68,29 +65,21 @@ interface ChatMessage {
   saved?: boolean
 }
 
+async function safeReadJson(res: Response | any) {
+  try {
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
 export default function DiagnosticoFullPage() {
   const router = useRouter()
+
   const [phase, setPhase] = useState<'onboarding' | 'assessment' | 'completed'>('onboarding')
   const [assessmentId, setAssessmentId] = useState<string | null>(null)
   const [onboardingData, setOnboardingData] = useState<any>(null)
-  
-  useEffect(() => {
-    console.log('🆔 assessmentId cambió a:', assessmentId)
-    if (assessmentId) {
-      const isDemo =
-        typeof window !== 'undefined' &&
-        new URLSearchParams(window.location.search).get('demo') === '1'
 
-      if (isDemo) {
-        console.log('🧪 Demo: NO guardo dts_assessment_id en localStorage')
-        return
-      }
-
-      console.log('✅ Guardando en localStorage:', assessmentId)
-      localStorage.setItem('dts_assessment_id', assessmentId)
-    }
-  }, [assessmentId])
-  
   const [showMap, setShowMap] = useState(true)
   const [criteria, setCriteria] = useState<Criterion[]>([])
   const [subdimensions, setSubdimensions] = useState<Subdimension[]>([])
@@ -100,62 +89,56 @@ export default function DiagnosticoFullPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  /* ============================
+     1) CHAT BUS: guardar mensajes
+     ============================ */
   useEffect(() => {
     const handleChatMessage = async (message: { role: 'user' | 'assistant' | 'system'; content: string }) => {
       const newMessage = { ...message, saved: false }
       setCurrentChatMessages(prev => [...prev, newMessage])
-      
+
       if (assessmentId && criteria[currentCriterionIndex]) {
         try {
           const currentCriterion = criteria[currentCriterionIndex]
-          await supabase.from('dts_chat_messages').insert({
+          const { error } = await supabase.from('dts_chat_messages').insert({
             assessment_id: assessmentId,
             criteria_id: currentCriterion.id,
             role: message.role,
-            content: message.content
+            content: message.content,
           })
-          console.log('💾 Mensaje nuevo guardado en BD')
-          
-          setCurrentChatMessages(prev => 
-            prev.map(msg => 
+          if (error) throw error
+
+          setCurrentChatMessages(prev =>
+            prev.map(msg =>
               msg.content === message.content && msg.role === message.role
                 ? { ...msg, saved: true }
                 : msg
             )
           )
-        } catch (error) {
-          console.error('❌ Error guardando mensaje:', error)
+        } catch (err) {
+          console.error('❌ Error guardando mensaje:', err)
         }
       }
     }
-    
+
     bus.on('chatMessage', handleChatMessage)
     return () => bus.off('chatMessage', handleChatMessage)
   }, [assessmentId, criteria, currentCriterionIndex])
 
+  /* ============================
+     2) Cargar mensajes por criterio
+     ============================ */
   useEffect(() => {
     const loadMessagesForCriterion = async () => {
-      console.log('🔍 useEffect disparado - currentCriterionIndex:', currentCriterionIndex)
-      console.log('🔍 assessmentId:', assessmentId)
-      console.log('🔍 criteria.length:', criteria.length)
-      
-      if (!assessmentId) {
-        console.warn('⚠️ No hay assessmentId - limpiando chat')
-        setCurrentChatMessages([])
-        return
-      }
-      
+      if (!assessmentId || criteria.length === 0) return
       if (!criteria[currentCriterionIndex]) {
-        console.warn('⚠️ No hay criterio en índice', currentCriterionIndex, '- limpiando chat')
         setCurrentChatMessages([])
         return
       }
 
       const currentCriterion = criteria[currentCriterionIndex]
-      
+
       try {
-        console.log(`📥 Cargando mensajes del criterio ${currentCriterion.code} (${currentCriterion.id})...`)
-        
         const { data, error } = await supabase
           .from('dts_chat_messages')
           .select('role, content, created_at')
@@ -163,26 +146,15 @@ export default function DiagnosticoFullPage() {
           .eq('criteria_id', currentCriterion.id)
           .order('created_at', { ascending: true })
 
-        if (error) {
-          console.error('❌ Error en query:', error)
-          throw error
-        }
+        if (error) throw error
 
-        console.log('📊 Query resultado:', data?.length || 0, 'mensajes')
-
-        if (data && data.length > 0) {
-          const messages = data.map(msg => ({
+        setCurrentChatMessages(
+          (data || []).map(msg => ({
             role: msg.role as 'user' | 'assistant' | 'system',
             content: msg.content,
-            saved: true
+            saved: true,
           }))
-          console.log('📋 Mensajes que se van a cargar:', messages)
-          setCurrentChatMessages(messages)
-          console.log(`✅ ${messages.length} mensajes cargados para criterio ${currentCriterion.code}`)
-        } else {
-          setCurrentChatMessages([])
-          console.log(`📝 Criterio ${currentCriterion.code} - chat limpio (nuevo o sin mensajes)`)
-        }
+        )
       } catch (err) {
         console.error('❌ Error cargando mensajes:', err)
         setCurrentChatMessages([])
@@ -192,46 +164,64 @@ export default function DiagnosticoFullPage() {
     loadMessagesForCriterion()
   }, [currentCriterionIndex, assessmentId, criteria])
 
+  /* ============================
+     3) Resolver assessmentId
+     ============================ */
   useEffect(() => {
-    const checkExistingAssessment = async () => {
+    const init = async () => {
       try {
-        const isDemo =
-          typeof window !== 'undefined' &&
-          new URLSearchParams(window.location.search).get('demo') === '1'
+        const params =
+          typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
 
-        if (isDemo) {
-          console.log('🎯 Modo DEMO activado: forzando assessment demo')
-          setAssessmentId(DEMO_ASSESSMENT_ID)
-          await loadFullCriteria(DEMO_ASSESSMENT_ID)
+        const assessmentIdFromUrl = params?.get('assessmentId')
+        if (assessmentIdFromUrl) {
+          await hydrateAssessment(assessmentIdFromUrl, { persistToLocalStorage: false })
           setPhase('assessment')
           return
         }
 
         const savedAssessmentId = localStorage.getItem('dts_assessment_id')
         if (savedAssessmentId) {
-          const { data: assessment, error } = await supabase
-            .from('dts_assessments')
-            .select('id, status, onboarding_data')
-            .eq('id', savedAssessmentId)
-            .single()
-          
-          if (error || !assessment) {
-            localStorage.removeItem('dts_assessment_id')
-            return
-          }
-          
-          setAssessmentId(savedAssessmentId)
-          setOnboardingData(assessment.onboarding_data)
-          await loadFullCriteria(savedAssessmentId)
+          await hydrateAssessment(savedAssessmentId, { persistToLocalStorage: true })
           setPhase('assessment')
         }
-      } catch (error) {
-        console.error('Error recuperando assessment:', error)
+      } catch (err) {
+        console.error('❌ Error inicializando diagnóstico:', err)
       }
     }
-    checkExistingAssessment()
+
+    init()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  /* ============================
+     4) Hidratar assessment
+     ============================ */
+  const hydrateAssessment = async (
+    id: string,
+    opts: { persistToLocalStorage: boolean }
+  ) => {
+    setAssessmentId(id)
+    if (opts.persistToLocalStorage) {
+      localStorage.setItem('dts_assessment_id', id)
+    }
+
+    const { data: assessment, error } = await supabase
+      .from('dts_assessments')
+      .select('id, onboarding_data')
+      .eq('id', id)
+      .single()
+
+    if (!error && assessment) {
+      setOnboardingData(assessment.onboarding_data)
+    }
+
+    await loadFullCriteria(id)
+  }
+
+  /* ============================
+     5) Cargar criterios + respuestas
+     ============================ */
   const loadFullCriteria = async (assessmentId: string) => {
     try {
       setLoading(true)
@@ -255,41 +245,51 @@ export default function DiagnosticoFullPage() {
       if (!data || data.length === 0) throw new Error('No se encontraron criterios')
 
       const DIMENSION_NAME_MAP: Record<string, string> = {
-        'Customer': 'Cliente', 'Strategy': 'Estrategia', 'Technology': 'Tecnología',
-        'Operations': 'Operaciones', 'Culture': 'Cultura', 'Data': 'Datos'
+        Customer: 'Cliente',
+        Strategy: 'Estrategia',
+        Technology: 'Tecnología',
+        Operations: 'Operaciones',
+        Culture: 'Cultura',
+        Data: 'Datos',
       }
 
       const transformedCriteria: Criterion[] = data.map((c: any) => {
         const subdimension = Array.isArray(c.dts_subdimensions) ? c.dts_subdimensions[0] : c.dts_subdimensions
         const dimension = subdimension?.dts_dimensions
         const dimensionArray = Array.isArray(dimension) ? dimension[0] : dimension
+
         const dimensionName = dimensionArray?.name || ''
         const dimensionNameEs = DIMENSION_NAME_MAP[dimensionName] || dimensionName
 
         return {
-          id: c.id, code: c.code,
+          id: c.id,
+          code: c.code,
           description: c.description_es || c.description || '',
           short_label: c.short_label_es || c.short_label || '',
           context: c.context_es || c.context || null,
           focus_area: c.focus_area || '',
           subdimension_id: c.subdimension_id,
-          subdimension: subdimension ? {
-            name: subdimension.name_es || subdimension.name || '',
-            code: subdimension.code || '',
-            dimension_name: dimensionNameEs,
-            dimension_display_order: dimensionArray?.display_order || 0,
-            subdimension_display_order: subdimension.display_order || 0
-          } : undefined,
-          dimension: dimensionArray ? {
-            name: dimensionNameEs,
-            code: dimensionArray.code || '',
-            display_order: dimensionArray.display_order || 0
-          } : undefined,
+          subdimension: subdimension
+            ? {
+                name: subdimension.name_es || subdimension.name || '',
+                code: subdimension.code || '',
+                dimension_name: dimensionNameEs,
+                dimension_display_order: dimensionArray?.display_order || 0,
+                subdimension_display_order: subdimension.display_order || 0,
+              }
+            : undefined,
+          dimension: dimensionArray
+            ? {
+                name: dimensionNameEs,
+                code: dimensionArray.code || '',
+                display_order: dimensionArray.display_order || 0,
+              }
+            : undefined,
           level_1_description_es: c.level_1_description_es,
           level_2_description_es: c.level_2_description_es,
           level_3_description_es: c.level_3_description_es,
           level_4_description_es: c.level_4_description_es,
-          level_5_description_es: c.level_5_description_es
+          level_5_description_es: c.level_5_description_es,
         }
       })
 
@@ -307,38 +307,31 @@ export default function DiagnosticoFullPage() {
 
       setCriteria(sortedCriteria)
 
-      const { data: existingResponses } = await supabase
+      const { data: existingResponses, error: respErr } = await supabase
         .from('dts_responses')
         .select('*')
         .eq('assessment_id', assessmentId)
 
-      if (existingResponses && existingResponses.length > 0) {
-        const responsesMap = new Map<string, Response>()
-        existingResponses.forEach((r: any) => {
-          responsesMap.set(r.criteria_id, {
-            as_is_level: r.as_is_level,
-            as_is_confidence: r.as_is_confidence,
-            as_is_notes: r.as_is_notes,
-            to_be_level: r.to_be_level,
-            to_be_timeframe: r.to_be_timeframe,
-            importance: r.importance
-          })
-        })
-        setResponses(responsesMap)
-        calculateSubdimensions(sortedCriteria, responsesMap)
-      } else {
-        calculateSubdimensions(sortedCriteria, new Map())
+      if (respErr) {
+        console.error('❌ Error cargando respuestas:', respErr)
       }
-    } catch (err: any) {
-      console.error('❌ Error cargando criterios (raw):', err)
-      console.error('❌ Error details:', {
-        message: err?.message,
-        code: err?.code,
-        details: err?.details,
-        hint: err?.hint,
-        status: err?.status
+
+      const responsesMap = new Map<string, Response>()
+      existingResponses?.forEach((r: any) => {
+        responsesMap.set(r.criteria_id, {
+          as_is_level: r.as_is_level,
+          as_is_confidence: r.as_is_confidence,
+          as_is_notes: r.as_is_notes,
+          to_be_level: r.to_be_level,
+          to_be_timeframe: r.to_be_timeframe,
+          importance: r.importance,
+        })
       })
-      try { console.error('❌ Error JSON:', JSON.stringify(err)) } catch {}
+
+      setResponses(responsesMap)
+      calculateSubdimensions(sortedCriteria, responsesMap)
+    } catch (err: any) {
+      console.error('❌ Error cargando criterios:', err)
       setError(err?.message || 'Error cargando criterios')
     } finally {
       setLoading(false)
@@ -347,111 +340,95 @@ export default function DiagnosticoFullPage() {
 
   const calculateSubdimensions = (criteriaList: Criterion[], responsesMap: Map<string, any>) => {
     const subdimMap = new Map<string, Subdimension>()
+
     criteriaList.forEach(criterion => {
       if (!criterion.subdimension) return
       const key = criterion.subdimension.code
+
       if (!subdimMap.has(key)) {
         subdimMap.set(key, {
           id: criterion.subdimension_id,
           code: criterion.subdimension.code,
           name: criterion.subdimension.name,
           dimension_name: criterion.subdimension.dimension_name,
-          total_criteria: 0, completed_criteria: 0,
-          is_completed: false, is_current: false
+          total_criteria: 0,
+          completed_criteria: 0,
+          is_completed: false,
+          is_current: false,
         })
       }
+
       const subdim = subdimMap.get(key)!
       subdim.total_criteria++
       if (responsesMap.has(criterion.id)) subdim.completed_criteria++
     })
+
     const subdimArray = Array.from(subdimMap.values())
-    subdimArray.forEach(subdim => {
-      subdim.is_completed = subdim.completed_criteria === subdim.total_criteria
+    subdimArray.forEach(sd => {
+      sd.is_completed = sd.completed_criteria === sd.total_criteria
     })
+
     setSubdimensions(subdimArray)
   }
 
+  /* ============================
+     6) Onboarding completado
+     ============================ */
   const handleOnboardingComplete = async (newAssessmentId: string) => {
-    console.log('🎯 handleOnboardingComplete llamado con ID:', newAssessmentId)
-    setAssessmentId(newAssessmentId)
-    console.log('💾 Guardando en localStorage:', newAssessmentId)
-    localStorage.setItem('dts_assessment_id', newAssessmentId)
-    
-    const { data: assessment } = await supabase
-      .from('dts_assessments')
-      .select('onboarding_data')
-      .eq('id', newAssessmentId)
-      .single()
-    
-    if (assessment) {
-      setOnboardingData(assessment.onboarding_data)
-    }
-    
-    console.log('📚 Cargando criterios...')
-    await loadFullCriteria(newAssessmentId)
-    console.log('✅ Cambiando a fase assessment')
+    await hydrateAssessment(newAssessmentId, { persistToLocalStorage: true })
     setPhase('assessment')
   }
 
+  /* ============================
+     7) Guardar respuesta (API route)
+     ============================ */
   const handleResponseChange = async (response: Response) => {
-    if (!assessmentId || currentCriterionIndex >= criteria.length) {
-      console.error('❌ No se puede guardar: assessmentId o criterio inválido')
-      return
-    }
-    
+    if (!assessmentId) return
+    if (currentCriterionIndex >= criteria.length) return
+
     const criterion = criteria[currentCriterionIndex]
-    
-    if (!criterion || !criterion.id) {
-      console.error('❌ No se puede guardar: criterion sin ID')
-      return
-    }
-    
-    try {
-      console.log('💾 Guardando respuesta para criterio:', criterion.code)
-      console.log('📊 Datos a guardar:', {
-        assessment_id: assessmentId,
-        criteria_id: criterion.id,
-        as_is_level: response.as_is_level,
-        as_is_confidence: response.as_is_confidence,
-        as_is_notes: response.as_is_notes || null,
-        to_be_level: response.to_be_level,
-        to_be_timeframe: response.to_be_timeframe,
-        importance: response.importance
+    if (!criterion?.id) return
+
+    const missing =
+      response.as_is_level == null ||
+      response.as_is_confidence == null ||
+      response.to_be_level == null ||
+      response.to_be_timeframe == null ||
+      response.importance == null
+
+    if (missing) return
+
+    // ✅ Guardar por API (server -> service role)
+    const res = await fetch('/api/dts/responses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({
+        assessmentId,
+        criteriaId: criterion.id,
+        response,
+      }),
+    })
+
+    const json = await safeReadJson(res)
+
+    if (!res.ok || !json?.ok) {
+      console.error('❌ API /api/dts/responses error:', {
+        httpStatus: res.status,
+        json,
       })
-      
-      const { error } = await supabase.from('dts_responses').upsert({
-        assessment_id: assessmentId,
-        criteria_id: criterion.id,
-        as_is_level: response.as_is_level,
-        as_is_confidence: response.as_is_confidence,
-        as_is_notes: response.as_is_notes || null,
-        to_be_level: response.to_be_level,
-        to_be_timeframe: response.to_be_timeframe,
-        importance: response.importance,
-        response_source: 'manual',
-        reviewed_by_user: true
-      }, { onConflict: 'assessment_id,criteria_id' })
-
-      if (error) {
-        console.error('❌ Error de Supabase:', error)
-        throw error
-      }
-
-      const newResponses = new Map(responses)
-      newResponses.set(criterion.id, response)
-      setResponses(newResponses)
-      calculateSubdimensions(criteria, newResponses)
-      
-      console.log('✅ Respuesta guardada exitosamente')
-    } catch (err) {
-      console.error('❌ Error guardando respuesta:', err)
-      throw err
+      throw new Error(json?.error || `API error ${res.status}`)
     }
+
+    const newResponses = new Map(responses)
+    newResponses.set(criterion.id, response)
+    setResponses(newResponses)
+    calculateSubdimensions(criteria, newResponses)
   }
 
   const handleNext = () => {
     if (currentCriterionIndex < criteria.length - 1) {
-      setCurrentCriterionIndex(currentCriterionIndex + 1)
+      setCurrentCriterionIndex(i => i + 1)
     } else {
       handleAssessmentComplete()
     }
@@ -459,32 +436,38 @@ export default function DiagnosticoFullPage() {
 
   const handlePrevious = () => {
     if (currentCriterionIndex > 0) {
-      setCurrentCriterionIndex(currentCriterionIndex - 1)
+      setCurrentCriterionIndex(i => i - 1)
     }
   }
 
   const handleAssessmentComplete = async () => {
     if (!assessmentId) return
-    
+
     try {
-      await supabase.from('dts_assessments').update({
-        status: 'full-completed',
-        phase_2_completed: true,
-        completed_at: new Date().toISOString()
-      }).eq('id', assessmentId)
-      
+      await supabase
+        .from('dts_assessments')
+        .update({
+          status: 'full-completed',
+          phase_2_completed: true,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', assessmentId)
+
       setPhase('completed')
       localStorage.removeItem('dts_assessment_id')
     } catch (err) {
-      console.error('Error completando assessment:', err)
+      console.error('❌ Error completando assessment:', err)
     }
   }
 
+  /* ============================
+     8) Renders
+     ============================ */
   if (phase === 'onboarding') {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
-          <OnboardingWorkshop 
+          <OnboardingWorkshop
             onComplete={handleOnboardingComplete}
             existingAssessmentId={assessmentId || undefined}
             existingData={onboardingData}
@@ -500,8 +483,8 @@ export default function DiagnosticoFullPage() {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">🎉 ¡Diagnóstico Completado!</h1>
           <p className="text-gray-600 mb-8">Tus respuestas han sido guardadas.</p>
-          <button 
-            onClick={() => window.location.href = '/resultados'}
+          <button
+            onClick={() => router.push('/resultados')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Ver Resultados
@@ -516,17 +499,20 @@ export default function DiagnosticoFullPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Top bar */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={() => setShowMap(!showMap)}
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
               >
                 {showMap ? '📊 Ocultar Mapa' : '📊 Mostrar Mapa'}
               </button>
+
               <span className="text-gray-300">|</span>
+
               <button
                 onClick={() => setPhase('onboarding')}
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
@@ -534,15 +520,18 @@ export default function DiagnosticoFullPage() {
               >
                 📋 Ver Onboarding
               </button>
+
               <span className="text-gray-300">|</span>
+
               <button
-                onClick={() => router.push(new URLSearchParams(window.location.search).get('demo') === '1' ? '/resultados?demo=1' : '/resultados')}
+                onClick={() => router.push('/resultados')}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-sm"
                 title="Ver resultados del diagnóstico"
               >
                 📈 Ver Resultados
               </button>
             </div>
+
             <div className="flex-1 text-center">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                 Diagnóstico de Madurez Digital
@@ -551,6 +540,7 @@ export default function DiagnosticoFullPage() {
                 TM Forum DMM v5.0.1 - Versión Completa (129 criterios)
               </p>
             </div>
+
             <div className="w-[100px] lg:hidden"></div>
           </div>
         </div>
@@ -558,12 +548,11 @@ export default function DiagnosticoFullPage() {
 
       <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2">
-          
           {showMap && (
             <div className="lg:col-span-3 order-2 lg:order-1">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2 sticky top-4 max-h-[calc(100vh-120px)] overflow-y-auto">
                 <h3 className="text-sm font-bold text-gray-900 mb-3">Mapa de Progreso</h3>
-                <DimensionProgressMap 
+                <DimensionProgressMap
                   subdimensions={subdimensions}
                   totalCriteria={criteria.length}
                   completedCriteria={responses.size}
@@ -584,7 +573,7 @@ export default function DiagnosticoFullPage() {
             ) : error ? (
               <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                 <p className="text-red-800">{error}</p>
-                <button 
+                <button
                   onClick={() => window.location.reload()}
                   className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
@@ -610,12 +599,11 @@ export default function DiagnosticoFullPage() {
 
           {showMap && (
             <div className="lg:col-span-3 order-3">
-              <div 
+              <div
                 className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-4 flex flex-col"
                 style={{ height: 'calc(100vh - 120px)' }}
               >
-                {/* Avatar - Altura balanceada: 300px en laptops (visible), 380px en 24" */}
-                <div 
+                <div
                   className="flex-shrink-0 bg-gray-50 border-b border-gray-200 2xl:h-[380px]"
                   style={{ height: '300px' }}
                 >
@@ -627,7 +615,6 @@ export default function DiagnosticoFullPage() {
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>

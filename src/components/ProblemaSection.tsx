@@ -128,7 +128,7 @@ const ProblemaSection: React.FC = () => {
   return (
     <section className="py-16 md:py-20 bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -147,32 +147,17 @@ const ProblemaSection: React.FC = () => {
               className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300"
             >
               <div className="grid md:grid-cols-[300px_1fr] gap-0">
-                
-                {/* Columna izquierda: Header + Icono */}
-                <div 
+                {/* Columna izquierda */}
+                <div
                   className="p-6 flex flex-col items-center justify-center text-center"
                   style={{ background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' }}
                 >
-                  <div 
-                    className="flex items-center justify-center rounded-lg mb-4 bg-white"
-                    style={{ width: '100px', height: '100px' }}
-                  >
-                    <Image
-                      src={dim.iconPath}
-                      alt={dim.iconAlt}
-                      width={70}
-                      height={70}
-                      className="w-auto h-auto"
-                    />
+                  <div className="flex items-center justify-center rounded-lg mb-4 bg-white" style={{ width: '100px', height: '100px' }}>
+                    <Image src={dim.iconPath} alt={dim.iconAlt} width={70} height={70} className="w-auto h-auto" />
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">
-                    {dim.title}
-                  </h3>
-                  <p className="text-xl font-semibold text-gray-700 mb-4">
-                    {dim.subtitle}
-                  </p>
-                  
-                  {/* Palancas */}
+                  <h3 className="text-3xl font-bold text-gray-900 mb-2">{dim.title}</h3>
+                  <p className="text-xl font-semibold text-gray-700 mb-4">{dim.subtitle}</p>
+
                   <div className="flex flex-wrap gap-2 justify-center">
                     {dim.palancas.map((palanca, i) => (
                       <span
@@ -186,10 +171,8 @@ const ProblemaSection: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Columna derecha: Contenido */}
+                {/* Columna derecha */}
                 <div className="p-6 space-y-4">
-                  
-                  {/* Problemas */}
                   <div>
                     <p className="text-base font-bold text-red-600 mb-2">Tu problema real:</p>
                     <ul className="space-y-1">
@@ -202,7 +185,6 @@ const ProblemaSection: React.FC = () => {
                     </ul>
                   </div>
 
-                  {/* Beneficios */}
                   <div>
                     <p className="text-base font-bold text-green-600 mb-2">Qué consigues:</p>
                     <ul className="space-y-1">
@@ -215,17 +197,12 @@ const ProblemaSection: React.FC = () => {
                     </ul>
                   </div>
 
-                  {/* Herramientas */}
                   <div>
                     <p className="text-base font-bold text-blue-600 mb-1">Herramientas que te ayudan:</p>
                     <p className="text-base text-gray-600">{dim.herramientas}</p>
                   </div>
 
-                  {/* Impacto - Quote */}
-                  <div 
-                    className="p-4 rounded-lg border-l-4"
-                    style={{ background: '#f0f9ff', borderColor: '#2563eb' }}
-                  >
+                  <div className="p-4 rounded-lg border-l-4" style={{ background: '#f0f9ff', borderColor: '#2563eb' }}>
                     <p className="text-base font-semibold italic text-gray-800">
                       💡 "{dim.impacto}"
                     </p>
@@ -242,7 +219,7 @@ const ProblemaSection: React.FC = () => {
           <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
             📊 Resumen: ¿Qué ganas mejorando estas 6 áreas?
           </h3>
-          
+
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex items-start gap-3">
@@ -267,7 +244,7 @@ const ProblemaSection: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <span className="text-2xl text-blue-600">④</span>
@@ -291,27 +268,6 @@ const ProblemaSection: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* CTA Final */}
-        <div className="text-center p-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl text-white">
-          <h3 className="text-2xl font-bold mb-4">
-            Evaluamos tu empresa en estas 6 áreas con metodología TM Forum oficial
-          </h3>
-          <p className="text-lg mb-6 opacity-90">
-            Sin tecnicismos. Sin PowerPoints. Solo resultados reales en 45-60 minutos.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <a
-              href="/diagnostico-full"
-              className="inline-block px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              Comenzar Evaluación Gratuita →
-            </a>
-            <p className="text-sm opacity-75">
-              ✓ 45-60 minutos · ✓ Sin tarjeta · ✓ Resultados inmediatos
-            </p>
           </div>
         </div>
 

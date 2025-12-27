@@ -1,328 +1,164 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { 
-  calculateAllDimensionScores, 
-  calculateAllEfforts, 
-  generateRoadmap, 
-  calculateGlobalScore,
-  formatMaturityIndex,
-  getMaturityLabel,
-  maturityIndexToPercentage,
-  type DimensionScore as DimScoreType, 
-  type EffortResult 
-} from '@/lib/scoring-utils'
+
+import { formatMaturityIndex, getMaturityLabel, maturityIndexToPercentage } from '@/lib/scoring-utils'
+
 import KPICards from '@/components/KPICards'
 import RadarChartComponent from '@/components/RadarChartComponent'
-import HeatMapChart from '@/components/HeatMapChart'
-import TimelineRoadmap from '@/components/TimelineRoadmap'
 
 const DEMO_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
 
-interface DimensionScore {
-  dimension: string
-  maturityIndex: number  // NUEVO: 1-5 scale
-  asIs: number          // Legacy: 0-100 scale
-  toBe: number
-  gap: number
+/**
+ * IMPORTANTE:
+ * En BD, dimension_id es UUID (dts_dimensions.id).
+ * En UI usamos slugs: strategy/customer/technology/operations/culture/data
+ */
+const DIM_UUID_TO_SLUG: Record<
+  string,
+  'strategy' | 'customer' | 'technology' | 'operations' | 'culture' | 'data'
+> = {
+  '3f297a88-986e-4c1e-9fcf-5601e32fd4f6': 'strategy',
+  '08e1e35b-2fa5-44ee-894e-22438c0be0bc': 'customer',
+  'da44a7c4-09d4-4f87-845d-fb3cf8a60d24': 'technology',
+  'a592fa3e-560c-4156-bb00-f63c3a526bed': 'operations',
+  '2e19a5e9-f076-431d-bfa6-9558e475f7a4': 'culture',
+  '64114d4b-3785-483b-b54c-94438091377c': 'data',
 }
 
-interface RoadmapPhase {
-  phase: string
-  criteria: any[]
+const SLUG_LABELS: Record<string, string> = {
+  strategy: 'Estrategia',
+  customer: 'Cliente',
+  technology: 'Tecnología',
+  operations: 'Operaciones',
+  culture: 'Cultura',
+  data: 'Datos',
 }
 
-interface HeatMapCriterion {
-  id: string
-  code: string
-  title: string
-  dimension: string
-  importance: number
-  effort: number
-  gap: number
-  category: 'quick-win' | 'foundation' | 'transformational' | 'maintenance'
+type ApiScoreGetResponse = {
+  ok: boolean
+  requestId: string
+  assessmentScore: {
+    assessment_id: string
+    answered_count: number
+    total_count: number
+    as_is_avg: number // 1-5
+    to_be_avg: number // 1-5
+    gap_avg: number
+    weighted_gap_avg: number
+    updated_at: string
+  } | null
+  dimensionScores: Array<{
+    assessment_id: string
+    dimension_id: string // UUID
+    answered_count: number
+    total_count: number
+    as_is_avg: number // 1-5
+    to_be_avg: number // 1-5
+    gap_avg: number
+    weighted_gap_avg: number
+    updated_at: string
+  }>
+  error?: string
 }
 
-interface TimelineInitiative {
-  id: string
-  code: string
-  title: string
-  dimension: string
-  timeframe: '6months' | '1year' | '2years' | '3years+'
-  importance: number
-  gap: number
+interface DimensionScoreUI {
+  dimension: string // slug
+  maturityIndex: number // 1-5 (as_is_avg)
+  asIs: number // legacy 0-100 derivado (solo para UI)
+  toBe: number // legacy 0-100 derivado (solo para UI)
+  gap: number // legacy points (toBe% - asIs%)
 }
 
 export default function ResultadosPage() {
   const router = useRouter()
+
   const [loading, setLoading] = useState(true)
-  
-  // NUEVO: Maturity Index (1-5)
+  const [companyName, setCompanyName] = useState('Tu Empresa')
+
+  // Global (viene de backend)
   const [globalMaturityIndex, setGlobalMaturityIndex] = useState(0)
   const [maturityLabel, setMaturityLabel] = useState('')
-  
-  // Legacy: Para compatibilidad
   const [globalScore, setGlobalScore] = useState(0)
-  
-  const [dimensionScores, setDimensionScores] = useState<DimensionScore[]>([])
-  const [roadmap, setRoadmap] = useState<RoadmapPhase[]>([])
-  const [distribution, setDistribution] = useState<Record<string, number>>({})
-  const [companyName, setCompanyName] = useState('')
-  
-  const [heatMapData, setHeatMapData] = useState<HeatMapCriterion[]>([])
-  const [timelineData, setTimelineData] = useState<TimelineInitiative[]>([])
 
-  useEffect(() => {
-    loadResults()
+  // Dimensiones (viene de backend)
+  const [dimensionScores, setDimensionScores] = useState<DimensionScoreUI[]>([])
+
+  const isDemo = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return new URLSearchParams(window.location.search).get('demo') === '1'
   }, [])
 
-  const categorizeCriterion = (impact: number, effort: number): string => {
-    if (impact >= 25 && effort <= 50) return 'Quick Win'
-    if (impact >= 40 || (impact >= 25 && effort > 50)) return 'Transformacional'
-    if (impact >= 15 && impact < 40 && effort <= 70) return 'Foundation'
-    return 'Mantenimiento'
-  }
+  const assessmentId = useMemo(() => {
+    if (typeof window === 'undefined') return null
+    return isDemo ? DEMO_ASSESSMENT_ID : localStorage.getItem('dts_assessment_id')
+  }, [isDemo])
 
-  const categorizeCriterionForHeatMap = (impact: number, effort: number): 'quick-win' | 'foundation' | 'transformational' | 'maintenance' => {
-    if (impact >= 25 && effort <= 50) return 'quick-win'
-    if (impact >= 40 || (impact >= 25 && effort > 50)) return 'transformational'
-    if (impact >= 15 && impact < 40 && effort <= 70) return 'foundation'
-    return 'maintenance'
+  useEffect(() => {
+    void loadResults()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const fetchScoresFromApi = async (assessmentId: string) => {
+    const url = `/api/dts/score/get?assessmentId=${encodeURIComponent(assessmentId)}`
+    const res = await fetch(url, { method: 'GET', cache: 'no-store' })
+    const json = (await res.json()) as ApiScoreGetResponse
+
+    if (!res.ok || !json.ok) {
+      throw new Error(json?.error || `Error en score/get (HTTP ${res.status})`)
+    }
+    return json
   }
 
   const loadResults = async () => {
     try {
-      const isDemo =
-        typeof window !== 'undefined' &&
-        new URLSearchParams(window.location.search).get('demo') === '1'
-
-      const assessmentId = isDemo
-        ? DEMO_ASSESSMENT_ID
-        : localStorage.getItem('dts_assessment_id')
-      
       if (!assessmentId) {
         router.push('/diagnostico-full')
         return
       }
 
-      console.log('🧪 Demo mode:', isDemo)
-      console.log('🔍 Assessment ID:', assessmentId)
-
-      const { data: assessment } = await supabase
+      // 1) Nombre de empresa (solo lectura)
+      const { data: assessment, error: assessmentError } = await supabase
         .from('dts_assessments')
         .select('onboarding_data')
         .eq('id', assessmentId)
         .single()
 
-      if (assessment?.onboarding_data) {
-        setCompanyName(assessment.onboarding_data.companyName || 'Tu Empresa')
+      if (!assessmentError && (assessment as any)?.onboarding_data?.companyName) {
+        setCompanyName((assessment as any).onboarding_data.companyName)
       }
 
-      console.log('🔍 Cargando criterios con dimensiones...')
-      
-      const { data: allCriteriaData, error: allCriteriaError } = await supabase
-        .from('dts_criteria')
-        .select(`
-          id,
-          code,
-          short_label,
-          subdimension_id,
-          dts_subdimensions!inner (
-            id,
-            dimension_id,
-            dts_dimensions!inner (
-              id,
-              code
-            )
-          )
-        `)
-        .in('tier', ['tier1', 'tier2'])
-
-      if (allCriteriaError) {
-        console.error('❌ Error cargando criterios:', allCriteriaError)
-        throw new Error(`Error cargando criterios: ${allCriteriaError.message}`)
-      }
-      
-      console.log('✅ Criterios cargados:', allCriteriaData?.length || 0)
-
-      console.log('🔍 Cargando respuestas para assessment:', assessmentId)
-      const { data: responsesData, error: responsesError } = await supabase
-        .from('dts_responses')
-        .select('*')
-        .eq('assessment_id', assessmentId)
-
-      if (responsesError) {
-        console.error('❌ Error cargando respuestas:', responsesError)
-        throw new Error(`Error cargando respuestas: ${responsesError.message}`)
-      }
-      
-      console.log('✅ Respuestas cargadas:', responsesData?.length || 0)
-
-      if (!allCriteriaData || allCriteriaData.length === 0) {
-        throw new Error('No se encontraron criterios en la base de datos')
-      }
-      
-      if (!responsesData || responsesData.length === 0) {
-        throw new Error('No se encontraron respuestas para este assessment')
+      // 2) Scores (backend manda)
+      const scoreApi = await fetchScoresFromApi(assessmentId)
+      if (!scoreApi.assessmentScore) {
+        throw new Error('No hay assessmentScore en /api/dts/score/get')
       }
 
-      const dimensionCodeMap: Record<string, string> = {
-        'D1': 'strategy',
-        'D2': 'customer',
-        'D3': 'technology',
-        'D4': 'operations',
-        'D5': 'culture',
-        'D6': 'data'
-      }
-
-      const criteria = allCriteriaData.map(c => {
-        const dbCode = (c as any).dts_subdimensions?.dts_dimensions?.code || 'D1'
-        const tmForumCode = dimensionCodeMap[dbCode] || 'strategy'
-        
-        return {
-          id: (c as any).id,
-          code: (c as any).code,
-          dimension_id: tmForumCode,
-          subdimension_id: (c as any).subdimension_id,
-          title: (c as any).short_label || (c as any).code
-        }
-      })
-
-      const responses = responsesData.map(r => ({
-        criteria_id: (r as any).criteria_id,
-        as_is_level: (r as any).as_is_level,
-        to_be_level: (r as any).to_be_level,
-        importance: (r as any).importance || 3,
-        to_be_timeframe: (r as any).to_be_timeframe || '1year'
-      }))
-
-      // ============================================
-      // NUEVO: Calcular con metodología TM Forum
-      // ============================================
-      
-      const dimScores = calculateAllDimensionScores(responses, criteria)
-      
-      // Score global usando NUEVA metodología (1-5)
-      const globalMaturity = calculateGlobalScore(dimScores)
+      const globalMaturity = Number(scoreApi.assessmentScore.as_is_avg) // 1-5
       setGlobalMaturityIndex(globalMaturity)
       setMaturityLabel(getMaturityLabel(globalMaturity))
-      
-      // Score legacy (0-100) para KPI cards
-      const legacyScore = maturityIndexToPercentage(globalMaturity)
-      setGlobalScore(Math.round(legacyScore))
-      
-      console.log(`✅ Global Maturity Index: ${globalMaturity.toFixed(2)}/5 (${getMaturityLabel(globalMaturity)})`)
-      console.log(`   Legacy score: ${legacyScore.toFixed(1)}%`)
-      
-      // Preparar scores para visualización
-      const radarScores: DimensionScore[] = dimScores.map(d => ({
-        dimension: (d as any).dimension_id,
-        maturityIndex: (d as any).maturity_index,  // NUEVO
-        asIs: Math.round((d as any).as_is_score),  // Legacy
-        toBe: Math.round((d as any).to_be_score),  // Legacy
-        gap: Math.round((d as any).gap)            // Legacy
-      }))
+      setGlobalScore(Math.round(maturityIndexToPercentage(globalMaturity)))
+
+      const radarScores: DimensionScoreUI[] = scoreApi.dimensionScores.map((d) => {
+        const slug = DIM_UUID_TO_SLUG[d.dimension_id] ?? 'strategy'
+        const asIsPct = maturityIndexToPercentage(Number(d.as_is_avg))
+        const toBePct = maturityIndexToPercentage(Number(d.to_be_avg))
+
+        return {
+          dimension: slug,
+          maturityIndex: Number(d.as_is_avg),
+          asIs: Math.round(asIsPct),
+          toBe: Math.round(toBePct),
+          gap: Math.round(toBePct - asIsPct),
+        }
+      })
+
       setDimensionScores(radarScores)
-
-      // ============================================
-      // Calcular efforts (usa globalMaturity 1-5)
-      // ============================================
-      
-      const efforts = calculateAllEfforts(
-        responses,
-        criteria,
-        (assessment as any)?.onboarding_data?.employees || 50,
-        (assessment as any)?.onboarding_data?.sector || 'Technology',
-        globalMaturity  // Ahora pasa 1-5
-      )
-
-      // Preparar datos para HeatMap
-      const heatMapCriteria: HeatMapCriterion[] = (efforts as any).map((effort: any) => {
-        const criterion = criteria.find((c: any) => c.id === effort.criteria_id)!
-        const response = responses.find((r: any) => r.criteria_id === effort.criteria_id)!
-        const gap = response.to_be_level - response.as_is_level
-        
-        const normalizedImportance = response.importance
-        const normalizedEffort = Math.min(5, Math.max(1, Math.round((effort.effort_final / 20))))
-        
-        return {
-          id: criterion.id,
-          code: criterion.code,
-          title: criterion.title,
-          dimension: criterion.dimension_id,
-          importance: normalizedImportance,
-          effort: normalizedEffort,
-          gap: gap,
-          category: categorizeCriterionForHeatMap(effort.impact, effort.effort_final)
-        }
-      })
-      setHeatMapData(heatMapCriteria)
-
-      // Preparar datos para Timeline
-      const timelineInitiatives: TimelineInitiative[] = (efforts as any)
-        .filter((effort: any) => {
-          const response = responses.find((r: any) => r.criteria_id === effort.criteria_id)!
-          return response.to_be_level > response.as_is_level
-        })
-        .map((effort: any) => {
-          const criterion = criteria.find((c: any) => c.id === effort.criteria_id)!
-          const response = responses.find((r: any) => r.criteria_id === effort.criteria_id)!
-          
-          let timeframe: '6months' | '1year' | '2years' | '3years+'
-          if (effort.category === 'Quick Win') {
-            timeframe = '6months'
-          } else if (effort.category === 'Foundation') {
-            timeframe = '1year'
-          } else {
-            timeframe = '2years'
-          }
-          
-          return {
-            id: criterion.id,
-            code: criterion.code,
-            title: criterion.title,
-            dimension: criterion.dimension_id,
-            timeframe: timeframe,
-            importance: response.importance,
-            gap: response.to_be_level - response.as_is_level
-          }
-        })
-      setTimelineData(timelineInitiatives)
-
-      const roadmapData = generateRoadmap(responses, criteria, efforts as any)
-      
-      const formattedRoadmap: RoadmapPhase[] = (roadmapData as any).map((phase: any) => {
-        const phaseNumber = phase.phase === '30-days' ? '30' : phase.phase === '60-days' ? '60' : '90'
-        return {
-          phase: phaseNumber,
-          criteria: phase.criteria.map((item: any) => ({
-            code: item.criterion.code,
-            impact: item.effort.impact,
-            effort: item.effort.effort_final
-          }))
-        }
-      })
-      setRoadmap(formattedRoadmap)
-
-      const dist: Record<string, number> = {
-        'Quick Win': 0,
-        'Foundation': 0,
-        'Transformacional': 0,
-        'Mantenimiento': 0
-      }
-
-      ;(efforts as any).forEach((effort: any) => {
-        const category = categorizeCriterion(effort.impact, effort.effort_final)
-        dist[category] = (dist[category] || 0) + 1
-      })
-
-      setDistribution(dist)
       setLoading(false)
-
-    } catch (error) {
-      console.error('Error loading results:', error)
+    } catch (err: any) {
+      console.error('❌ Error loading results:', err)
       setLoading(false)
     }
   }
@@ -338,25 +174,10 @@ export default function ResultadosPage() {
     )
   }
 
-  const criticalDimension = dimensionScores.reduce((min, current) => 
-    current.maturityIndex < min.maturityIndex ? current : min
-  , dimensionScores[0])
-
-  const dimensionLabels: Record<string, string> = {
-    'strategy': 'Estrategia',
-    'customer': 'Cliente',
-    'technology': 'Tecnología',
-    'operations': 'Operaciones',
-    'culture': 'Cultura',
-    'data': 'Datos'
-  }
-
-  const totalInitiatives = dimensionScores.reduce((sum, d) => sum + (d.gap > 0 ? 1 : 0), 0) * 21
-  const quickWins = distribution['Quick Win'] || 0
-
-  const isDemo =
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('demo') === '1'
+  const criticalDimension =
+    dimensionScores.length > 0
+      ? dimensionScores.reduce((min, cur) => (cur.maturityIndex < min.maturityIndex ? cur : min), dimensionScores[0])
+      : null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -364,15 +185,12 @@ export default function ResultadosPage() {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Resultados del Diagnóstico
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {companyName} - Evaluación TM Forum DMM v5.0.1
-              </p>
+              <h1 className="text-3xl font-bold text-gray-900">Resultados del Diagnóstico</h1>
+              <p className="text-gray-600 mt-1">{companyName} - Evaluación TM Forum DMM v5.0.1</p>
             </div>
+
             <button
-              onClick={() => router.push(new URLSearchParams(window.location.search).get('demo') === '1' ? '/diagnostico-full?demo=1' : '/diagnostico-full')}
+              onClick={() => router.push(isDemo ? '/diagnostico-full?demo=1' : '/diagnostico-full')}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               ← Volver al Diagnóstico
@@ -382,102 +200,52 @@ export default function ResultadosPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        
-        {/* ============================================ */}
-        {/* NUEVO: Maturity Index Hero Section */}
-        {/* ============================================ */}
+        {/* HERO */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-8 text-white">
           <div className="text-center">
-            <p className="text-blue-100 text-sm font-semibold uppercase tracking-wide mb-2">
-              Overall Maturity Index
-            </p>
+            <p className="text-blue-100 text-sm font-semibold uppercase tracking-wide mb-2">Overall Maturity Index</p>
             <div className="flex items-center justify-center gap-4 mb-3">
-              <div className="text-6xl font-bold">
-                {formatMaturityIndex(globalMaturityIndex, 1)}
-              </div>
+              <div className="text-6xl font-bold">{formatMaturityIndex(globalMaturityIndex, 1)}</div>
               <div className="text-left">
-                <div className="text-2xl font-semibold">
-                  {maturityLabel}
-                </div>
-                <div className="text-blue-200 text-sm">
-                  ({globalScore}%)
-                </div>
+                <div className="text-2xl font-semibold">{maturityLabel}</div>
+                <div className="text-blue-200 text-sm">({globalScore}%)</div>
               </div>
             </div>
             <p className="text-blue-100 text-sm max-w-2xl mx-auto">
-              Basado en la metodología oficial TM Forum DMM v5.0.1
+              Score leído del backend (persistido en dts_assessment_scores / dts_dimension_scores).
             </p>
           </div>
         </div>
 
-        {/* KPI Cards - Mantener para compatibilidad */}
+        {/* KPI Cards (sin cálculos extra: ponemos 0 donde antes dependía de efforts) */}
         <KPICards
           globalScore={globalScore}
-          totalInitiatives={totalInitiatives}
-          criticalDimension={dimensionLabels[criticalDimension?.dimension] || 'N/A'}
-          quickWins={quickWins}
+          totalInitiatives={0}
+          criticalDimension={criticalDimension ? SLUG_LABELS[criticalDimension.dimension] : 'N/A'}
+          quickWins={0}
         />
 
-        {/* Radar Chart - Actualizar para usar maturity index */}
+        {/* Radar */}
         <RadarChartComponent scores={dimensionScores} />
 
-        {/* Heat Map */}
+        {/* Cards por dimensión */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            🎯 Matriz de Priorización: Impacto vs Esfuerzo
-          </h2>
-          <p className="text-gray-600 text-sm mb-6">
-            Visualiza las {heatMapData.length} iniciativas según su impacto y esfuerzo requerido
-          </p>
-          <HeatMapChart criteria={heatMapData} />
-        </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">📈 Madurez por Dimensión</h2>
 
-        {/* Timeline Roadmap */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            🗓️ Roadmap de Implementación 30/60/90 Días
-          </h2>
-          <p className="text-gray-600 text-sm mb-6">
-            Plan de acción organizado por fases temporales
-          </p>
-          <TimelineRoadmap initiatives={timelineData} />
-        </div>
-
-        {/* ============================================ */}
-        {/* ACTUALIZADO: Scores por Dimensión */}
-        {/* ============================================ */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            📈 Madurez por Dimensión
-          </h2>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {dimensionScores.map((dim, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-              >
-                <h3 className="font-semibold text-gray-800 mb-3">
-                  {dimensionLabels[dim.dimension]}
-                </h3>
-                
+            {dimensionScores.map((dim, idx) => (
+              <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <h3 className="font-semibold text-gray-800 mb-3">{SLUG_LABELS[dim.dimension] || dim.dimension}</h3>
+
                 <div className="space-y-3">
-                  {/* NUEVO: Maturity Index destacado */}
                   <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-blue-900">
-                        Maturity Index:
-                      </span>
-                      <span className="text-2xl font-bold text-blue-600">
-                        {formatMaturityIndex(dim.maturityIndex, 1)}
-                      </span>
+                      <span className="text-sm font-medium text-blue-900">Maturity Index:</span>
+                      <span className="text-2xl font-bold text-blue-600">{formatMaturityIndex(dim.maturityIndex, 1)}</span>
                     </div>
-                    <div className="text-xs text-blue-700 mt-1">
-                      {getMaturityLabel(dim.maturityIndex)}
-                    </div>
+                    <div className="text-xs text-blue-700 mt-1">{getMaturityLabel(dim.maturityIndex)}</div>
                   </div>
-                  
-                  {/* Legacy scores (smaller) */}
+
                   <div className="space-y-1 text-xs text-gray-600">
                     <div className="flex items-center justify-between">
                       <span>AS-IS (0-100):</span>
@@ -490,7 +258,8 @@ export default function ResultadosPage() {
                     <div className="flex items-center justify-between pt-1 border-t border-gray-100">
                       <span>Gap:</span>
                       <span className={`font-semibold ${dim.gap > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {dim.gap > 0 ? '+' : ''}{dim.gap} pts
+                        {dim.gap > 0 ? '+' : ''}
+                        {dim.gap} pts
                       </span>
                     </div>
                   </div>
@@ -498,55 +267,16 @@ export default function ResultadosPage() {
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Distribución de Iniciativas - Sin cambios */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            🎯 Distribución de Iniciativas
-          </h2>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(distribution).map(([category, count]) => {
-              const colors: Record<string, { bg: string; text: string; border: string }> = {
-                'Quick Win': { bg: '#d1fae5', text: '#065f46', border: '#10b981' },
-                'Foundation': { bg: '#dbeafe', text: '#1e40af', border: '#3b82f6' },
-                'Transformacional': { bg: '#e9d5ff', text: '#6b21a8', border: '#a855f7' },
-                'Mantenimiento': { bg: '#f3f4f6', text: '#374151', border: '#9ca3af' }
-              }
-              
-              const color = colors[category]
-              
-              return (
-                <div
-                  key={category}
-                  className="border-2 rounded-lg p-4 text-center"
-                  style={{ 
-                    backgroundColor: color.bg,
-                    borderColor: color.border
-                  }}
-                >
-                  <div
-                    className="text-3xl font-bold mb-1"
-                    style={{ color: color.text }}
-                  >
-                    {count}
-                  </div>
-                  <div
-                    className="text-sm font-semibold"
-                    style={{ color: color.text }}
-                  >
-                    {category}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">
-                    {Math.round((count / 129) * 100)}% del total
-                  </div>
-                </div>
-              )
-            })}
+          {/* Nota técnica clara */}
+          <div className="mt-6 text-sm text-gray-600">
+            <p className="font-semibold text-gray-700 mb-1">Nota:</p>
+            <p>
+              Esta pantalla ya no calcula nada “crítico” en el navegador. Si quieres volver a mostrar HeatMap/Timeline/Roadmap
+              <strong> sin cálculo frontend</strong>, toca exponer un endpoint backend que devuelva iniciativas ya agregadas.
+            </p>
           </div>
         </div>
-
       </div>
     </div>
   )
