@@ -1,54 +1,69 @@
+// src/components/diagnostico/OnboardingWorkshop.tsx
 'use client'
 
-import React, { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import React, { useEffect, useState } from 'react'
 
 interface Props {
   onComplete: (assessmentId: string) => void
   existingAssessmentId?: string
   existingData?: any
+  pack?: string
 }
 
-export default function OnboardingWorkshop({ onComplete, existingAssessmentId, existingData }: Props) {
+async function safeReadJson(res: Response) {
+  try {
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+export default function OnboardingWorkshop({
+  onComplete,
+  existingAssessmentId,
+  existingData,
+  pack,
+}: Props) {
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  
+
   // Datos básicos de la organización
   const [companyName, setCompanyName] = useState('')
   const [sector, setSector] = useState('')
   const [numEmployees, setNumEmployees] = useState<number>(10)
   const [role, setRole] = useState('')
-  
+
   // Pre-Assessment Questions - TM Forum Official
-  // Strategy, Customer, Operations
   const [businessAspiration, setBusinessAspiration] = useState('')
   const [digitalTransformationGoals, setDigitalTransformationGoals] = useState('')
   const [brandRepresentation, setBrandRepresentation] = useState('')
-  
+
   // Culture
   const [culturePrinciples, setCulturePrinciples] = useState('')
   const [cultureChange, setCultureChange] = useState<'yes' | 'no' | ''>('')
   const [workingStyle, setWorkingStyle] = useState('')
-  
+
   // Data/Technology
   const [legacyBurden, setLegacyBurden] = useState<string>('3')
   const [dataEffectiveness, setDataEffectiveness] = useState('')
 
-  // Cargar datos existentes si los hay
-  React.useEffect(() => {
+  useEffect(() => {
     if (existingData) {
       setIsEditing(true)
       setCompanyName(existingData.companyName || '')
       setSector(existingData.sector || '')
       setNumEmployees(existingData.numEmployees || 10)
       setRole(existingData.role || '')
+
       setBusinessAspiration(existingData.businessAspiration || '')
       setDigitalTransformationGoals(existingData.digitalTransformationGoals || '')
       setBrandRepresentation(existingData.brandRepresentation || '')
+
       setCulturePrinciples(existingData.culturePrinciples || '')
       setCultureChange(existingData.cultureChange || '')
       setWorkingStyle(existingData.workingStyle || '')
+
       setLegacyBurden(existingData.legacyBurden || '3')
       setDataEffectiveness(existingData.dataEffectiveness || '')
     }
@@ -57,7 +72,6 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
   const TOTAL_STEPS = 4
   const progressPct = (step / TOTAL_STEPS) * 100
 
-  // Opciones
   const SECTORES = [
     'Telecomunicaciones',
     'Tecnología y Software',
@@ -71,7 +85,7 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
     'Hostelería y Turismo',
     'Medios y Entretenimiento',
     'Energía y Utilities',
-    'Otro'
+    'Otro',
   ]
 
   const ROLES = [
@@ -84,93 +98,65 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
     'Director Comercial',
     'Gerente / Manager',
     'Consultor Externo',
-    'Otro'
+    'Otro',
   ]
 
-  const saveAssessment = async () => {
+  const saveOnboarding = async () => {
+    if (!existingAssessmentId) {
+      alert('Error: falta existingAssessmentId (no debería pasar).')
+      return
+    }
+
     setSaving(true)
     try {
       const onboardingData = {
-        // Datos básicos
         companyName,
         sector,
         numEmployees,
         role,
-        
-        // Pre-Assessment Questions
+
         businessAspiration,
         digitalTransformationGoals,
         brandRepresentation,
+
         culturePrinciples,
         cultureChange,
         workingStyle,
+
         legacyBurden,
-        dataEffectiveness
+        dataEffectiveness,
+
+        // opcional: te ayuda a depurar
+        _meta: {
+          pack: pack || null,
+          saved_at: new Date().toISOString(),
+        },
       }
 
-      // Si estamos editando, actualizar el assessment existente
-      if (isEditing && existingAssessmentId) {
-        console.log('💾 Actualizando assessment existente...')
-        
-        const { error } = await supabase
-          .from('dts_assessments')
-          .update({
-            onboarding_data: onboardingData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingAssessmentId)
+      const res = await fetch('/api/dts/assessment/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          assessmentId: existingAssessmentId,
+          onboardingData,
+        }),
+      })
 
-        if (error) {
-          console.error('❌ Error actualizando assessment:', error)
-          alert('Error al actualizar el assessment. Por favor, intenta de nuevo.')
-          setSaving(false)
-          return
-        }
+      const json = await safeReadJson(res)
 
-        console.log('✅ Assessment actualizado')
-        onComplete(existingAssessmentId)
-        return
-      }
-
-      // Si es nuevo, crear assessment
-      console.log('💾 Guardando assessment en Supabase...')
-
-      const { data, error } = await supabase
-        .from('dts_assessments')
-        .insert({
-          dmm_version_id: '4e95ce5c-adfc-4095-82a7-715953b46906',
-          assessment_type: 'full',
-          status: 'in-progress',
-          phase_0_completed: true,
-          onboarding_data: onboardingData,
-          started_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select('id')
-        .single()
-
-      if (error) {
-        console.error('❌ Error guardando assessment:', error)
-        alert('Error al guardar el assessment. Por favor, intenta de nuevo.')
+      if (!res.ok || !json?.ok) {
+        console.error('❌ onboarding POST failed', { status: res.status, json })
+        alert(json?.error || 'Error guardando onboarding')
         setSaving(false)
         return
       }
 
-      if (!data || !data.id) {
-        console.error('❌ No se recibió ID del assessment:', data)
-        alert('Error: No se pudo obtener el ID del assessment.')
-        setSaving(false)
-        return
-      }
-
-      const assessmentId = data.id as string
-      console.log('✅ Assessment guardado con ID:', assessmentId)
-      
-      onComplete(assessmentId)
+      onComplete(existingAssessmentId)
     } catch (err) {
-      console.error('❌ Error inesperado:', err)
-      alert('Error inesperado. Por favor, intenta de nuevo.')
+      console.error('❌ Error inesperado onboarding:', err)
+      alert('Error inesperado guardando onboarding.')
+    } finally {
       setSaving(false)
     }
   }
@@ -197,7 +183,7 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
     if (step < TOTAL_STEPS) {
       setStep(step + 1)
     } else {
-      saveAssessment()
+      saveOnboarding()
     }
   }
 
@@ -208,7 +194,6 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
   return (
     <div className="card">
       <div className="card-body">
-        
         {/* Progreso */}
         <div className="flex items-center gap-3 mb-6">
           <span className="kpi">Paso {step} de {TOTAL_STEPS}</span>
@@ -219,15 +204,14 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
           </div>
         </div>
 
-        {/* PASO 1: Datos Básicos */}
+        {/* PASO 1 */}
         {step === 1 && (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold" style={{ color: '#0f172a' }}>
               Información Básica de tu Organización
             </h2>
             <p className="text-base" style={{ color: '#475569' }}>
-              Comenzaremos con algunos datos básicos antes de las preguntas estratégicas del 
-              <strong> TM Forum Digital Maturity Model</strong>.
+              Datos mínimos para adaptar el diagnóstico.
             </p>
 
             <div>
@@ -298,7 +282,7 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
           </div>
         )}
 
-        {/* PASO 2: Strategy, Customer, Operations */}
+        {/* PASO 2 */}
         {step === 2 && (
           <div className="space-y-4">
             <div className="mb-4">
@@ -306,23 +290,19 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
                 Estrategia, Cliente y Operaciones
               </h2>
               <p className="text-sm mt-2" style={{ color: '#64748b' }}>
-                Estas preguntas nos ayudarán a entender tus aspiraciones de negocio
+                Para entender aspiraciones y objetivos
               </p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                1. Suponiendo que no hay restricciones, ¿qué te gustaría que lograra el negocio? *
+                1. ¿Qué te gustaría que lograra el negocio (sin restricciones)? *
               </label>
               <textarea
                 className="input w-full h-24 resize-none"
-                placeholder="Ej: Ser el mejor proveedor de servicios digitales a través de una base tecnológica innovadora..."
                 value={businessAspiration}
                 onChange={(e) => setBusinessAspiration(e.target.value)}
               />
-              <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                Pregunta del TM Forum: "Assuming there are no constraints what would you like the business to achieve?"
-              </p>
             </div>
 
             <div>
@@ -331,33 +311,25 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
               </label>
               <textarea
                 className="input w-full h-32 resize-none"
-                placeholder="Ej: Que todos los procesos sean digitales e inteligentes, crear mayor claridad interna, reorientar hacia el cliente..."
                 value={digitalTransformationGoals}
                 onChange={(e) => setDigitalTransformationGoals(e.target.value)}
               />
-              <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                TM Forum: "What do you hope to achieve from Digital Transformation?"
-              </p>
             </div>
 
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                3. ¿Qué te gustaría que tu marca represente para tus clientes? *
+                3. ¿Qué te gustaría que tu marca representara? *
               </label>
               <textarea
                 className="input w-full h-24 resize-none"
-                placeholder="Ej: La marca representa gran calidad de servicio en todo lo que hacemos..."
                 value={brandRepresentation}
                 onChange={(e) => setBrandRepresentation(e.target.value)}
               />
-              <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                TM Forum: "What would you like your brand to represent to your customers?"
-              </p>
             </div>
           </div>
         )}
 
-        {/* PASO 3: Culture */}
+        {/* PASO 3 */}
         {step === 3 && (
           <div className="space-y-4">
             <div className="mb-4">
@@ -365,35 +337,30 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
                 Cultura Organizacional
               </h2>
               <p className="text-sm mt-2" style={{ color: '#64748b' }}>
-                Entender tu cultura actual y deseada es clave para la transformación digital
+                Cómo trabajáis hoy y hacia dónde queréis moverlo
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                1. ¿Sobre qué principios clave está construida la cultura de tu empresa? *
+                1. Principios clave de la cultura *
               </label>
               <textarea
                 className="input w-full h-32 resize-none"
-                placeholder="Ej: Reinventar la relación con clientes internos, método ágil, desarrollar habilidades del futuro, cultura de innovación..."
                 value={culturePrinciples}
                 onChange={(e) => setCulturePrinciples(e.target.value)}
               />
-              <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                TM Forum: "What key principles is your company's culture built around?"
-              </p>
             </div>
 
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                2. ¿Quieres cambiar la cultura de tu empresa? *
+                2. ¿Quieres cambiar la cultura? *
               </label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
                     name="cultureChange"
-                    value="yes"
                     checked={cultureChange === 'yes'}
                     onChange={() => setCultureChange('yes')}
                     className="w-4 h-4"
@@ -404,7 +371,6 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
                   <input
                     type="radio"
                     name="cultureChange"
-                    value="no"
                     checked={cultureChange === 'no'}
                     onChange={() => setCultureChange('no')}
                     className="w-4 h-4"
@@ -412,29 +378,22 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
                   <span className="text-sm">No</span>
                 </label>
               </div>
-              <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                TM Forum: "Do you want to change the culture of your company?"
-              </p>
             </div>
 
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                3. ¿Qué estilo de trabajo te gustaría promover? *
+                3. Estilo de trabajo a promover *
               </label>
               <textarea
                 className="input w-full h-24 resize-none"
-                placeholder="Ej: Trabajo ágil, colaboración entre equipos, enfoque en el cliente, innovación continua..."
                 value={workingStyle}
                 onChange={(e) => setWorkingStyle(e.target.value)}
               />
-              <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                TM Forum: "What style of working would you like to promote?"
-              </p>
             </div>
           </div>
         )}
 
-        {/* PASO 4: Data/Technology */}
+        {/* PASO 4 */}
         {step === 4 && (
           <div className="space-y-4">
             <div className="mb-4">
@@ -442,70 +401,48 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
                 Datos y Tecnología
               </h2>
               <p className="text-sm mt-2" style={{ color: '#64748b' }}>
-                Últimas preguntas sobre tu situación tecnológica actual
+                Últimas preguntas
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                1. ¿Cómo calificarías la carga de sistemas legacy en tu entorno IT? *
+                1. Carga de legacy en IT *
               </label>
-              <div className="space-y-2">
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  step="1"
-                  value={legacyBurden}
-                  className="range w-full"
-                  onChange={(e) => setLegacyBurden(e.target.value)}
-                />
-                <div className="flex justify-between text-xs" style={{ color: '#64748b' }}>
-                  <span>Muy baja</span>
-                  <span>Baja</span>
-                  <span>Media</span>
-                  <span>Alta</span>
-                  <span>Muy alta</span>
-                </div>
-                <p className="text-sm font-medium text-center" style={{ color: '#0f172a' }}>
-                  Nivel seleccionado: {
-                    legacyBurden === '1' ? 'Muy baja' :
-                    legacyBurden === '2' ? 'Baja' :
-                    legacyBurden === '3' ? 'Media' :
-                    legacyBurden === '4' ? 'Alta' : 'Muy alta'
-                  }
-                </p>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                step="1"
+                value={legacyBurden}
+                className="range w-full"
+                onChange={(e) => setLegacyBurden(e.target.value)}
+              />
+              <div className="flex justify-between text-xs" style={{ color: '#64748b' }}>
+                <span>Muy baja</span><span>Baja</span><span>Media</span><span>Alta</span><span>Muy alta</span>
               </div>
-              <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                TM Forum: "How would you rate the burden of legacy in your IT environment resp. technical debt?"
-              </p>
             </div>
 
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                2. ¿Cómo podrías usar los datos de forma más efectiva para lograr tus objetivos? *
+                2. ¿Cómo usarías los datos de forma más efectiva? *
               </label>
               <textarea
                 className="input w-full h-32 resize-none"
-                placeholder="Ej: Combinar datos de diferentes fuentes, aplicar análisis predictivo, usar datos para aprendizaje continuo..."
                 value={dataEffectiveness}
                 onChange={(e) => setDataEffectiveness(e.target.value)}
               />
-              <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                TM Forum: "How might you use data more effectively to achieve your goals?"
-              </p>
             </div>
 
             <div className="p-4 rounded-lg mt-4" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
               <p className="text-sm" style={{ color: '#1e40af' }}>
-                <strong>¡Listo!</strong> Con esta información inicial, podremos personalizar tu diagnóstico 
-                de madurez digital según la metodología oficial TM Forum.
+                <strong>Listo.</strong> Guardamos el contexto y empezamos el diagnóstico.
               </p>
             </div>
           </div>
         )}
 
-        {/* Botones de navegación */}
+        {/* Botones */}
         <div className="flex items-center gap-3 mt-6">
           <button
             className={`btn ${step === 1 ? 'opacity-50 pointer-events-none' : ''}`}
@@ -514,18 +451,17 @@ export default function OnboardingWorkshop({ onComplete, existingAssessmentId, e
           >
             ← Anterior
           </button>
-          
-          {/* Botón Cancelar - solo si está editando */}
+
           {isEditing && (
             <button
               className="btn"
-              onClick={() => onComplete(existingAssessmentId!)}
+              onClick={() => existingAssessmentId && onComplete(existingAssessmentId)}
               disabled={saving}
             >
               Cancelar
             </button>
           )}
-          
+
           <button
             className="btn btn-primary ml-auto"
             onClick={handleNext}

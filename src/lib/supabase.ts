@@ -1,24 +1,27 @@
 // src/lib/supabase.ts
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+let _client: SupabaseClient | null = null
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
+function requireEnv(name: string, value: string | undefined): string {
+  if (!value) throw new Error(`Missing env: ${name}`)
+  return value
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'dts-prototype',
-    },
-  },
-})
+/**
+ * Client Supabase SOLO para casos no-core (auth, storage público, etc.).
+ * Regla de oro DTS:
+ * - dts_assessments / dts_responses / dts_criteria / dts_chat_messages => SIEMPRE por API routes.
+ */
+export function supabaseBrowser(): SupabaseClient {
+  if (_client) return _client
 
-export default supabase
+  const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL', process.env.NEXT_PUBLIC_SUPABASE_URL)
+  const anon = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+
+  _client = createClient(url, anon, {
+    auth: { persistSession: true, autoRefreshToken: true },
+  })
+
+  return _client
+}

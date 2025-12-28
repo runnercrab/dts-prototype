@@ -1,8 +1,9 @@
+// src/app/diagnostico-full/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+
 import AvatarPane from '@/components/AvatarPane'
 import AssistantChat from '@/components/AssistantChat'
 import OnboardingWorkshop from '@/components/diagnostico/OnboardingWorkshop'
@@ -11,6 +12,10 @@ import CriterionQuestion from '@/components/diagnostico/CriterionQuestion'
 import bus from '@/lib/bus'
 
 export const dynamic = 'force-dynamic'
+
+// ✅ DEMO FULL: este assessment DEBE tener pack=tmf_full_v5 y onboarding_data ya relleno.
+// Si no lo tiene, te mandará a onboarding (correcto por seguridad).
+const DEMO_FULL_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
 
 interface Criterion {
   id: string
@@ -39,7 +44,7 @@ interface Criterion {
   level_5_description_es?: string
 }
 
-interface Response {
+interface ResponseT {
   as_is_level: number
   as_is_confidence: 'low' | 'medium' | 'high'
   as_is_notes?: string
@@ -65,7 +70,7 @@ interface ChatMessage {
   saved?: boolean
 }
 
-async function safeReadJson(res: Response | any) {
+async function safeReadJson(res: Response) {
   try {
     return await res.json()
   } catch {
@@ -76,117 +81,89 @@ async function safeReadJson(res: Response | any) {
 export default function DiagnosticoFullPage() {
   const router = useRouter()
 
+  const DEFAULT_PACK = 'mvp12_v1'
+  const createInFlightRef = useRef(false)
+
   const [phase, setPhase] = useState<'onboarding' | 'assessment' | 'completed'>('onboarding')
   const [assessmentId, setAssessmentId] = useState<string | null>(null)
   const [onboardingData, setOnboardingData] = useState<any>(null)
+  const [pack, setPack] = useState<string | null>(null)
+  const [isDemo, setIsDemo] = useState(false)
 
   const [showMap, setShowMap] = useState(true)
   const [criteria, setCriteria] = useState<Criterion[]>([])
   const [subdimensions, setSubdimensions] = useState<Subdimension[]>([])
   const [currentCriterionIndex, setCurrentCriterionIndex] = useState(0)
-  const [responses, setResponses] = useState<Map<string, Response>>(new Map())
+  const [responses, setResponses] = useState<Map<string, ResponseT>>(new Map())
   const [currentChatMessages, setCurrentChatMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  /* ============================
-     1) CHAT BUS: guardar mensajes
-     ============================ */
-  useEffect(() => {
-    const handleChatMessage = async (message: { role: 'user' | 'assistant' | 'system'; content: string }) => {
-      const newMessage = { ...message, saved: false }
-      setCurrentChatMessages(prev => [...prev, newMessage])
-
-      if (assessmentId && criteria[currentCriterionIndex]) {
-        try {
-          const currentCriterion = criteria[currentCriterionIndex]
-          const { error } = await supabase.from('dts_chat_messages').insert({
-            assessment_id: assessmentId,
-            criteria_id: currentCriterion.id,
-            role: message.role,
-            content: message.content,
-          })
-          if (error) throw error
-
-          setCurrentChatMessages(prev =>
-            prev.map(msg =>
-              msg.content === message.content && msg.role === message.role
-                ? { ...msg, saved: true }
-                : msg
-            )
-          )
-        } catch (err) {
-          console.error('❌ Error guardando mensaje:', err)
-        }
-      }
-    }
-
-    bus.on('chatMessage', handleChatMessage)
-    return () => bus.off('chatMessage', handleChatMessage)
-  }, [assessmentId, criteria, currentCriterionIndex])
-
-  /* ============================
-     2) Cargar mensajes por criterio
-     ============================ */
-  useEffect(() => {
-    const loadMessagesForCriterion = async () => {
-      if (!assessmentId || criteria.length === 0) return
-      if (!criteria[currentCriterionIndex]) {
-        setCurrentChatMessages([])
-        return
-      }
-
-      const currentCriterion = criteria[currentCriterionIndex]
-
-      try {
-        const { data, error } = await supabase
-          .from('dts_chat_messages')
-          .select('role, content, created_at')
-          .eq('assessment_id', assessmentId)
-          .eq('criteria_id', currentCriterion.id)
-          .order('created_at', { ascending: true })
-
-        if (error) throw error
-
-        setCurrentChatMessages(
-          (data || []).map(msg => ({
-            role: msg.role as 'user' | 'assistant' | 'system',
-            content: msg.content,
-            saved: true,
-          }))
-        )
-      } catch (err) {
-        console.error('❌ Error cargando mensajes:', err)
-        setCurrentChatMessages([])
-      }
-    }
-
-    loadMessagesForCriterion()
-  }, [currentCriterionIndex, assessmentId, criteria])
-
-  /* ============================
-     3) Resolver assessmentId
-     ============================ */
+  // ============================
+  // INIT: crea/hidrata assessment por pack
+  // ============================
   useEffect(() => {
     const init = async () => {
       try {
-        const params =
-          typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+        const params = new URLSearchParams(window.location.search)
 
-        const assessmentIdFromUrl = params?.get('assessmentId')
-        if (assessmentIdFromUrl) {
-          await hydrateAssessment(assessmentIdFromUrl, { persistToLocalStorage: false })
-          setPhase('assessment')
+        const packFromUrl = params.get('pack') || DEFAULT_PACK
+        const demoFromUrl = params.get('demo') === 'true'
+        setPack(packFromUrl)
+        setIsDemo(demoFromUrl)
+
+        const fromUrl = params.get('assessmentId')
+
+        // ✅ DEMO MODE (FULL):
+        // Si viene demo=true y NO viene assessmentId, forzamos un assessment demo fijo (no crea nada).
+        if (demoFromUrl && !fromUrl) {
+          await hydrateAssessment(DEMO_FULL_ASSESSMENT_ID)
           return
         }
 
-        const savedAssessmentId = localStorage.getItem('dts_assessment_id')
-        if (savedAssessmentId) {
-          await hydrateAssessment(savedAssessmentId, { persistToLocalStorage: true })
-          setPhase('assessment')
+        const lsKey = `dts_assessment_id__${packFromUrl}`
+        const fromLs = localStorage.getItem(lsKey)
+
+        // 1) si viene explícito en URL
+        if (fromUrl) {
+          await hydrateAssessment(fromUrl)
+          return
         }
+
+        // 2) si hay en LS para este pack
+        if (fromLs) {
+          await hydrateAssessment(fromLs)
+          return
+        }
+
+        // 3) si no hay id -> crear (solo para flujo normal, no demo)
+        if (createInFlightRef.current) return
+        createInFlightRef.current = true
+
+        const res = await fetch('/api/dts/assessment/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({ pack: packFromUrl }),
+        })
+
+        const json = await safeReadJson(res)
+
+        if (!res.ok || !json?.ok || !json?.assessmentId) {
+          console.error('❌ assessment/create failed', { status: res.status, json })
+          setPhase('onboarding')
+          return
+        }
+
+        const newId = String(json.assessmentId)
+        localStorage.setItem(lsKey, newId)
+
+        await hydrateAssessment(newId)
       } catch (err) {
-        console.error('❌ Error inicializando diagnóstico:', err)
+        console.error('❌ init diagnostico error:', err)
+        setPhase('onboarding')
+      } finally {
+        createInFlightRef.current = false
       }
     }
 
@@ -194,131 +171,66 @@ export default function DiagnosticoFullPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /* ============================
-     4) Hidratar assessment
-     ============================ */
-  const hydrateAssessment = async (
-    id: string,
-    opts: { persistToLocalStorage: boolean }
-  ) => {
+  // ============================
+  // HYDRATE assessment
+  // ============================
+  const hydrateAssessment = async (id: string) => {
     setAssessmentId(id)
-    if (opts.persistToLocalStorage) {
-      localStorage.setItem('dts_assessment_id', id)
+
+    const aRes = await fetch(`/api/dts/assessment/get?assessmentId=${id}`, { cache: 'no-store' })
+    const aJson = await safeReadJson(aRes)
+
+    if (!aRes.ok || !aJson?.ok) {
+      console.error('❌ assessment/get failed', { status: aRes.status, aJson })
+      setOnboardingData(null)
+      setPhase('onboarding')
+      return
     }
 
-    const { data: assessment, error } = await supabase
-      .from('dts_assessments')
-      .select('id, onboarding_data')
-      .eq('id', id)
-      .single()
+    const a = aJson.assessment
+    setPack(a?.pack ?? null)
+    setOnboardingData(a?.onboarding_data ?? null)
 
-    if (!error && assessment) {
-      setOnboardingData(assessment.onboarding_data)
+    if (!a?.onboarding_data) {
+      setPhase('onboarding')
+      return
     }
 
-    await loadFullCriteria(id)
+    await loadCriteriaAndResponses(id)
+    setPhase('assessment')
   }
 
-  /* ============================
-     5) Cargar criterios + respuestas
-     ============================ */
-  const loadFullCriteria = async (assessmentId: string) => {
+  // ============================
+  // LOAD criteria + responses
+  // ============================
+  const loadCriteriaAndResponses = async (id: string) => {
+    setLoading(true)
+    setError(null)
+
     try {
-      setLoading(true)
-      setError(null)
+      // criteria
+      const cRes = await fetch(`/api/dts/criteria?assessmentId=${id}`, { cache: 'no-store' })
+      const cJson = await safeReadJson(cRes)
 
-      const { data, error: queryError } = await supabase
-        .from('dts_criteria')
-        .select(`
-          id, code, description, description_es, short_label, short_label_es,
-          context, context_es, focus_area, tier, subdimension_id, display_order,
-          level_1_description_es, level_2_description_es, level_3_description_es,
-          level_4_description_es, level_5_description_es,
-          dts_subdimensions!inner (
-            id, code, name, name_es, display_order,
-            dts_dimensions!inner (id, code, name, name_es, display_order)
-          )
-        `)
-        .in('tier', ['tier1', 'tier2'])
-
-      if (queryError) throw queryError
-      if (!data || data.length === 0) throw new Error('No se encontraron criterios')
-
-      const DIMENSION_NAME_MAP: Record<string, string> = {
-        Customer: 'Cliente',
-        Strategy: 'Estrategia',
-        Technology: 'Tecnología',
-        Operations: 'Operaciones',
-        Culture: 'Cultura',
-        Data: 'Datos',
+      if (!cRes.ok || !cJson?.ok) {
+        throw new Error(cJson?.error || `Error cargando criterios (${cRes.status})`)
       }
 
-      const transformedCriteria: Criterion[] = data.map((c: any) => {
-        const subdimension = Array.isArray(c.dts_subdimensions) ? c.dts_subdimensions[0] : c.dts_subdimensions
-        const dimension = subdimension?.dts_dimensions
-        const dimensionArray = Array.isArray(dimension) ? dimension[0] : dimension
+      const list: Criterion[] = cJson.criteria ?? []
+      setCriteria(list)
+      setPack(cJson.pack ?? null)
 
-        const dimensionName = dimensionArray?.name || ''
-        const dimensionNameEs = DIMENSION_NAME_MAP[dimensionName] || dimensionName
+      // responses
+      const rRes = await fetch(`/api/dts/responses/get?assessmentId=${id}`, { cache: 'no-store' })
+      const rJson = await safeReadJson(rRes)
 
-        return {
-          id: c.id,
-          code: c.code,
-          description: c.description_es || c.description || '',
-          short_label: c.short_label_es || c.short_label || '',
-          context: c.context_es || c.context || null,
-          focus_area: c.focus_area || '',
-          subdimension_id: c.subdimension_id,
-          subdimension: subdimension
-            ? {
-                name: subdimension.name_es || subdimension.name || '',
-                code: subdimension.code || '',
-                dimension_name: dimensionNameEs,
-                dimension_display_order: dimensionArray?.display_order || 0,
-                subdimension_display_order: subdimension.display_order || 0,
-              }
-            : undefined,
-          dimension: dimensionArray
-            ? {
-                name: dimensionNameEs,
-                code: dimensionArray.code || '',
-                display_order: dimensionArray.display_order || 0,
-              }
-            : undefined,
-          level_1_description_es: c.level_1_description_es,
-          level_2_description_es: c.level_2_description_es,
-          level_3_description_es: c.level_3_description_es,
-          level_4_description_es: c.level_4_description_es,
-          level_5_description_es: c.level_5_description_es,
-        }
-      })
-
-      const sortedCriteria = transformedCriteria.sort((a, b) => {
-        const parseCode = (code: string) => code.split('.').map(part => parseInt(part) || 0)
-        const partsA = parseCode(a.code)
-        const partsB = parseCode(b.code)
-        for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-          const numA = partsA[i] || 0
-          const numB = partsB[i] || 0
-          if (numA !== numB) return numA - numB
-        }
-        return 0
-      })
-
-      setCriteria(sortedCriteria)
-
-      const { data: existingResponses, error: respErr } = await supabase
-        .from('dts_responses')
-        .select('*')
-        .eq('assessment_id', assessmentId)
-
-      if (respErr) {
-        console.error('❌ Error cargando respuestas:', respErr)
+      if (!rRes.ok || !rJson?.ok) {
+        throw new Error(rJson?.error || `Error cargando respuestas (${rRes.status})`)
       }
 
-      const responsesMap = new Map<string, Response>()
-      existingResponses?.forEach((r: any) => {
-        responsesMap.set(r.criteria_id, {
+      const map = new Map<string, ResponseT>()
+      ;(rJson.responses ?? []).forEach((r: any) => {
+        map.set(r.criteria_id, {
           as_is_level: r.as_is_level,
           as_is_confidence: r.as_is_confidence,
           as_is_notes: r.as_is_notes,
@@ -328,11 +240,12 @@ export default function DiagnosticoFullPage() {
         })
       })
 
-      setResponses(responsesMap)
-      calculateSubdimensions(sortedCriteria, responsesMap)
+      setResponses(map)
+      calculateSubdimensions(list, map)
+      setCurrentCriterionIndex(0)
     } catch (err: any) {
-      console.error('❌ Error cargando criterios:', err)
-      setError(err?.message || 'Error cargando criterios')
+      console.error('❌ loadCriteriaAndResponses error:', err)
+      setError(err?.message || 'Error cargando diagnóstico')
     } finally {
       setLoading(false)
     }
@@ -341,7 +254,7 @@ export default function DiagnosticoFullPage() {
   const calculateSubdimensions = (criteriaList: Criterion[], responsesMap: Map<string, any>) => {
     const subdimMap = new Map<string, Subdimension>()
 
-    criteriaList.forEach(criterion => {
+    criteriaList.forEach((criterion) => {
       if (!criterion.subdimension) return
       const key = criterion.subdimension.code
 
@@ -364,25 +277,102 @@ export default function DiagnosticoFullPage() {
     })
 
     const subdimArray = Array.from(subdimMap.values())
-    subdimArray.forEach(sd => {
+    subdimArray.forEach((sd) => {
       sd.is_completed = sd.completed_criteria === sd.total_criteria
     })
 
     setSubdimensions(subdimArray)
   }
 
-  /* ============================
-     6) Onboarding completado
-     ============================ */
-  const handleOnboardingComplete = async (newAssessmentId: string) => {
-    await hydrateAssessment(newAssessmentId, { persistToLocalStorage: true })
-    setPhase('assessment')
+  // ============================
+  // CHAT: save via API (NO supabase)
+  // ============================
+  useEffect(() => {
+    const handleChatMessage = async (message: { role: 'user' | 'assistant' | 'system'; content: string }) => {
+      const newMessage = { ...message, saved: false }
+      setCurrentChatMessages((prev) => [...prev, newMessage])
+
+      if (!assessmentId) return
+      const criterion = criteria[currentCriterionIndex]
+      if (!criterion?.id) return
+
+      try {
+        const res = await fetch('/api/dts/chat/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({
+            assessmentId,
+            criteriaId: criterion.id,
+            role: message.role,
+            content: message.content,
+          }),
+        })
+
+        const json = await safeReadJson(res)
+        if (!res.ok || !json?.ok) throw new Error(json?.error || `chat/post ${res.status}`)
+
+        setCurrentChatMessages((prev) =>
+          prev.map((msg) =>
+            msg.content === message.content && msg.role === message.role ? { ...msg, saved: true } : msg
+          )
+        )
+      } catch (err) {
+        console.error('❌ Error guardando chat por API:', err)
+      }
+    }
+
+    bus.on('chatMessage', handleChatMessage)
+    return () => bus.off('chatMessage', handleChatMessage)
+  }, [assessmentId, criteria, currentCriterionIndex])
+
+  // ============================
+  // CHAT: load via API per criterion
+  // ============================
+  useEffect(() => {
+    const load = async () => {
+      if (!assessmentId) return
+      const criterion = criteria[currentCriterionIndex]
+      if (!criterion?.id) {
+        setCurrentChatMessages([])
+        return
+      }
+
+      const res = await fetch(
+        `/api/dts/chat/get?assessmentId=${assessmentId}&criteriaId=${criterion.id}`,
+        { cache: 'no-store' }
+      )
+      const json = await safeReadJson(res)
+
+      if (!res.ok || !json?.ok) {
+        console.error('❌ chat/get error', { status: res.status, json })
+        setCurrentChatMessages([])
+        return
+      }
+
+      setCurrentChatMessages(
+        (json.messages ?? []).map((m: any) => ({
+          role: m.role,
+          content: m.content,
+          saved: true,
+        }))
+      )
+    }
+
+    load()
+  }, [assessmentId, criteria, currentCriterionIndex])
+
+  // ============================
+  // Onboarding complete
+  // ============================
+  const handleOnboardingComplete = async (id: string) => {
+    await hydrateAssessment(id)
   }
 
-  /* ============================
-     7) Guardar respuesta (API route)
-     ============================ */
-  const handleResponseChange = async (response: Response) => {
+  // ============================
+  // Save response
+  // ============================
+  const handleResponseChange = async (response: ResponseT) => {
     if (!assessmentId) return
     if (currentCriterionIndex >= criteria.length) return
 
@@ -398,7 +388,6 @@ export default function DiagnosticoFullPage() {
 
     if (missing) return
 
-    // ✅ Guardar por API (server -> service role)
     const res = await fetch('/api/dts/responses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -411,58 +400,52 @@ export default function DiagnosticoFullPage() {
     })
 
     const json = await safeReadJson(res)
-
     if (!res.ok || !json?.ok) {
-      console.error('❌ API /api/dts/responses error:', {
-        httpStatus: res.status,
-        json,
-      })
+      console.error('❌ /api/dts/responses error:', { httpStatus: res.status, json })
       throw new Error(json?.error || `API error ${res.status}`)
     }
 
-    const newResponses = new Map(responses)
-    newResponses.set(criterion.id, response)
-    setResponses(newResponses)
-    calculateSubdimensions(criteria, newResponses)
+    const newMap = new Map(responses)
+    newMap.set(criterion.id, response)
+    setResponses(newMap)
+    calculateSubdimensions(criteria, newMap)
   }
 
   const handleNext = () => {
-    if (currentCriterionIndex < criteria.length - 1) {
-      setCurrentCriterionIndex(i => i + 1)
-    } else {
-      handleAssessmentComplete()
-    }
+    if (currentCriterionIndex < criteria.length - 1) setCurrentCriterionIndex((i) => i + 1)
+    else handleAssessmentComplete()
   }
 
   const handlePrevious = () => {
-    if (currentCriterionIndex > 0) {
-      setCurrentCriterionIndex(i => i - 1)
-    }
+    if (currentCriterionIndex > 0) setCurrentCriterionIndex((i) => i - 1)
   }
 
   const handleAssessmentComplete = async () => {
     if (!assessmentId) return
 
     try {
-      await supabase
-        .from('dts_assessments')
-        .update({
-          status: 'full-completed',
-          phase_2_completed: true,
-          completed_at: new Date().toISOString(),
-        })
-        .eq('id', assessmentId)
+      await fetch('/api/dts/assessment/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ assessmentId }),
+      })
 
       setPhase('completed')
-      localStorage.removeItem('dts_assessment_id')
+
+      // limpiamos SOLO el key del pack actual (en demo no tocamos LS)
+      if (!isDemo) {
+        const key = `dts_assessment_id__${pack || DEFAULT_PACK}`
+        localStorage.removeItem(key)
+      }
     } catch (err) {
       console.error('❌ Error completando assessment:', err)
     }
   }
 
-  /* ============================
-     8) Renders
-     ============================ */
+  // ============================
+  // RENDERS
+  // ============================
   if (phase === 'onboarding') {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -471,6 +454,7 @@ export default function DiagnosticoFullPage() {
             onComplete={handleOnboardingComplete}
             existingAssessmentId={assessmentId || undefined}
             existingData={onboardingData}
+            pack={pack || DEFAULT_PACK}
           />
         </div>
       </div>
@@ -484,7 +468,7 @@ export default function DiagnosticoFullPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-4">🎉 ¡Diagnóstico Completado!</h1>
           <p className="text-gray-600 mb-8">Tus respuestas han sido guardadas.</p>
           <button
-            onClick={() => router.push('/resultados')}
+            onClick={() => router.push(`/resultados?assessmentId=${assessmentId ?? ''}`)}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Ver Resultados
@@ -496,6 +480,7 @@ export default function DiagnosticoFullPage() {
 
   const currentCriterion = criteria[currentCriterionIndex]
   const currentResponse = currentCriterion ? responses.get(currentCriterion.id) : undefined
+  const headerPackLabel = pack === 'mvp12_v1' ? 'MVP12 (12 criterios)' : 'Versión Completa (129 criterios)'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -514,9 +499,13 @@ export default function DiagnosticoFullPage() {
               <span className="text-gray-300">|</span>
 
               <button
-                onClick={() => setPhase('onboarding')}
+                onClick={() => {
+                  // En demo, no tiene sentido “volver a onboarding” del ejemplo completo.
+                  // No rompemos nada: simplemente lo dejamos como estaba si lo necesitas.
+                  setPhase('onboarding')
+                }}
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
-                title="Ver/Editar información del onboarding"
+                title="Ver/Editar onboarding"
               >
                 📋 Ver Onboarding
               </button>
@@ -524,21 +513,17 @@ export default function DiagnosticoFullPage() {
               <span className="text-gray-300">|</span>
 
               <button
-                onClick={() => router.push('/resultados')}
+                onClick={() => router.push(`/resultados?assessmentId=${assessmentId ?? ''}`)}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-sm"
-                title="Ver resultados del diagnóstico"
+                title="Ver resultados"
               >
                 📈 Ver Resultados
               </button>
             </div>
 
             <div className="flex-1 text-center">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                Diagnóstico de Madurez Digital
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-600">
-                TM Forum DMM v5.0.1 - Versión Completa (129 criterios)
-              </p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Diagnóstico de Madurez Digital</h1>
+              <p className="text-xs sm:text-sm text-gray-600">TM Forum DMM v5.0.1 — {headerPackLabel}</p>
             </div>
 
             <div className="w-[100px] lg:hidden"></div>
