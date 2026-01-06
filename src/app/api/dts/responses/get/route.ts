@@ -1,4 +1,9 @@
-// src/app/api/dts/responses/get/route.ts
+// ============================================================================
+// FILE: src/app/api/dts/responses/get/route.ts
+// ROUTE: GET /api/dts/responses/get?assessmentId=...
+// PURPOSE: Leer respuestas (incluye derivadas is_complete/gap/weighted_gap).
+// ============================================================================
+
 import { NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase/server'
 
@@ -12,7 +17,7 @@ function isUuid(v: string) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const assessmentId = searchParams.get('assessmentId') || ''
+    const assessmentId = (searchParams.get('assessmentId') || '').trim()
 
     if (!isUuid(assessmentId)) {
       return NextResponse.json({ ok: false, error: 'assessmentId inválido (uuid requerido)' }, { status: 400 })
@@ -43,10 +48,27 @@ export async function GET(req: Request) {
       )
     }
 
+    const enriched = (data || []).map((r: any) => {
+      const hasAsIs = r.as_is_level != null
+      const hasToBe = r.to_be_level != null
+      const hasImp = r.importance != null
+
+      const gap = hasAsIs && hasToBe ? r.to_be_level - r.as_is_level : null
+      const weighted_gap = gap != null && hasImp ? gap * r.importance : null
+      const is_complete = hasAsIs && hasToBe && hasImp
+
+      return {
+        ...r,
+        is_complete,
+        gap,
+        weighted_gap,
+      }
+    })
+
     return NextResponse.json({
       ok: true,
       assessmentId,
-      responses: data || [],
+      responses: enriched,
     })
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || 'Unknown error' }, { status: 500 })

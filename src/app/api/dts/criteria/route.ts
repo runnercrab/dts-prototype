@@ -72,6 +72,7 @@ export async function GET(req: Request) {
         context, context_es, focus_area, tier, subdimension_id, display_order,
         level_1_description_es, level_2_description_es, level_3_description_es,
         level_4_description_es, level_5_description_es,
+        explain_json,
         dts_subdimensions!inner (
           id, code, name, name_es, display_order,
           dts_dimensions!inner (id, code, name, name_es, display_order)
@@ -82,7 +83,6 @@ export async function GET(req: Request) {
     if (pack === 'mvp12_v1') {
       criteriaQuery = criteriaQuery.in('code', MVP12_CODES as unknown as string[])
     } else {
-      // comportamiento full (ajusta si quieres tier1/tier2)
       criteriaQuery = criteriaQuery.in('tier', ['tier1', 'tier2'])
     }
 
@@ -91,7 +91,7 @@ export async function GET(req: Request) {
     if (error) return jsonError(500, { error: error.message, hint: 'Supabase query error' })
     if (!data || data.length === 0) return jsonError(404, { error: 'No criteria found for pack', pack })
 
-    // 3) Transformación igual que en el frontend (sin romper interfaces)
+    // 3) Transformación
     const transformed = data.map((c: any) => {
       const subdimension = Array.isArray(c.dts_subdimensions) ? c.dts_subdimensions[0] : c.dts_subdimensions
       const dimension = subdimension?.dts_dimensions
@@ -103,11 +103,15 @@ export async function GET(req: Request) {
       return {
         id: c.id,
         code: c.code,
+
+        // UX short fields
         description: c.description_es || c.description || '',
         short_label: c.short_label_es || c.short_label || '',
         context: c.context_es || c.context || null,
+
         focus_area: c.focus_area || '',
         subdimension_id: c.subdimension_id,
+
         subdimension: subdimension
           ? {
               name: subdimension.name_es || subdimension.name || '',
@@ -117,6 +121,7 @@ export async function GET(req: Request) {
               subdimension_display_order: subdimension.display_order || 0,
             }
           : undefined,
+
         dimension: dimensionArray
           ? {
               name: dimensionNameEs,
@@ -124,20 +129,24 @@ export async function GET(req: Request) {
               display_order: dimensionArray.display_order || 0,
             }
           : undefined,
+
+        // Level texts (ES)
         level_1_description_es: c.level_1_description_es,
         level_2_description_es: c.level_2_description_es,
         level_3_description_es: c.level_3_description_es,
         level_4_description_es: c.level_4_description_es,
         level_5_description_es: c.level_5_description_es,
+
+        // ✅ The CEO-model JSON
+        explain_json: c.explain_json ?? null,
       }
     })
 
     // 4) Orden estable
     if (pack === 'mvp12_v1') {
       transformed.sort(orderByList(MVP12_CODES))
-      // valida que están los 12
       const returned = new Set(transformed.map((x: any) => x.code))
-      const missing = MVP12_CODES.filter(c => !returned.has(c))
+      const missing = MVP12_CODES.filter((c) => !returned.has(c))
       if (missing.length) {
         return jsonError(500, {
           error: 'Pack MVP12 incompleto en BD (faltan códigos)',
@@ -147,7 +156,6 @@ export async function GET(req: Request) {
         })
       }
     } else {
-      // si quieres mantener tu orden numérico actual, puedes
       transformed.sort((a: any, b: any) => {
         const parse = (code: string) => code.split('.').map((p: string) => parseInt(p) || 0)
         const A = parse(a.code)

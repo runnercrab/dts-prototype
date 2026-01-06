@@ -14,7 +14,6 @@ import bus from '@/lib/bus'
 export const dynamic = 'force-dynamic'
 
 // ✅ DEMO FULL: este assessment DEBE tener pack=tmf_full_v5 y onboarding_data ya relleno.
-// Si no lo tiene, te mandará a onboarding (correcto por seguridad).
 const DEMO_FULL_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
 
 interface Criterion {
@@ -45,12 +44,11 @@ interface Criterion {
 }
 
 interface ResponseT {
-  as_is_level: number
-  as_is_confidence: 'low' | 'medium' | 'high'
-  as_is_notes?: string
-  to_be_level: number
-  to_be_timeframe: '6months' | '1year' | '2years' | '3years+'
-  importance: number
+  as_is_level: number | null
+  to_be_level: number | null
+  importance: number | null
+  as_is_confidence?: 'low' | 'medium' | 'high' | null
+  as_is_notes?: string | null
 }
 
 interface Subdimension {
@@ -78,6 +76,16 @@ async function safeReadJson(res: Response) {
   }
 }
 
+function isCompleteResponse(r: ResponseT | undefined) {
+  if (!r) return false
+  return r.as_is_level != null && r.to_be_level != null && r.importance != null
+}
+
+function isAnyAnswered(r: ResponseT | undefined) {
+  if (!r) return false
+  return r.as_is_level != null || r.to_be_level != null || r.importance != null || !!r.as_is_notes
+}
+
 export default function DiagnosticoFullPage() {
   const router = useRouter()
 
@@ -85,6 +93,10 @@ export default function DiagnosticoFullPage() {
   const createInFlightRef = useRef(false)
 
   const [phase, setPhase] = useState<'onboarding' | 'assessment' | 'completed'>('onboarding')
+
+  // ✅ NEW: stage inside assessment flow
+  const [stage, setStage] = useState<'diagnostico_intro' | 'diagnostico'>('diagnostico_intro')
+
   const [assessmentId, setAssessmentId] = useState<string | null>(null)
   const [onboardingData, setOnboardingData] = useState<any>(null)
   const [pack, setPack] = useState<string | null>(null)
@@ -98,6 +110,21 @@ export default function DiagnosticoFullPage() {
   const [currentChatMessages, setCurrentChatMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // ============================
+  // Helpers (sin hooks)
+  // ============================
+  const currentCriterion = criteria[currentCriterionIndex]
+  const currentResponse = currentCriterion ? responses.get(currentCriterion.id) : undefined
+
+  const completedCount = Array.from(responses.entries()).filter(([_, r]) => isCompleteResponse(r)).length
+  const pendingCount = criteria.filter((c) => !isCompleteResponse(responses.get(c.id))).length
+
+  const headerPackLabel = pack === 'mvp12_v1' ? 'MVP12 (12 criterios)' : 'Versión Completa (129 criterios)'
+
+  // ===== intro KPIs
+  const totalCriteriaCount = criteria.length
+  const progressLabel = `${completedCount}/${Math.max(1, totalCriteriaCount)}`
 
   // ============================
   // INIT: crea/hidrata assessment por pack
@@ -114,8 +141,7 @@ export default function DiagnosticoFullPage() {
 
         const fromUrl = params.get('assessmentId')
 
-        // ✅ DEMO MODE (FULL):
-        // Si viene demo=true y NO viene assessmentId, forzamos un assessment demo fijo (no crea nada).
+        // ✅ DEMO FULL (si no viene id explícito)
         if (demoFromUrl && !fromUrl) {
           await hydrateAssessment(DEMO_FULL_ASSESSMENT_ID)
           return
@@ -124,19 +150,16 @@ export default function DiagnosticoFullPage() {
         const lsKey = `dts_assessment_id__${packFromUrl}`
         const fromLs = localStorage.getItem(lsKey)
 
-        // 1) si viene explícito en URL
         if (fromUrl) {
           await hydrateAssessment(fromUrl)
           return
         }
 
-        // 2) si hay en LS para este pack
         if (fromLs) {
           await hydrateAssessment(fromLs)
           return
         }
 
-        // 3) si no hay id -> crear (solo para flujo normal, no demo)
         if (createInFlightRef.current) return
         createInFlightRef.current = true
 
@@ -208,7 +231,6 @@ export default function DiagnosticoFullPage() {
     setError(null)
 
     try {
-      // criteria
       const cRes = await fetch(`/api/dts/criteria?assessmentId=${id}`, { cache: 'no-store' })
       const cJson = await safeReadJson(cRes)
 
@@ -220,7 +242,6 @@ export default function DiagnosticoFullPage() {
       setCriteria(list)
       setPack(cJson.pack ?? null)
 
-      // responses
       const rRes = await fetch(`/api/dts/responses/get?assessmentId=${id}`, { cache: 'no-store' })
       const rJson = await safeReadJson(rRes)
 
@@ -231,18 +252,21 @@ export default function DiagnosticoFullPage() {
       const map = new Map<string, ResponseT>()
       ;(rJson.responses ?? []).forEach((r: any) => {
         map.set(r.criteria_id, {
-          as_is_level: r.as_is_level,
-          as_is_confidence: r.as_is_confidence,
-          as_is_notes: r.as_is_notes,
-          to_be_level: r.to_be_level,
-          to_be_timeframe: r.to_be_timeframe,
-          importance: r.importance,
+          as_is_level: r.as_is_level ?? null,
+          to_be_level: r.to_be_level ?? null,
+          importance: r.importance ?? null,
+          as_is_confidence: r.as_is_confidence ?? null,
+          as_is_notes: r.as_is_notes ?? null,
         })
       })
 
       setResponses(map)
       calculateSubdimensions(list, map)
       setCurrentCriterionIndex(0)
+
+      // ✅ Decide intro vs ir directo a preguntas
+      const hasAny = list.some((c) => isAnyAnswered(map.get(c.id)))
+      setStage(hasAny ? 'diagnostico' : 'diagnostico_intro')
     } catch (err: any) {
       console.error('❌ loadCriteriaAndResponses error:', err)
       setError(err?.message || 'Error cargando diagnóstico')
@@ -251,7 +275,7 @@ export default function DiagnosticoFullPage() {
     }
   }
 
-  const calculateSubdimensions = (criteriaList: Criterion[], responsesMap: Map<string, any>) => {
+  const calculateSubdimensions = (criteriaList: Criterion[], responsesMap: Map<string, ResponseT>) => {
     const subdimMap = new Map<string, Subdimension>()
 
     criteriaList.forEach((criterion) => {
@@ -273,7 +297,9 @@ export default function DiagnosticoFullPage() {
 
       const subdim = subdimMap.get(key)!
       subdim.total_criteria++
-      if (responsesMap.has(criterion.id)) subdim.completed_criteria++
+
+      const r = responsesMap.get(criterion.id)
+      if (isCompleteResponse(r)) subdim.completed_criteria++
     })
 
     const subdimArray = Array.from(subdimMap.values())
@@ -285,7 +311,7 @@ export default function DiagnosticoFullPage() {
   }
 
   // ============================
-  // CHAT: save via API (NO supabase)
+  // CHAT: save via API
   // ============================
   useEffect(() => {
     const handleChatMessage = async (message: { role: 'user' | 'assistant' | 'system'; content: string }) => {
@@ -338,10 +364,9 @@ export default function DiagnosticoFullPage() {
         return
       }
 
-      const res = await fetch(
-        `/api/dts/chat/get?assessmentId=${assessmentId}&criteriaId=${criterion.id}`,
-        { cache: 'no-store' }
-      )
+      const res = await fetch(`/api/dts/chat/get?assessmentId=${assessmentId}&criteriaId=${criterion.id}`, {
+        cache: 'no-store',
+      })
       const json = await safeReadJson(res)
 
       if (!res.ok || !json?.ok) {
@@ -379,15 +404,6 @@ export default function DiagnosticoFullPage() {
     const criterion = criteria[currentCriterionIndex]
     if (!criterion?.id) return
 
-    const missing =
-      response.as_is_level == null ||
-      response.as_is_confidence == null ||
-      response.to_be_level == null ||
-      response.to_be_timeframe == null ||
-      response.importance == null
-
-    if (missing) return
-
     const res = await fetch('/api/dts/responses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -420,6 +436,25 @@ export default function DiagnosticoFullPage() {
     if (currentCriterionIndex > 0) setCurrentCriterionIndex((i) => i - 1)
   }
 
+  const handleGoToNextPending = () => {
+    if (!criteria.length) return
+
+    for (let step = 1; step <= criteria.length; step++) {
+      const idx = (currentCriterionIndex + step) % criteria.length
+      const c = criteria[idx]
+      const r = responses.get(c.id)
+      if (!isCompleteResponse(r)) {
+        setCurrentCriterionIndex(idx)
+        return
+      }
+    }
+  }
+
+  const handleGoToCriterion = (criterionId: string) => {
+    const idx = criteria.findIndex((c) => c.id === criterionId)
+    if (idx >= 0) setCurrentCriterionIndex(idx)
+  }
+
   const handleAssessmentComplete = async () => {
     if (!assessmentId) return
 
@@ -433,7 +468,6 @@ export default function DiagnosticoFullPage() {
 
       setPhase('completed')
 
-      // limpiamos SOLO el key del pack actual (en demo no tocamos LS)
       if (!isDemo) {
         const key = `dts_assessment_id__${pack || DEFAULT_PACK}`
         localStorage.removeItem(key)
@@ -442,6 +476,23 @@ export default function DiagnosticoFullPage() {
       console.error('❌ Error completando assessment:', err)
     }
   }
+
+  // ============================
+  // Intro Enter ↵ support
+  // ============================
+  useEffect(() => {
+    if (phase !== 'assessment') return
+    if (stage !== 'diagnostico_intro') return
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        setStage('diagnostico')
+      }
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [phase, stage])
 
   // ============================
   // RENDERS
@@ -478,10 +529,163 @@ export default function DiagnosticoFullPage() {
     )
   }
 
-  const currentCriterion = criteria[currentCriterionIndex]
-  const currentResponse = currentCriterion ? responses.get(currentCriterion.id) : undefined
-  const headerPackLabel = pack === 'mvp12_v1' ? 'MVP12 (12 criterios)' : 'Versión Completa (129 criterios)'
+  // ✅ Intro screen
+  if (phase === 'assessment' && stage === 'diagnostico_intro') {
+    const packLabel = pack || DEFAULT_PACK
+    const criteriaLabel = totalCriteriaCount ? String(totalCriteriaCount) : '—'
 
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Top bar (simplified) */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="w-[100px]" />
+              <div className="flex-1 text-center">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Diagnóstico de Madurez Digital</h1>
+                <p className="text-xs sm:text-sm text-gray-600">TM Forum DMM v5.0.1 — {headerPackLabel}</p>
+              </div>
+              <div className="w-[100px]" />
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 sm:p-8">
+              <div className="text-sm text-slate-500 font-semibold">Paso 2</div>
+              <h2 className="mt-2 text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">2. Diagnóstico</h2>
+
+              <p className="mt-4 text-lg text-slate-600">
+                Ahora vamos a analizar tu transformación digital de forma <b>simple</b>, <b>práctica</b> y orientada a
+                decisiones reales.
+              </p>
+
+              {/* Bloque 1 */}
+              <div className="mt-8">
+                <h3 className="text-base font-bold text-slate-900">Qué vas a hacer aquí</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  En cada criterio te pediremos <b>solo tres cosas</b>:
+                </p>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="rounded-2xl border bg-slate-50 p-4">
+                    <div className="text-xs font-semibold text-slate-500">1) AS-IS</div>
+                    <div className="mt-1 font-semibold text-slate-900">Cómo estás hoy</div>
+                    <div className="mt-2 text-sm text-slate-600">
+                      Elige el nivel (1–5) que mejor describe tu realidad actual.
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border bg-slate-50 p-4">
+                    <div className="text-xs font-semibold text-slate-500">2) TO-BE</div>
+                    <div className="mt-1 font-semibold text-slate-900">Dónde quieres llegar</div>
+                    <div className="mt-2 text-sm text-slate-600">
+                      Elige el nivel objetivo (1–5). No es “lo ideal”: es lo realista para tu negocio.
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border bg-slate-50 p-4">
+                    <div className="text-xs font-semibold text-slate-500">3) IMPORTANCIA</div>
+                    <div className="mt-1 font-semibold text-slate-900">Para tu negocio, hoy</div>
+                    <div className="mt-2 text-sm text-slate-600">
+                      Del 1 al 5: impacto en ventas, costes, eficiencia o experiencia de cliente.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bloque 2 */}
+              <div className="mt-8">
+                <h3 className="text-base font-bold text-slate-900">Cómo está organizado el diagnóstico</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  Cubre <b>6 áreas clave del negocio</b>. Verás criterios de cada una:
+                </p>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  {[
+                    ['Estrategia', 'dirección, prioridades y foco real del negocio'],
+                    ['Cliente', 'captación, relación y experiencia end-to-end'],
+                    ['Tecnología', 'sistemas, automatización y ciberseguridad'],
+                    ['Operaciones', 'procesos, ejecución y métricas'],
+                    ['Cultura', 'personas, hábitos y adopción del cambio'],
+                    ['Datos', 'calidad, gobierno y uso del dato para decidir'],
+                  ].map(([t, d]) => (
+                    <div key={t} className="rounded-2xl border p-4">
+                      <div className="font-semibold text-slate-900">{t}</div>
+                      <div className="mt-1 text-slate-600">{d}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bloque 3 */}
+              <div className="mt-8">
+                <h3 className="text-base font-bold text-slate-900">Qué obtendrás al finalizar</h3>
+
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  {[
+                    'Tus brechas clave (distancia entre AS-IS y TO-BE)',
+                    'Tus frenos principales (qué bloquea hoy el negocio)',
+                    'Una priorización clara (impacto vs esfuerzo)',
+                    'Un plan por trimestres con seguimiento mensual',
+                  ].map((x) => (
+                    <div key={x} className="rounded-2xl border bg-slate-50 p-4 text-slate-700">
+                      {x}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* KPI cards */}
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-2xl border p-4">
+                  <div className="text-xs text-slate-500">Pack</div>
+                  <div className="mt-1 font-mono text-sm text-slate-900">{packLabel}</div>
+                </div>
+
+                <div className="rounded-2xl border p-4">
+                  <div className="text-xs text-slate-500">Criterios</div>
+                  <div className="mt-1 text-3xl font-bold text-slate-900">{criteriaLabel}</div>
+                </div>
+
+                <div className="rounded-2xl border p-4">
+                  <div className="text-xs text-slate-500">Progreso</div>
+                  <div className="mt-1 text-3xl font-bold text-slate-900">{progressLabel}</div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                <button
+                  onClick={() => setPhase('onboarding')}
+                  className="px-5 py-3 rounded-2xl border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50"
+                >
+                  ← Editar onboarding
+                </button>
+
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    onClick={() => setStage('diagnostico')}
+                    className="px-8 py-3 rounded-2xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                  >
+                    Diagnóstico →
+                  </button>
+                </div>
+              </div>
+
+              {/* Trust microcopy */}
+              <div className="mt-6 text-sm text-slate-600">
+                Tus respuestas se guardan automáticamente para que puedas continuar más tarde y ver el progreso.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ✅ Main assessment screen (questions)
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top bar */}
@@ -499,15 +703,22 @@ export default function DiagnosticoFullPage() {
               <span className="text-gray-300">|</span>
 
               <button
-                onClick={() => {
-                  // En demo, no tiene sentido “volver a onboarding” del ejemplo completo.
-                  // No rompemos nada: simplemente lo dejamos como estaba si lo necesitas.
-                  setPhase('onboarding')
-                }}
+                onClick={() => setPhase('onboarding')}
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
                 title="Ver/Editar onboarding"
               >
                 📋 Ver Onboarding
+              </button>
+
+              <span className="text-gray-300">|</span>
+
+              {/* ✅ NEW: How it works */}
+              <button
+                onClick={() => setStage('diagnostico_intro')}
+                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
+                title="Cómo funciona el diagnóstico"
+              >
+                ❓ Cómo funciona
               </button>
 
               <span className="text-gray-300">|</span>
@@ -536,12 +747,12 @@ export default function DiagnosticoFullPage() {
           {showMap && (
             <div className="lg:col-span-3 order-2 lg:order-1">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2 sticky top-4 max-h-[calc(100vh-120px)] overflow-y-auto">
-                <h3 className="text-sm font-bold text-gray-900 mb-3">Mapa de Progreso</h3>
                 <DimensionProgressMap
-                  subdimensions={subdimensions}
-                  totalCriteria={criteria.length}
-                  completedCriteria={responses.size}
-                  onStartAssessment={() => {}}
+                  criteria={criteria}
+                  responses={responses}
+                  currentCriterionId={currentCriterion?.id}
+                  onGoToCriterion={handleGoToCriterion}
+                  onGoToNextPending={handleGoToNextPending}
                 />
               </div>
             </div>
@@ -600,6 +811,13 @@ export default function DiagnosticoFullPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Mini footer estado */}
+        <div className="mt-3 text-xs text-gray-500">
+          Completados: <span className="font-semibold">{completedCount}/{criteria.length}</span>
+          <span className="mx-2">|</span>
+          Pendientes: <span className="font-semibold">{pendingCount}</span>
         </div>
       </div>
     </div>

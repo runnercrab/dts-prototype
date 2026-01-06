@@ -1,0 +1,53 @@
+# Supabase DB Schema (mínimo) — MVP10
+
+## Tablas existentes usadas
+- dts_assessments
+- dts_criteria
+- dts_responses
+- dts_assessment_scores
+- dts_dimension_scores
+- dts_chat_messages
+
+## Nueva tabla: dts_initiatives (MVP)
+Campos mínimos:
+- id uuid pk default gen_random_uuid()
+- assessment_id uuid (fk dts_assessments)
+- criterion_code text  (ej "6.1.1")
+- initiative_code text unique per assessment (ej "6.1.1.A")
+- type text check in ('Quick Win','Base estructural','Transformacional','Mantenimiento')
+- category text check in ('BASE','AMPLIFIER','MAINTENANCE')
+- title text
+- description text null
+- owner_role text
+- status text check in ('pending','in_progress','blocked','done') default 'pending'
+- due_date date null
+- evidence_note text null
+- evidence_url text null
+- last_update_at timestamptz null
+
+Engines:
+- effort_base int
+- effort_final int
+- weeks_min int
+- weeks_max int
+- impact_hours_base int
+- impact_hours_final int
+- impact_eur_min numeric null
+- impact_eur_max numeric null
+
+Dependencies:
+- dependencies text[] default '{}'
+
+## Nueva tabla: dts_roadmap_items (opcional)
+- assessment_id uuid
+- initiative_code text
+- quarter text ('Q1','Q2','Q3')
+- order_in_quarter int
+- created_at, updated_at
+
+## Nueva tabla: dts_alerts (opcional)
+- assessment_id uuid
+- type text
+- message text
+- severity int (1..3)
+- created_at

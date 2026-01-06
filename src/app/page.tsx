@@ -5,6 +5,14 @@ import ProblemaSection from '@/components/ProblemaSection'
 import SolucionSection from '@/components/SolucionSection'
 
 export default function Home() {
+  // ✅ 1) Pega aquí el ID del vídeo de Google Drive
+  // Ejemplo link:
+  // https://drive.google.com/file/d/1AbCDefGhIjKlMnOPqRsTuVwXyZ123456/view?usp=sharing
+  // ID = 1AbCDefGhIjKlMnOPqRsTuVwXyZ123456
+  // link google drive real :https://drive.google.com/file/d/1ULLdAeUSFMf5f5A6KyKFTfXMC863xbHt/view?usp=sharing
+  const GOOGLE_DRIVE_VIDEO_ID = '1ULLdAeUSFMf5f5A6KyKFTfXMC863xbHt'
+  const GOOGLE_DRIVE_PREVIEW_URL = `https://drive.google.com/file/d/${GOOGLE_DRIVE_VIDEO_ID}/preview`
+
   return (
     <>
       {/* HERO SECTION */}
@@ -57,15 +65,22 @@ export default function Home() {
       >
         <div className="max-w-7xl mx-auto px-6">
           <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ aspectRatio: '16/9' }}>
-            <video
-              src="/Welcome.mp4"
-              className="w-full h-full object-cover"
-              controls
-              controlsList="nofullscreen nodownload noremoteplayback"
-              disablePictureInPicture
-              playsInline
+            <iframe
+              src={GOOGLE_DRIVE_PREVIEW_URL}
+              className="w-full h-full"
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              referrerPolicy="no-referrer"
+              title="Gapply - Video"
             />
           </div>
+
+          {/* (Opcional) fallback si no quieres que se quede “en blanco” cuando no hay ID */}
+          {GOOGLE_DRIVE_VIDEO_ID === 'PASTE_YOUR_FILE_ID_HERE' && (
+            <p className="text-center text-sm text-slate-600 mt-3">
+              ⚠️ Falta configurar el ID del vídeo de Google Drive en <code>GOOGLE_DRIVE_VIDEO_ID</code>.
+            </p>
+          )}
         </div>
       </div>
 

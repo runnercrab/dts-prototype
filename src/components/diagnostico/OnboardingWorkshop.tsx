@@ -1,7 +1,7 @@
 // src/components/diagnostico/OnboardingWorkshop.tsx
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 interface Props {
   onComplete: (assessmentId: string) => void
@@ -18,118 +18,120 @@ async function safeReadJson(res: Response) {
   }
 }
 
+function isNonEmpty(v: any) {
+  return typeof v === 'string' && v.trim().length > 0
+}
+
 export default function OnboardingWorkshop({
   onComplete,
   existingAssessmentId,
   existingData,
   pack,
 }: Props) {
-  const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
 
-  // Datos básicos de la organización
-  const [companyName, setCompanyName] = useState('')
-  const [sector, setSector] = useState('')
-  const [numEmployees, setNumEmployees] = useState<number>(10)
+  // ✅ Campos mínimos “motor-ready”
+  const [orgName, setOrgName] = useState('')
+  const [industry, setIndustry] = useState('')
+  const [size, setSize] = useState('')
+  const [country, setCountry] = useState('')
+
+  // (opcionales)
   const [role, setRole] = useState('')
 
-  // Pre-Assessment Questions - TM Forum Official
-  const [businessAspiration, setBusinessAspiration] = useState('')
-  const [digitalTransformationGoals, setDigitalTransformationGoals] = useState('')
-  const [brandRepresentation, setBrandRepresentation] = useState('')
-
-  // Culture
-  const [culturePrinciples, setCulturePrinciples] = useState('')
-  const [cultureChange, setCultureChange] = useState<'yes' | 'no' | ''>('')
-  const [workingStyle, setWorkingStyle] = useState('')
-
-  // Data/Technology
-  const [legacyBurden, setLegacyBurden] = useState<string>('3')
-  const [dataEffectiveness, setDataEffectiveness] = useState('')
-
   useEffect(() => {
-    if (existingData) {
-      setIsEditing(true)
-      setCompanyName(existingData.companyName || '')
-      setSector(existingData.sector || '')
-      setNumEmployees(existingData.numEmployees || 10)
-      setRole(existingData.role || '')
+    if (!existingData) return
 
-      setBusinessAspiration(existingData.businessAspiration || '')
-      setDigitalTransformationGoals(existingData.digitalTransformationGoals || '')
-      setBrandRepresentation(existingData.brandRepresentation || '')
+    // Soporta tanto nombres antiguos como nuevos:
+    // - antiguos: companyName, sector, numEmployees
+    // - nuevos: name, industry, size, country
+    setIsEditing(true)
 
-      setCulturePrinciples(existingData.culturePrinciples || '')
-      setCultureChange(existingData.cultureChange || '')
-      setWorkingStyle(existingData.workingStyle || '')
+    setOrgName(existingData.name || existingData.companyName || '')
+    setIndustry(existingData.industry || existingData.sector || '')
+    setSize(existingData.size || '')
+    setCountry(existingData.country || '')
 
-      setLegacyBurden(existingData.legacyBurden || '3')
-      setDataEffectiveness(existingData.dataEffectiveness || '')
-    }
+    setRole(existingData.role || '')
   }, [existingData])
 
-  const TOTAL_STEPS = 4
-  const progressPct = (step / TOTAL_STEPS) * 100
+  const INDUSTRIES = useMemo(
+    () => [
+      'Tecnología y Software',
+      'Retail y E-commerce',
+      'Servicios Profesionales',
+      'Manufactura',
+      'Salud',
+      'Educación',
+      'Finanzas y Seguros',
+      'Logística y Transporte',
+      'Hostelería y Turismo',
+      'Energía y Utilities',
+      'Construcción e Inmobiliario',
+      'Otro',
+    ],
+    []
+  )
 
-  const SECTORES = [
-    'Telecomunicaciones',
-    'Tecnología y Software',
-    'Retail y E-commerce',
-    'Servicios Profesionales',
-    'Manufactura',
-    'Salud',
-    'Educación',
-    'Finanzas y Seguros',
-    'Logística y Transporte',
-    'Hostelería y Turismo',
-    'Medios y Entretenimiento',
-    'Energía y Utilities',
-    'Otro',
-  ]
+  const SIZES = useMemo(
+    () => [
+      { value: '1-10', label: '1–10 empleados' },
+      { value: '11-50', label: '11–50 empleados' },
+      { value: '51-200', label: '51–200 empleados' },
+      { value: '201-500', label: '201–500 empleados' },
+      { value: '500+', label: '500+ empleados' },
+    ],
+    []
+  )
 
-  const ROLES = [
-    'CEO / Fundador',
-    'Director General',
-    'CTO / CIO / Director Tecnología',
-    'CDO / Chief Digital Officer',
-    'Director Operaciones',
-    'Director Marketing',
-    'Director Comercial',
-    'Gerente / Manager',
-    'Consultor Externo',
-    'Otro',
-  ]
+  const ROLES = useMemo(
+    () => [
+      'CEO / Fundador',
+      'Director General',
+      'CTO / CIO / Director Tecnología',
+      'CDO / Chief Digital Officer',
+      'Director Operaciones',
+      'Director Marketing',
+      'Director Comercial',
+      'Gerente / Manager',
+      'Consultor Externo',
+      'Otro',
+    ],
+    []
+  )
+
+  const canSubmit =
+    isNonEmpty(orgName) && isNonEmpty(industry) && isNonEmpty(size) && isNonEmpty(country)
 
   const saveOnboarding = async () => {
     if (!existingAssessmentId) {
-      alert('Error: falta existingAssessmentId (no debería pasar).')
+      alert('Error: falta assessmentId (no debería pasar).')
+      return
+    }
+
+    if (!canSubmit) {
+      alert('Completa los campos obligatorios: nombre, sector, tamaño y país/región.')
       return
     }
 
     setSaving(true)
     try {
+      // ✅ Esto es lo que el motor usará después
       const onboardingData = {
-        companyName,
-        sector,
-        numEmployees,
-        role,
+        name: orgName.trim(),
+        industry: industry.trim(),
+        size: size.trim(),
+        country: country.trim(),
 
-        businessAspiration,
-        digitalTransformationGoals,
-        brandRepresentation,
+        // opcional
+        role: role.trim() || null,
 
-        culturePrinciples,
-        cultureChange,
-        workingStyle,
-
-        legacyBurden,
-        dataEffectiveness,
-
-        // opcional: te ayuda a depurar
+        // trazabilidad ligera
         _meta: {
           pack: pack || null,
           saved_at: new Date().toISOString(),
+          version: 'onboarding_v1_min',
         },
       }
 
@@ -148,7 +150,6 @@ export default function OnboardingWorkshop({
       if (!res.ok || !json?.ok) {
         console.error('❌ onboarding POST failed', { status: res.status, json })
         alert(json?.error || 'Error guardando onboarding')
-        setSaving(false)
         return
       }
 
@@ -161,315 +162,128 @@ export default function OnboardingWorkshop({
     }
   }
 
-  const handleNext = () => {
-    // Validaciones por paso
-    if (step === 1 && (!companyName || !sector || !role)) {
-      alert('Por favor completa todos los campos obligatorios.')
-      return
-    }
-    if (step === 2 && (!businessAspiration || !digitalTransformationGoals || !brandRepresentation)) {
-      alert('Por favor responde las 3 preguntas sobre estrategia y cliente.')
-      return
-    }
-    if (step === 3 && (!culturePrinciples || !cultureChange || !workingStyle)) {
-      alert('Por favor responde las 3 preguntas sobre cultura organizacional.')
-      return
-    }
-    if (step === 4 && !dataEffectiveness) {
-      alert('Por favor responde la pregunta sobre uso efectivo de datos.')
-      return
-    }
-
-    if (step < TOTAL_STEPS) {
-      setStep(step + 1)
-    } else {
-      saveOnboarding()
-    }
-  }
-
-  const handlePrev = () => {
-    if (step > 1) setStep(step - 1)
-  }
-
   return (
-    <div className="card">
-      <div className="card-body">
-        {/* Progreso */}
-        <div className="flex items-center gap-3 mb-6">
-          <span className="kpi">Paso {step} de {TOTAL_STEPS}</span>
-          <div className="flex-1">
-            <div className="progress">
-              <span style={{ width: `${progressPct}%` }} />
-            </div>
-          </div>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Empecemos</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            60 segundos. Esto permite adaptar impacto/esfuerzo y el roadmap.
+          </p>
+        </div>
+        {pack ? (
+          <span className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-700 border">
+            Pack: <span className="font-mono">{pack}</span>
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Nombre de la organización *
+          </label>
+          <input
+            type="text"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            placeholder="Ej: Talleres López S.L."
+            value={orgName}
+            onChange={(e) => setOrgName(e.target.value)}
+          />
         </div>
 
-        {/* PASO 1 */}
-        {step === 1 && (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold" style={{ color: '#0f172a' }}>
-              Información Básica de tu Organización
-            </h2>
-            <p className="text-base" style={{ color: '#475569' }}>
-              Datos mínimos para adaptar el diagnóstico.
-            </p>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                Nombre de la empresa *
-              </label>
-              <input
-                type="text"
-                className="input w-full"
-                placeholder="Ej: Mi Empresa S.L."
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                Sector *
-              </label>
-              <select
-                className="input w-full"
-                value={sector}
-                onChange={(e) => setSector(e.target.value)}
-              >
-                <option value="">Selecciona un sector</option>
-                {SECTORES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                Número de empleados: <strong>{numEmployees}</strong>
-              </label>
-              <input
-                type="range"
-                min={1}
-                max={500}
-                step={1}
-                value={numEmployees}
-                className="range w-full"
-                style={{ ['--sx' as any]: `${((numEmployees - 1) / (500 - 1)) * 100}%` }}
-                onChange={(e) => setNumEmployees(+e.target.value)}
-              />
-              <div className="flex justify-between text-xs mt-1" style={{ color: '#64748b' }}>
-                <span>1</span>
-                <span>250</span>
-                <span>500+</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                Tu rol en la empresa *
-              </label>
-              <select
-                className="input w-full"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                <option value="">Selecciona tu rol</option>
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* PASO 2 */}
-        {step === 2 && (
-          <div className="space-y-4">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold" style={{ color: '#0f172a' }}>
-                Estrategia, Cliente y Operaciones
-              </h2>
-              <p className="text-sm mt-2" style={{ color: '#64748b' }}>
-                Para entender aspiraciones y objetivos
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                1. ¿Qué te gustaría que lograra el negocio (sin restricciones)? *
-              </label>
-              <textarea
-                className="input w-full h-24 resize-none"
-                value={businessAspiration}
-                onChange={(e) => setBusinessAspiration(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                2. ¿Qué esperas lograr con la Transformación Digital? *
-              </label>
-              <textarea
-                className="input w-full h-32 resize-none"
-                value={digitalTransformationGoals}
-                onChange={(e) => setDigitalTransformationGoals(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                3. ¿Qué te gustaría que tu marca representara? *
-              </label>
-              <textarea
-                className="input w-full h-24 resize-none"
-                value={brandRepresentation}
-                onChange={(e) => setBrandRepresentation(e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* PASO 3 */}
-        {step === 3 && (
-          <div className="space-y-4">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold" style={{ color: '#0f172a' }}>
-                Cultura Organizacional
-              </h2>
-              <p className="text-sm mt-2" style={{ color: '#64748b' }}>
-                Cómo trabajáis hoy y hacia dónde queréis moverlo
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                1. Principios clave de la cultura *
-              </label>
-              <textarea
-                className="input w-full h-32 resize-none"
-                value={culturePrinciples}
-                onChange={(e) => setCulturePrinciples(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                2. ¿Quieres cambiar la cultura? *
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="cultureChange"
-                    checked={cultureChange === 'yes'}
-                    onChange={() => setCultureChange('yes')}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm">Sí</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="cultureChange"
-                    checked={cultureChange === 'no'}
-                    onChange={() => setCultureChange('no')}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm">No</span>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                3. Estilo de trabajo a promover *
-              </label>
-              <textarea
-                className="input w-full h-24 resize-none"
-                value={workingStyle}
-                onChange={(e) => setWorkingStyle(e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* PASO 4 */}
-        {step === 4 && (
-          <div className="space-y-4">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold" style={{ color: '#0f172a' }}>
-                Datos y Tecnología
-              </h2>
-              <p className="text-sm mt-2" style={{ color: '#64748b' }}>
-                Últimas preguntas
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                1. Carga de legacy en IT *
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="5"
-                step="1"
-                value={legacyBurden}
-                className="range w-full"
-                onChange={(e) => setLegacyBurden(e.target.value)}
-              />
-              <div className="flex justify-between text-xs" style={{ color: '#64748b' }}>
-                <span>Muy baja</span><span>Baja</span><span>Media</span><span>Alta</span><span>Muy alta</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#475569' }}>
-                2. ¿Cómo usarías los datos de forma más efectiva? *
-              </label>
-              <textarea
-                className="input w-full h-32 resize-none"
-                value={dataEffectiveness}
-                onChange={(e) => setDataEffectiveness(e.target.value)}
-              />
-            </div>
-
-            <div className="p-4 rounded-lg mt-4" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-              <p className="text-sm" style={{ color: '#1e40af' }}>
-                <strong>Listo.</strong> Guardamos el contexto y empezamos el diagnóstico.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Botones */}
-        <div className="flex items-center gap-3 mt-6">
-          <button
-            className={`btn ${step === 1 ? 'opacity-50 pointer-events-none' : ''}`}
-            onClick={handlePrev}
-            disabled={step === 1 || saving}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Sector (industry) *
+          </label>
+          <select
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+            value={industry}
+            onChange={(e) => setIndustry(e.target.value)}
           >
-            ← Anterior
-          </button>
+            <option value="">Selecciona…</option>
+            {INDUSTRIES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          {isEditing && (
-            <button
-              className="btn"
-              onClick={() => existingAssessmentId && onComplete(existingAssessmentId)}
-              disabled={saving}
-            >
-              Cancelar
-            </button>
-          )}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Tamaño (size) *
+          </label>
+          <select
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+          >
+            <option value="">Selecciona…</option>
+            {SIZES.map((x) => (
+              <option key={x.value} value={x.value}>
+                {x.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            País / región *
+          </label>
+          <input
+            type="text"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            placeholder="Ej: España"
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Tu rol (opcional)
+          </label>
+          <select
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
+            <option value="">(Opcional) Selecciona…</option>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="mt-6 flex items-center gap-3">
+        {isEditing ? (
           <button
-            className="btn btn-primary ml-auto"
-            onClick={handleNext}
+            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+            onClick={() => existingAssessmentId && onComplete(existingAssessmentId)}
             disabled={saving}
           >
-            {saving ? 'Guardando...' : step === TOTAL_STEPS ? (isEditing ? 'Guardar Cambios →' : 'Comenzar Diagnóstico →') : 'Siguiente →'}
+            Cancelar
           </button>
-        </div>
+        ) : null}
+
+        <button
+          className={`ml-auto px-5 py-2 rounded-lg text-white font-medium ${
+            canSubmit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'
+          }`}
+          onClick={saveOnboarding}
+          disabled={!canSubmit || saving}
+        >
+          {saving ? 'Guardando…' : 'Continuar →'}
+        </button>
+      </div>
+
+      <div className="mt-4 text-xs text-gray-500">
+        * Obligatorio porque alimenta el cálculo posterior (impacto/esfuerzo/roadmap).
       </div>
     </div>
   )
