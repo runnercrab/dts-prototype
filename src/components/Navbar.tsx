@@ -22,21 +22,9 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* Navegación */}
+        {/* Navegación vacía por ahora (header limpio) */}
         <div className="flex items-center gap-6">
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#faq" className="text-gray-600 hover:text-gray-900 transition-colors">
-              FAQ
-            </a>
-          </nav>
-
-          {/* CTA principal: Empezar diagnóstico */}
-          <Link
-            href="/start"
-            className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition-all"
-          >
-            Empieza tu diagnóstico
-          </Link>
+          {/* Intencionadamente vacío */}
         </div>
       </div>
     </nav>

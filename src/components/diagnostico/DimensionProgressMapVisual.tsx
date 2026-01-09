@@ -79,9 +79,14 @@ function isPartialResponse(r?: ResponseT) {
   return hasAny && !isCompleteResponse(r)
 }
 
+/**
+ * ✅ FIX:
+ * Un criterio completo NO debe quedar marcado como "current".
+ * Prioridad: complete > current > partial > pending
+ */
 function getStatus(criterionId: string, currentCriterionId: string | undefined, r?: ResponseT): CriterionStatus {
-  if (currentCriterionId && criterionId === currentCriterionId) return 'current'
   if (isCompleteResponse(r)) return 'complete'
+  if (currentCriterionId && criterionId === currentCriterionId) return 'current'
   if (isPartialResponse(r)) return 'partial'
   return 'pending'
 }
@@ -179,6 +184,9 @@ export default function DimensionProgressMapVisual({
     return out
   }, [groupedByDimension])
 
+  // ✅ Para que el botón no “prometa” algo que no existe
+  const hasPending = totals.pending + totals.partial > 0
+
   return (
     <div className="space-y-3">
       {/* Header: contador + botón siguiente pendiente */}
@@ -194,12 +202,18 @@ export default function DimensionProgressMapVisual({
 
         {onGoToNextPending && (
           <button
-            onClick={onGoToNextPending}
-            className="px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 text-xs 2xl:text-sm font-semibold hover:bg-amber-100 flex items-center gap-2"
-            title="Ir al siguiente criterio pendiente o parcial"
+            onClick={hasPending ? onGoToNextPending : undefined}
+            disabled={!hasPending}
+            className={[
+              'px-3 py-2 rounded-lg border text-xs 2xl:text-sm font-semibold flex items-center gap-2 transition',
+              hasPending
+                ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed',
+            ].join(' ')}
+            title={hasPending ? 'Ir al siguiente criterio pendiente o parcial' : 'No hay criterios pendientes'}
           >
             <ArrowRight className="w-4 h-4" />
-            Siguiente pendiente
+            {hasPending ? 'Siguiente pendiente' : 'Todo completado'}
           </button>
         )}
       </div>
@@ -288,11 +302,7 @@ export default function DimensionProgressMapVisual({
               {/* Header dimensión (SIN azul marino) */}
               <div className="px-3 py-2 flex items-center justify-between border-b" style={headerStyle}>
                 <div className="flex items-center gap-2">
-                  <span
-                    className="inline-block w-2 h-2 rounded-full"
-                    style={{ background: dotColor }}
-                    aria-hidden
-                  />
+                  <span className="inline-block w-2 h-2 rounded-full" style={{ background: dotColor }} aria-hidden />
                   <span className="text-xs 2xl:text-sm font-semibold" style={{ color: textColor }}>
                     {dimName}
                   </span>
@@ -331,16 +341,12 @@ export default function DimensionProgressMapVisual({
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="text-xs font-bold opacity-80">{c.code}</div>
-                          <div className="mt-1 text-sm 2xl:text-base font-semibold leading-snug line-clamp-2">
-                            {c.label}
-                          </div>
+                          <div className="mt-1 text-sm 2xl:text-base font-semibold leading-snug line-clamp-2">{c.label}</div>
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
                           <Icon className={['w-7 h-7 2xl:w-8 2xl:h-8', s.icon].join(' ')} />
-                          <span
-                            className={['text-[10px] 2xl:text-xs px-2 py-1 rounded-full font-semibold', s.badge].join(' ')}
-                          >
+                          <span className={['text-[10px] 2xl:text-xs px-2 py-1 rounded-full font-semibold', s.badge].join(' ')}>
                             {c.status === 'complete'
                               ? 'Completo'
                               : c.status === 'current'

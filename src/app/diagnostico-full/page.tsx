@@ -1,4 +1,3 @@
-// src/app/diagnostico-full/page.tsx
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
@@ -10,11 +9,11 @@ import OnboardingWorkshop from '@/components/diagnostico/OnboardingWorkshop'
 import DimensionProgressMap from '@/components/diagnostico/DimensionProgressMapVisual'
 import CriterionQuestion from '@/components/diagnostico/CriterionQuestion'
 import bus from '@/lib/bus'
+import { DEMO_FULL_ASSESSMENT_ID } from '@/lib/demo'
 
 export const dynamic = 'force-dynamic'
 
 // ✅ DEMO FULL: este assessment DEBE tener pack=tmf_full_v5 y onboarding_data ya relleno.
-const DEMO_FULL_ASSESSMENT_ID = 'b4b63b9b-4412-4628-8a9a-527b0696426a'
 
 interface Criterion {
   id: string

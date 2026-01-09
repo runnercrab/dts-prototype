@@ -1,4 +1,4 @@
-// src/app/api/dts/results/frenos/route.ts
+// src/app/api/dts/results/priorizacion/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -6,6 +6,29 @@ function isUuid(v: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     v
   );
+}
+
+function sanitizeAssessmentId(raw: string) {
+  // 1) decode por si viene URL-encoded raro
+  let v = raw;
+  try {
+    v = decodeURIComponent(v);
+  } catch {
+    // si falla, seguimos con el raw
+  }
+
+  // 2) trim whitespace
+  v = (v || "").trim();
+
+  // 3) quitar wrappers típicos de copy/paste: "", '', {}, []
+  //    (solo si envuelven toda la cadena)
+  v = v.replace(/^["'{}\[\]\(\)\s]+/, "").replace(/["'{}\[\]\(\)\s]+$/, "");
+
+  // 4) si por error meten "assessmentId=xxx" dentro del propio valor, corta
+  //    o si meten algo con espacios, corta al primer espacio
+  v = v.split(/\s|&/)[0] || "";
+
+  return v;
 }
 
 type ResponseRow = {
@@ -17,24 +40,22 @@ type ResponseRow = {
 
 type CriteriaMetaRow = {
   id: string;
-  code: string; // TMF criteria_code (ej "1.1.1")
-  effort_base_full: number | null;
-  effort_base_pyme: number | null;
+  code: string; // TMF code: "1.1.1"
   short_label?: string | null;
   short_label_es?: string | null;
   description?: string | null;
   description_es?: string | null;
 };
 
-type FrenoItem = {
+type PriorityItem = {
   rank: number;
-  criteria_code: string; // TMF real
+  criteria_code: string;
   title: string;
   plain_impact: string;
-  symptom: string;
-  suggested_action: string;
-  impact_score: number; // informativo (no TMF); mantenido por compatibilidad UI
-  effort_score: number; // 1..5 desde BD
+  gap_levels: number; // to_be - as_is (si > 0)
+  importance: number; // 1..5
+  priority: number; // gap * importance (informativo)
+  band: "high" | "medium" | "low"; // solo UI
 };
 
 type ResultsPayload = {
@@ -45,14 +66,25 @@ type ResultsPayload = {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const assessmentId = (searchParams.get("assessmentId") || "").trim();
 
-    const limitRaw = (searchParams.get("limit") || "8").trim();
-    const limit = Math.max(1, Math.min(12, Number(limitRaw) || 8));
+    // ✅ acepta assessmentId o assessment_id
+    const rawId =
+      (searchParams.get("assessmentId") ??
+        searchParams.get("assessment_id") ??
+        "") + "";
+
+    const assessmentId = sanitizeAssessmentId(rawId);
+
+    const limitRaw = (searchParams.get("limit") || "12").trim();
+    const limit = Math.max(1, Math.min(12, Number(limitRaw) || 12));
 
     if (!assessmentId || !isUuid(assessmentId)) {
       return NextResponse.json(
-        { error: "Invalid assessmentId (expected UUID)" },
+        {
+          error: "Invalid assessmentId (expected UUID)",
+          received: rawId, // 👈 clave para ver qué narices llegó
+          sanitized: assessmentId,
+        },
         { status: 400 }
       );
     }
@@ -75,14 +107,14 @@ export async function GET(req: Request) {
       auth: { persistSession: false },
     });
 
-    // 1) validar assessment + pack + assessment_type (RPC estable)
+    // 1) validar assessment + pack (RPC estable)
     const { data, error } = await supabase.rpc("dts_results_v1", {
       p_assessment_id: assessmentId,
     });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error)
+      return NextResponse.json({ error: error.message }, { status: 500 });
 
     const payload = extractResultsPayload(data) as ResultsPayload | null;
-
     if (!payload) {
       return NextResponse.json(
         { error: "No data for assessmentId" },
@@ -98,20 +130,14 @@ export async function GET(req: Request) {
       );
     }
 
-    const assessmentType = (payload.assessment_type || "full")
-      .toString()
-      .toLowerCase()
-      .trim();
-
-    const isPyme = assessmentType === "sme" || assessmentType === "pyme";
-
     // 2) criterios del pack
     const { data: packRows, error: packErr } = await supabase
       .from("dts_pack_criteria")
       .select("criteria_id")
       .eq("pack", pack);
 
-    if (packErr) return NextResponse.json({ error: packErr.message }, { status: 500 });
+    if (packErr)
+      return NextResponse.json({ error: packErr.message }, { status: 500 });
 
     const criteriaIds = (packRows || [])
       .map((r: any) => r.criteria_id)
@@ -122,7 +148,6 @@ export async function GET(req: Request) {
         {
           assessment_id: assessmentId,
           pack,
-          assessment_type: assessmentType,
           count: 0,
           items: [],
           disclaimer:
@@ -134,15 +159,14 @@ export async function GET(req: Request) {
       return res;
     }
 
-    // 3) metadata de criterios (incluye esfuerzo desde BD)
+    // 3) metadata criterios
     const { data: metaRows, error: metaErr } = await supabase
       .from("dts_criteria")
-      .select(
-        "id, code, effort_base_full, effort_base_pyme, short_label, short_label_es, description, description_es"
-      )
+      .select("id, code, short_label, short_label_es, description, description_es")
       .in("id", criteriaIds);
 
-    if (metaErr) return NextResponse.json({ error: metaErr.message }, { status: 500 });
+    if (metaErr)
+      return NextResponse.json({ error: metaErr.message }, { status: 500 });
 
     const metas = (metaRows || []) as CriteriaMetaRow[];
     const metaByCode = new Map<string, CriteriaMetaRow>();
@@ -157,7 +181,6 @@ export async function GET(req: Request) {
         {
           assessment_id: assessmentId,
           pack,
-          assessment_type: assessmentType,
           count: 0,
           items: [],
           disclaimer:
@@ -176,7 +199,8 @@ export async function GET(req: Request) {
       .eq("assessment_id", assessmentId)
       .in("criteria_code", packCodes);
 
-    if (respErr) return NextResponse.json({ error: respErr.message }, { status: 500 });
+    if (respErr)
+      return NextResponse.json({ error: respErr.message }, { status: 500 });
 
     const responses: ResponseRow[] = (respRows || []).map((r: any) => ({
       criteria_code: r.criteria_code ?? null,
@@ -185,35 +209,32 @@ export async function GET(req: Request) {
       importance: r.importance ?? null,
     }));
 
-    // 5) ranking por weighted_gap desc (solo gap>0)
-    const ranked = rankByWeightedGap(packCodes, responses);
+    // 5) ranking por gap*importance (solo gap>0)
+    const ranked = scoreByWeightedGap(packCodes, responses);
+    const usingFallback = ranked.sorted.length === 0;
 
-    const usingFallback = ranked.sortedCodes.length === 0;
-    const chosenCodes = (usingFallback ? packCodes : ranked.sortedCodes).slice(0, limit);
+    const chosen = (usingFallback
+      ? packCodes.map((code) => ({ code, priority: 0, gap: 0, importance: 0 }))
+      : ranked.sorted
+    ).slice(0, limit);
 
-    const items: FrenoItem[] = chosenCodes.map((criteria_code, idx) => {
-      const m = metaByCode.get(criteria_code);
+    // 6) bands
+    const bands = assignBands(chosen.length);
 
-      const effortRaw = isPyme ? m?.effort_base_pyme : m?.effort_base_full;
-      const effort_score = clampInt(effortRaw ?? m?.effort_base_full ?? 3, 1, 5);
-
-      const title = (m?.short_label_es || m?.short_label || criteria_code)
-        .toString()
-        .trim();
-
-      const plain_impact = (m?.description_es || m?.description || "")
-        .toString()
-        .trim();
+    const items: PriorityItem[] = chosen.map((x, idx) => {
+      const m = metaByCode.get(x.code);
+      const title = (m?.short_label_es || m?.short_label || x.code).toString().trim();
+      const plain_impact = (m?.description_es || m?.description || "").toString().trim();
 
       return {
         rank: idx + 1,
-        criteria_code,
+        criteria_code: x.code,
         title,
         plain_impact,
-        symptom: "",
-        suggested_action: "",
-        impact_score: 3, // compat UI; no es TMF
-        effort_score,
+        gap_levels: x.gap,
+        importance: x.importance,
+        priority: x.priority,
+        band: bands[idx],
       };
     });
 
@@ -221,14 +242,11 @@ export async function GET(req: Request) {
       {
         assessment_id: assessmentId,
         pack,
-        assessment_type: assessmentType,
         count: items.length,
         items,
         disclaimer: usingFallback
-          ? "MVP: no hay datos suficientes para priorizar por tus respuestas (faltan AS-IS/TO-BE/Importancia o gap<=0). Mostramos criterios del pack sin ranking por impacto."
-          : `MVP: frenos priorizados por tus respuestas (gap × importancia). Esfuerzo = ${
-              isPyme ? "effort_base_pyme" : "effort_base_full"
-            } desde BD (dts_criteria).`,
+          ? "MVP: no hay datos suficientes para priorizar por tus respuestas (faltan AS-IS/TO-BE/Importancia o gap<=0). Mostramos criterios del pack sin ranking por criticidad."
+          : "MVP: priorización basada en tus respuestas (gap × importancia). No son acciones: son áreas donde concentrar la atención.",
       },
       { status: 200 }
     );
@@ -255,34 +273,42 @@ function normalizeCode(code: string) {
   return code.trim();
 }
 
-function clampInt(v: number, min: number, max: number) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return min;
-  return Math.max(min, Math.min(max, Math.round(n)));
-}
-
-function rankByWeightedGap(packCodes: string[], responses: ResponseRow[]) {
+function scoreByWeightedGap(packCodes: string[], responses: ResponseRow[]) {
   const packSet = new Set(packCodes.map(normalizeCode));
-  const bestByCode = new Map<string, number>();
+  const best = new Map<string, { priority: number; gap: number; importance: number }>();
 
   for (const r of responses) {
     const code = r.criteria_code ? normalizeCode(r.criteria_code) : "";
     if (!code || !packSet.has(code)) continue;
-
     if (r.as_is_level == null || r.to_be_level == null || r.importance == null) continue;
 
     const gap = (r.to_be_level as number) - (r.as_is_level as number);
     if (gap <= 0) continue;
 
-    const weighted_gap = gap * (r.importance as number);
+    const importance = r.importance as number;
+    const priority = gap * importance;
 
-    const prev = bestByCode.get(code);
-    if (prev == null || weighted_gap > prev) bestByCode.set(code, weighted_gap);
+    const prev = best.get(code);
+    if (!prev || priority > prev.priority) best.set(code, { priority, gap, importance });
   }
 
-  const sortedCodes = Array.from(bestByCode.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([code]) => code);
+  const sorted = Array.from(best.entries())
+    .map(([code, v]) => ({ code, priority: v.priority, gap: v.gap, importance: v.importance }))
+    .sort((a, b) => b.priority - a.priority);
 
-  return { sortedCodes };
+  return { sorted };
+}
+
+function assignBands(n: number): Array<"high" | "medium" | "low"> {
+  if (n <= 0) return [];
+  const highCut = Math.ceil(n * 0.3);
+  const medCut = Math.ceil(n * 0.7);
+
+  const out: Array<"high" | "medium" | "low"> = [];
+  for (let i = 0; i < n; i++) {
+    if (i < highCut) out.push("high");
+    else if (i < medCut) out.push("medium");
+    else out.push("low");
+  }
+  return out;
 }

@@ -3,27 +3,52 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 function isUuid(v: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    v
+  );
 }
 
-type FrenoItem = {
+type ResponseRow = {
+  criteria_code: string | null;
+  as_is_level: number | null;
+  to_be_level: number | null;
+  importance: number | null;
+};
+
+type CriteriaMetaRow = {
+  id: string;
+  code: string; // TMF criteria_code: "1.1.1"
+  effort_base_full: number | null;
+  effort_base_pyme: number | null;
+
+  // textos opcionales
+  short_label?: string | null;
+  short_label_es?: string | null;
+  description?: string | null;
+  description_es?: string | null;
+};
+
+type MatrizItem = {
   rank: number;
-  criterion_code: string;
+  criteria_code: string;
+
   title: string;
   plain_impact: string;
   symptom: string;
   suggested_action: string;
-  impact_score: number; // 1..5
-  effort_score: number; // 1..5
-  note?: string;
-};
 
-type MatrizItem = FrenoItem & {
-  // Coordenadas normalizadas 0..1 para pintar en un grid
-  x_effort: number; // 0..1 (izq->der)
-  y_impact: number; // 0..1 (abajo->arriba)
+  impact_score: number; // 1..5 (solo para fallback visual si no hay respuestas)
+  effort_score: number; // 1..5 (desde BD)
+
+  x_effort: number; // 0..1
+  y_impact: number; // 0..1
   quadrant: "quick_wins" | "big_bets" | "foundations" | "fill_ins";
   quadrant_label_es: string;
+};
+
+type ResultsPayload = {
+  pack?: string | null;
+  assessment_type?: string | null;
 };
 
 export async function GET(req: Request) {
@@ -31,7 +56,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const assessmentId = (searchParams.get("assessmentId") || "").trim();
 
-    // Por defecto 8 (lo que tú pediste). Si quieres 12: ?limit=12
     const limitRaw = (searchParams.get("limit") || "8").trim();
     const limit = Math.max(1, Math.min(12, Number(limitRaw) || 8));
 
@@ -42,8 +66,8 @@ export async function GET(req: Request) {
       );
     }
 
-    // Env
-    const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const url =
+      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
     if (!url || !serviceKey) {
@@ -60,45 +84,156 @@ export async function GET(req: Request) {
       auth: { persistSession: false },
     });
 
-    // 1) Validar que existe assessment + pack (reusamos tu RPC estable)
+    // 1) obtener pack + assessment_type desde RPC
     const { data, error } = await supabase.rpc("dts_results_v1", {
       p_assessment_id: assessmentId,
     });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const payload = Array.isArray(data)
-      ? (data[0]?.results_v1 ?? data[0] ?? null)
-      : ((data as any)?.results_v1 ?? data);
+    const payload = extractResultsPayload(data) as ResultsPayload | null;
 
     if (!payload) {
-      return NextResponse.json({ error: "No data for assessmentId" }, { status: 404 });
+      return NextResponse.json(
+        { error: "No data for assessmentId" },
+        { status: 404 }
+      );
     }
 
-    const pack = (payload.pack || "mvp12_v1") as string;
+    const pack = (payload.pack || "").toString().trim();
+    if (!pack) {
+      return NextResponse.json(
+        { error: "Missing pack in dts_results_v1 payload" },
+        { status: 500 }
+      );
+    }
 
-    // 2) Reusar frenos del pack (MVP: predefinidos)
-    const frenos: FrenoItem[] = getFrenosForPack(pack);
+    const assessmentType = (payload.assessment_type || "full")
+      .toString()
+      .toLowerCase()
+      .trim();
 
-    // 3) Orden de prioridad para matriz:
-    //    Primero mayor impacto, luego menor esfuerzo, luego rank
-    const sorted = [...frenos].sort((a, b) => {
-      if (b.impact_score !== a.impact_score) return b.impact_score - a.impact_score;
-      if (a.effort_score !== b.effort_score) return a.effort_score - b.effort_score;
-      return a.rank - b.rank;
-    });
+    const isPyme = assessmentType === "sme" || assessmentType === "pyme";
 
-    const selected = sorted.slice(0, limit);
+    // 2) resolver el set de criterios del pack (criteria_id)
+    const { data: packRows, error: packErr } = await supabase
+      .from("dts_pack_criteria")
+      .select("criteria_id")
+      .eq("pack", pack);
 
-    // Umbrales (simples y explicables):
-    // Impacto alto: >=4 ; Esfuerzo alto: >=4
-    const impactHigh = 4;
-    const effortHigh = 4;
+    if (packErr)
+      return NextResponse.json({ error: packErr.message }, { status: 500 });
 
-    const items: MatrizItem[] = selected.map((it) => {
-      const quadrant = classifyQuadrant(it.impact_score, it.effort_score, impactHigh, effortHigh);
+    const criteriaIds = (packRows || [])
+      .map((r: any) => r.criteria_id)
+      .filter(Boolean) as string[];
+
+    if (criteriaIds.length === 0) {
+      const res = NextResponse.json(
+        {
+          assessment_id: assessmentId,
+          pack,
+          assessment_type: assessmentType,
+          limit,
+          thresholds: null,
+          items: [],
+          disclaimer:
+            "Pack sin criterios en dts_pack_criteria. Revisa dts_packs/dts_pack_criteria.",
+        },
+        { status: 200 }
+      );
+      res.headers.set("Cache-Control", "no-store");
+      return res;
+    }
+
+    // 3) cargar metadata de criterios (incluye esfuerzo desde BD)
+    const { data: metaRows, error: metaErr } = await supabase
+      .from("dts_criteria")
+      .select(
+        "id, code, effort_base_full, effort_base_pyme, short_label, short_label_es, description, description_es"
+      )
+      .in("id", criteriaIds);
+
+    if (metaErr)
+      return NextResponse.json({ error: metaErr.message }, { status: 500 });
+
+    const metas = (metaRows || []) as CriteriaMetaRow[];
+    const metaByCode = new Map<string, CriteriaMetaRow>();
+
+    for (const m of metas) {
+      const code = normalizeCode(m.code);
+      if (code) metaByCode.set(code, m);
+    }
+
+    const packCodes = Array.from(metaByCode.keys());
+    if (packCodes.length === 0) {
+      const res = NextResponse.json(
+        {
+          assessment_id: assessmentId,
+          pack,
+          assessment_type: assessmentType,
+          limit,
+          thresholds: null,
+          items: [],
+          disclaimer:
+            "No se pudieron resolver criteria_code desde dts_criteria para este pack.",
+        },
+        { status: 200 }
+      );
+      res.headers.set("Cache-Control", "no-store");
+      return res;
+    }
+
+    // 4) cargar respuestas SOLO para criterios del pack
+    const { data: respRows, error: respErr } = await supabase
+      .from("dts_responses")
+      .select("criteria_code, as_is_level, to_be_level, importance")
+      .eq("assessment_id", assessmentId)
+      .in("criteria_code", packCodes);
+
+    if (respErr)
+      return NextResponse.json({ error: respErr.message }, { status: 500 });
+
+    const responses = (respRows || []).map((r: any) => ({
+      criteria_code: r.criteria_code ?? null,
+      as_is_level: r.as_is_level ?? null,
+      to_be_level: r.to_be_level ?? null,
+      importance: r.importance ?? null,
+    })) as ResponseRow[];
+
+    // 5) calcular prioridades por criterio (gap × importance)
+    const ranked = rankByResponses(packCodes, responses);
+
+    const usingFallback = ranked.sortedCodes.length === 0;
+    const chosenCodes = (usingFallback ? packCodes : ranked.sortedCodes).slice(
+      0,
+      limit
+    );
+
+    // 6) thresholds y normalización
+    const maxPriority = ranked.maxPriority || 1;
+
+    const impactHigh = 0.7; // 0..1
+    const effortHigh = (4 - 1) / 4; // esfuerzo >=4 en 0..1
+
+    // 7) construir items
+    const items: MatrizItem[] = chosenCodes.map((criteria_code, idx) => {
+      const m = metaByCode.get(criteria_code);
+
+      // esfuerzo desde BD según assessment_type (sin heurísticas por pack)
+      const effortRaw = isPyme ? m?.effort_base_pyme : m?.effort_base_full;
+      const effort_score = clampInt(effortRaw ?? m?.effort_base_full ?? 3, 1, 5);
+
+      const x_effort = (effort_score - 1) / 4;
+
+      const priority = ranked.priorityByCode.get(criteria_code) || 0;
+      const y_impact = usingFallback ? 0 : clamp01(priority / maxPriority);
+
+      const quadrant = classifyQuadrant01(
+        y_impact,
+        x_effort,
+        impactHigh,
+        effortHigh
+      );
 
       const quadrant_label_es =
         quadrant === "quick_wins"
@@ -109,14 +244,24 @@ export async function GET(req: Request) {
           ? "Foundations (bajo impacto, alto esfuerzo)"
           : "Fill-ins (bajo impacto, bajo esfuerzo)";
 
-      // Coordenadas normalizadas:
-      // esfuerzo 1..5 -> 0..1
-      // impacto 1..5 -> 0..1
-      const x_effort = (clamp(it.effort_score, 1, 5) - 1) / 4;
-      const y_impact = (clamp(it.impact_score, 1, 5) - 1) / 4;
+      // copy mínimo desde BD (si falta, no invento)
+      const title = (m?.short_label_es || m?.short_label || criteria_code)
+        .toString()
+        .trim();
+
+      const plain_impact = (m?.description_es || m?.description || "")
+        .toString()
+        .trim();
 
       return {
-        ...it,
+        rank: idx + 1,
+        criteria_code,
+        title,
+        plain_impact,
+        symptom: "",
+        suggested_action: "",
+        impact_score: 3, // informativo; impacto real es y_impact
+        effort_score,
         x_effort,
         y_impact,
         quadrant,
@@ -128,11 +273,15 @@ export async function GET(req: Request) {
       {
         assessment_id: assessmentId,
         pack,
+        assessment_type: assessmentType,
         limit,
         thresholds: { impact_high: impactHigh, effort_high: effortHigh },
         items,
-        disclaimer:
-          "MVP: la matriz se construye con frenos predefinidos por pack. Próximo paso: derivar impacto/esfuerzo desde AS-IS/TO-BE/Importance.",
+        disclaimer: usingFallback
+          ? "MVP: no hay datos suficientes (gap×importancia) para priorizar; se devuelve el set del pack sin impacto calculado."
+          : `MVP: impacto = prioridad por tus respuestas (gap × importancia). Esfuerzo = ${
+              isPyme ? "effort_base_pyme" : "effort_base_full"
+            } desde BD (dts_criteria).`,
       },
       { status: 200 }
     );
@@ -147,14 +296,37 @@ export async function GET(req: Request) {
   }
 }
 
-function classifyQuadrant(
-  impact: number,
-  effort: number,
+function extractResultsPayload(data: any) {
+  // RPC devuelve jsonb (a veces envuelto según cliente)
+  if (Array.isArray(data)) {
+    const row = data[0] ?? null;
+    return row?.dts_results_v1 ?? row?.results_v1 ?? row ?? null;
+  }
+  return (data as any)?.dts_results_v1 ?? (data as any)?.results_v1 ?? data ?? null;
+}
+
+function normalizeCode(code: string) {
+  return code.trim();
+}
+
+function clamp01(v: number) {
+  return Math.max(0, Math.min(1, v));
+}
+
+function clampInt(v: number, min: number, max: number) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+
+function classifyQuadrant01(
+  impact01: number,
+  effort01: number,
   impactHigh: number,
   effortHigh: number
 ): "quick_wins" | "big_bets" | "foundations" | "fill_ins" {
-  const hiImpact = impact >= impactHigh;
-  const hiEffort = effort >= effortHigh;
+  const hiImpact = impact01 >= impactHigh;
+  const hiEffort = effort01 >= effortHigh;
 
   if (hiImpact && !hiEffort) return "quick_wins";
   if (hiImpact && hiEffort) return "big_bets";
@@ -162,167 +334,40 @@ function classifyQuadrant(
   return "fill_ins";
 }
 
-function clamp(v: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, v));
-}
+function rankByResponses(packCodes: string[], responses: ResponseRow[]) {
+  const packSet = new Set(packCodes.map(normalizeCode));
 
-/**
- * ⬇️ MISMO mapping que en /api/dts/results/frenos
- * (si quieres, luego lo refactorizamos a un módulo compartido)
- */
-function getFrenosForPack(pack: string): FrenoItem[] {
-  if (pack !== "mvp12_v1") return baseFrenos();
+  // best weighted_gap por criteria_code
+  const bestByCode = new Map<string, number>();
 
-  const demoNote = "Demo MVP12 (no calculado aún desde respuestas).";
+  for (const r of responses) {
+    const code = r.criteria_code ? normalizeCode(r.criteria_code) : "";
+    if (!code || !packSet.has(code)) continue;
 
-  return [
-    {
-      rank: 1,
-      criterion_code: "D1-1.1",
-      title: "La experiencia del cliente no está gobernada end-to-end",
-      plain_impact: "Se pierde fidelidad y se encarecen ventas/soporte por fricción.",
-      symptom: "Quejas repetidas, tiempos de respuesta variables, canales desconectados.",
-      suggested_action: "Mapear 1 journey crítico y fijar 3 KPIs operativos (tiempo, resolución, NPS).",
-      impact_score: 5,
-      effort_score: 3,
-      note: demoNote,
-    },
-    {
-      rank: 2,
-      criterion_code: "D1-1.4",
-      title: "El customer journey no está optimizado como sistema",
-      plain_impact: "Baja conversión y más churn por puntos de abandono no detectados.",
-      symptom: "No se sabe dónde se cae el cliente ni por qué.",
-      suggested_action: "Instrumentar el funnel y priorizar 2 ‘drop-offs’ con dueño y fecha.",
-      impact_score: 5,
-      effort_score: 2,
-      note: demoNote,
-    },
-    {
-      rank: 3,
-      criterion_code: "D2-2.1",
-      title: "La transformación no está conectada a valor de negocio",
-      plain_impact: "Se invierte en iniciativas sin retorno claro; se ralentiza la ejecución.",
-      symptom: "Muchas iniciativas, poca claridad de impacto y prioridades.",
-      suggested_action: "Definir 3 objetivos de valor (coste/ingreso/cobro) y alinear iniciativas a eso.",
-      impact_score: 5,
-      effort_score: 3,
-      note: demoNote,
-    },
-    {
-      rank: 4,
-      criterion_code: "D2-2.2",
-      title: "Innovación sin un sistema repetible",
-      plain_impact: "Dependencia de ‘héroes’; lo nuevo no escala ni llega a operación.",
-      symptom: "POCs que mueren, pilotos eternos, nadie ‘industrializa’.",
-      suggested_action: "Crear un pipeline simple: idea → piloto (4 semanas) → escala (owner + criterio).",
-      impact_score: 4,
-      effort_score: 3,
-      note: demoNote,
-    },
-    {
-      rank: 5,
-      criterion_code: "D2-2.5",
-      title: "Tecnología no habilita la estrategia al ritmo que se necesita",
-      plain_impact: "Time-to-market lento; se pierde ventaja frente a competidores.",
-      symptom: "Backlog infinito, entregas tardías, dependencias entre equipos.",
-      suggested_action: "Definir 1–2 capacidades tecnológicas ‘core’ y eliminar cuellos de botella.",
-      impact_score: 4,
-      effort_score: 4,
-      note: demoNote,
-    },
-    {
-      rank: 6,
-      criterion_code: "D3-3.1",
-      title: "Arquitectura digital poco abierta/modular",
-      plain_impact: "Integrar cosas cuesta; cada cambio rompe; crece el coste de IT.",
-      symptom: "Integraciones ad-hoc, proyectos largos para cambios pequeños.",
-      suggested_action: "Establecer 1 capa API y estándares mínimos de integración.",
-      impact_score: 4,
-      effort_score: 4,
-      note: demoNote,
-    },
-    {
-      rank: 7,
-      criterion_code: "D3-3.3",
-      title: "Infraestructura no integrada (datos/sistemas dispersos)",
-      plain_impact: "Decisiones lentas y errores por inconsistencias.",
-      symptom: "‘Cada área tiene su número’, reconciliaciones manuales.",
-      suggested_action: "Elegir 1 ‘fuente de verdad’ para 3 métricas críticas y automatizar su pipeline.",
-      impact_score: 4,
-      effort_score: 3,
-      note: demoNote,
-    },
-    {
-      rank: 8,
-      criterion_code: "D3-3.4",
-      title: "Aseguramiento y control con poca inteligencia",
-      plain_impact: "Incidencias repetidas y coste operacional alto.",
-      symptom: "Alertas que no priorizan, problemas que se detectan tarde.",
-      suggested_action: "Definir severidades y automatizar 2 acciones de contención.",
-      impact_score: 4,
-      effort_score: 3,
-      note: demoNote,
-    },
-    {
-      rank: 9,
-      criterion_code: "D4-4.3",
-      title: "Resiliencia operativa insuficiente",
-      plain_impact: "Riesgo de paradas y pérdidas por incidentes.",
-      symptom: "Dependencias críticas sin plan; ‘apagamos fuegos’.",
-      suggested_action: "Identificar 3 riesgos críticos y preparar playbooks (quién/qué/cuándo).",
-      impact_score: 5,
-      effort_score: 4,
-      note: demoNote,
-    },
-    {
-      rank: 10,
-      criterion_code: "D4-4.4",
-      title: "Operaciones no guiadas por estrategia",
-      plain_impact: "Se optimiza localmente y se pierde eficiencia global.",
-      symptom: "KPIs por silos; decisiones que chocan entre áreas.",
-      suggested_action: "Alinear 5 KPIs operativos con 3 objetivos estratégicos (y revisarlos semanalmente).",
-      impact_score: 4,
-      effort_score: 2,
-      note: demoNote,
-    },
-    {
-      rank: 11,
-      criterion_code: "D5-5.2",
-      title: "Talento digital sin mentalidad y rutinas",
-      plain_impact: "La adopción se frena; la inversión en herramientas no se aprovecha.",
-      symptom: "Uso irregular, resistencia, falta de ownership.",
-      suggested_action: "Crear 2 rutinas: formación mínima + ‘champions’ por área con objetivos.",
-      impact_score: 4,
-      effort_score: 3,
-      note: demoNote,
-    },
-    {
-      rank: 12,
-      criterion_code: "D6-6.1/6.2",
-      title: "Datos no se usan como motor diario de decisiones",
-      plain_impact: "Menos control del cash flow y menor capacidad de anticipación.",
-      symptom: "Decisiones por intuición; reporting lento.",
-      suggested_action: "Definir 1 ‘tablero CEO’ con 8 métricas y refresco automático.",
-      impact_score: 5,
-      effort_score: 3,
-      note: demoNote,
-    },
-  ];
-}
+    if (r.as_is_level == null || r.to_be_level == null || r.importance == null)
+      continue;
 
-function baseFrenos(): FrenoItem[] {
-  return [
-    {
-      rank: 1,
-      criterion_code: "MVP",
-      title: "Freno genérico (pack no reconocido)",
-      plain_impact: "Impacto no definido.",
-      symptom: "N/A",
-      suggested_action: "Configura mapping del pack a frenos.",
-      impact_score: 3,
-      effort_score: 3,
-      note: "Configurar getFrenosForPack(pack).",
-    },
-  ];
+    const gap = (r.to_be_level as number) - (r.as_is_level as number);
+    if (gap <= 0) continue;
+
+    const priority = gap * (r.importance as number);
+
+    const prev = bestByCode.get(code);
+    if (prev == null || priority > prev) bestByCode.set(code, priority);
+  }
+
+  const scored = Array.from(bestByCode.entries())
+    .map(([code, priority]) => ({ code, priority }))
+    .sort((a, b) => b.priority - a.priority);
+
+  const sortedCodes = scored.map((x) => x.code);
+  const maxPriority = scored.length ? scored[0].priority : 0;
+
+  const priorityByCode = new Map<string, number>();
+  for (const c of packCodes) {
+    const key = normalizeCode(c);
+    priorityByCode.set(key, bestByCode.get(key) || 0);
+  }
+
+  return { sortedCodes, maxPriority, priorityByCode };
 }

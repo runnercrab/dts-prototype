@@ -1,95 +1,131 @@
-import { useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
-import bus from '@/lib/bus'
+"use client";
 
-interface Response {
-  as_is_level: number
-  as_is_confidence: 'low' | 'medium' | 'high'
-  as_is_notes?: string
-  to_be_level: number
-  to_be_timeframe: '6months' | '1year' | '2years' | '3years+'
-  importance: number
-}
+import { useCallback, useEffect, useRef } from "react";
+
+type SaveResponseInput = {
+  assessmentId: string;
+  criterionId: string;
+
+  as_is_level?: number | null;
+  to_be_level?: number | null;
+  importance?: number | null;
+  note?: string | null;
+};
+
+type UseRealtimeSaverOptions = {
+  /**
+   * Cada cuántos ms intentamos enviar el último estado acumulado.
+   * Si el usuario mueve sliders rápido, esto evita spamear requests.
+   */
+  debounceMs?: number;
+
+  /**
+   * Si quieres enganchar logs en UI (opcional)
+   */
+  onError?: (err: unknown) => void;
+  onSaved?: () => void;
+};
 
 /**
- * Hook ÚNICO que guarda TODO en tiempo real:
- * - Respuestas del criterio (AS-IS, TO-BE, Importancia)
- * - Mensajes del chat
+ * useRealtimeSaver (versión segura)
+ * - Antes: supabase.from('dts_responses').upsert(...) desde cliente
+ * - Ahora: POST /api/dts/responses/upsert (server-side con service role)
+ *
+ * Esto encaja con producto B2B: el navegador no escribe tablas core.
  */
-export function useRealtimeSaver(
-  assessmentId: string | null,
-  currentCriteriaId: string | null
-) {
-  // Debounce para no guardar en cada tecla
-  const saveTimeoutRef = useRef<NodeJS.Timeout>()
+export default function useRealtimeSaver(options: UseRealtimeSaverOptions = {}) {
+  const debounceMs = options.debounceMs ?? 600;
 
-  useEffect(() => {
-    // ====================================
-    // GUARDAR RESPUESTAS DEL CRITERIO
-    // ====================================
-    const handleResponseChange = async (response: Response) => {
-      if (!assessmentId || !currentCriteriaId) return
+  // guardamos el último payload pendiente por criterio (key = criterionId)
+  const pendingRef = useRef<Map<string, SaveResponseInput>>(new Map());
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inflightRef = useRef(false);
+  const destroyedRef = useRef(false);
 
-      // Debounce: esperar 500ms después del último cambio
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
+  const flush = useCallback(async () => {
+    if (inflightRef.current) return;
+    if (destroyedRef.current) return;
 
-      saveTimeoutRef.current = setTimeout(async () => {
-        try {
-          await supabase.from('dts_responses').upsert({
-            assessment_id: assessmentId,
-            criteria_id: currentCriteriaId,
-            as_is_level: response.as_is_level,
-            as_is_confidence: response.as_is_confidence,
-            as_is_notes: response.as_is_notes || null,
-            to_be_level: response.to_be_level,
-            to_be_timeframe: response.to_be_timeframe,
-            importance: response.importance,
-            response_source: 'manual',
-            reviewed_by_user: true
-          }, { onConflict: 'assessment_id,criteria_id' })
-          
-          console.log('✅ Respuesta guardada')
-        } catch (error) {
-          console.error('❌ Error guardando respuesta:', error)
+    const pending = pendingRef.current;
+    if (pending.size === 0) return;
+
+    inflightRef.current = true;
+
+    try {
+      // Enviamos en serie (simple y robusto).
+      // Si quieres batch, lo hacemos luego, pero primero seguridad y estabilidad.
+      for (const [, payload] of pending) {
+        const res = await fetch("/api/dts/responses/upsert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, source: "realtimeSaver" }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(
+            `Upsert failed (${res.status}): ${JSON.stringify(data)}`
+          );
         }
-      }, 500)
-    }
-
-    // ====================================
-    // GUARDAR MENSAJES DEL CHAT
-    // ====================================
-    const handleChatMessage = async (message: { 
-      role: 'user' | 'assistant' | 'system'
-      content: string 
-    }) => {
-      if (!assessmentId || !currentCriteriaId) return
-
-      try {
-        await supabase.from('dts_chat_messages').insert({
-          assessment_id: assessmentId,
-          criteria_id: currentCriteriaId,
-          role: message.role,
-          content: message.content
-        })
-        console.log('✅ Mensaje guardado')
-      } catch (error) {
-        console.error('❌ Error guardando mensaje:', error)
       }
+
+      pending.clear();
+      options.onSaved?.();
+    } catch (err) {
+      options.onError?.(err);
+      // No limpiamos pending: así no pierdes datos; se reintentará en el próximo flush
+      // (Si quieres backoff y retries, lo añadimos después.)
+    } finally {
+      inflightRef.current = false;
     }
+  }, [options]);
 
-    // Escuchar eventos
-    bus.on('responseChange', handleResponseChange)
-    bus.on('chatMessage', handleChatMessage)
+  const scheduleFlush = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      flush();
+    }, debounceMs);
+  }, [debounceMs, flush]);
 
-    // Limpiar
+  /**
+   * Llama a esto cada vez que el usuario cambie un valor
+   * (slider / input / etc.). El hook se encarga de debouncing + envío.
+   */
+  const enqueueSave = useCallback(
+    (input: SaveResponseInput) => {
+      if (!input?.assessmentId || !input?.criterionId) return;
+
+      pendingRef.current.set(input.criterionId, {
+        assessmentId: input.assessmentId,
+        criterionId: input.criterionId,
+        as_is_level: input.as_is_level ?? null,
+        to_be_level: input.to_be_level ?? null,
+        importance: input.importance ?? null,
+        note: input.note ?? null,
+      });
+
+      scheduleFlush();
+    },
+    [scheduleFlush]
+  );
+
+  // Flush final al desmontar (best effort)
+  useEffect(() => {
+    destroyedRef.current = false;
     return () => {
-      bus.off('responseChange', handleResponseChange)
-      bus.off('chatMessage', handleChatMessage)
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
-    }
-  }, [assessmentId, currentCriteriaId])
+      destroyedRef.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
+      // No podemos "await" en cleanup, pero disparamos best-effort:
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      flush();
+    };
+  }, [flush]);
+
+  return {
+    enqueueSave,
+    flush,
+    pendingCount: () => pendingRef.current.size,
+  };
 }
