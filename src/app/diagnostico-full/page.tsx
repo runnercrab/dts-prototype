@@ -1,3 +1,4 @@
+// src/app/diagnostico-full/page.tsx
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
@@ -125,6 +126,12 @@ export default function DiagnosticoFullPage() {
   const totalCriteriaCount = criteria.length
   const progressLabel = `${completedCount}/${Math.max(1, totalCriteriaCount)}`
 
+  // ✅ ÚNICO helper de navegación a resultados (evita errores / rutas legacy)
+  const goToResults = () => {
+    if (!assessmentId) return
+    router.push(`/resultados/${assessmentId}`)
+  }
+
   // ============================
   // INIT: crea/hidrata assessment por pack
   // ============================
@@ -140,19 +147,20 @@ export default function DiagnosticoFullPage() {
 
         const fromUrl = params.get('assessmentId')
 
+        // ✅ Si viene assessmentId por URL, manda SIEMPRE
+        if (fromUrl) {
+          await hydrateAssessment(fromUrl)
+          return
+        }
+
         // ✅ DEMO FULL (si no viene id explícito)
-        if (demoFromUrl && !fromUrl) {
+        if (demoFromUrl) {
           await hydrateAssessment(DEMO_FULL_ASSESSMENT_ID)
           return
         }
 
         const lsKey = `dts_assessment_id__${packFromUrl}`
         const fromLs = localStorage.getItem(lsKey)
-
-        if (fromUrl) {
-          await hydrateAssessment(fromUrl)
-          return
-        }
 
         if (fromLs) {
           await hydrateAssessment(fromLs)
@@ -518,7 +526,7 @@ export default function DiagnosticoFullPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-4">🎉 ¡Diagnóstico Completado!</h1>
           <p className="text-gray-600 mb-8">Tus respuestas han sido guardadas.</p>
           <button
-            onClick={() => router.push(`/resultados?assessmentId=${assessmentId ?? ''}`)}
+            onClick={goToResults}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Ver Resultados
@@ -723,7 +731,7 @@ export default function DiagnosticoFullPage() {
               <span className="text-gray-300">|</span>
 
               <button
-                onClick={() => router.push(`/resultados?assessmentId=${assessmentId ?? ''}`)}
+                onClick={goToResults}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-sm"
                 title="Ver resultados"
               >

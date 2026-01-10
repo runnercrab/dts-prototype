@@ -149,7 +149,9 @@ type ScoreGetResponse = {
   dimensionScores: any[];
 };
 
-async function fetchScore(assessmentId: string): Promise<ScoreGetResponse | null> {
+async function fetchScore(
+  assessmentId: string
+): Promise<ScoreGetResponse | null> {
   const baseUrl = await getBaseUrl();
   const url = new URL("/api/dts/score/get", baseUrl);
   url.searchParams.set("assessmentId", assessmentId);
@@ -204,11 +206,14 @@ type FrenosResponse = {
   disclaimer?: string;
 };
 
-async function fetchFrenos(assessmentId: string): Promise<FrenosResponse | null> {
+async function fetchFrenos(
+  assessmentId: string,
+  limit: number = 12
+): Promise<FrenosResponse | null> {
   const baseUrl = await getBaseUrl();
   const url = new URL("/api/dts/results/frenos", baseUrl);
   url.searchParams.set("assessmentId", assessmentId);
-  url.searchParams.set("limit", "12");
+  url.searchParams.set("limit", String(limit));
 
   const res = await fetch(url.toString(), { cache: "no-store" });
   if (!res.ok) return null;
@@ -238,12 +243,13 @@ type PriorizacionResponse = {
 };
 
 async function fetchPriorizacion(
-  assessmentId: string
+  assessmentId: string,
+  limit: number = 12
 ): Promise<PriorizacionResponse | null> {
   const baseUrl = await getBaseUrl();
   const url = new URL("/api/dts/results/priorizacion", baseUrl);
   url.searchParams.set("assessmentId", assessmentId);
-  url.searchParams.set("limit", "12");
+  url.searchParams.set("limit", String(limit));
 
   const res = await fetch(url.toString(), { cache: "no-store" });
   if (!res.ok) return null;
@@ -517,6 +523,7 @@ export default async function ResultadosPage({
 
   const sp = (await searchParams) || {};
   const activeTab = normalizeTab(sp.tab);
+  const isOverview = activeTab === "overview";
 
   let data: ResultsV1 | null = null;
   let errorMsg: string | null = null;
@@ -545,21 +552,23 @@ export default async function ResultadosPage({
   );
   const completed = total > 0 && evaluated >= total;
 
-  // Solo cargamos lo que se va a mostrar
-  const frenosResp =
-    activeTab === "frenos" ? await fetchFrenos(assessmentId) : null;
+  // ✅ Solo cargamos lo que se va a mostrar (y en overview, Top 3)
+  const frenosResp = activeTab === "frenos" ? await fetchFrenos(assessmentId, 12) : null;
 
   const priorResp =
-    activeTab === "priorizacion" ? await fetchPriorizacion(assessmentId) : null;
+    activeTab === "priorizacion" ? await fetchPriorizacion(assessmentId, 12) : null;
 
-  const scoreResp =
-    activeTab === "overview" ? await fetchScore(assessmentId) : null;
+  const topFrenosResp = isOverview ? await fetchFrenos(assessmentId, 3) : null;
+  const topPriorResp = isOverview ? await fetchPriorizacion(assessmentId, 3) : null;
 
-  const dimsMetaResp =
-    activeTab === "overview" ? await fetchDimensionsMeta() : null;
+  const scoreResp = isOverview ? await fetchScore(assessmentId) : null;
+  const dimsMetaResp = isOverview ? await fetchDimensionsMeta() : null;
 
   const frenosItems = (frenosResp?.items || []) as FrenoItem[];
   const priorItems = (priorResp?.items || []) as PriorityItem[];
+
+  const topFrenos = (topFrenosResp?.items || []) as FrenoItem[];
+  const topPrior = (topPriorResp?.items || []) as PriorityItem[];
 
   const high = priorItems.filter((x) => x.band === "high");
   const medium = priorItems.filter((x) => x.band === "medium");
@@ -567,7 +576,11 @@ export default async function ResultadosPage({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ResultsTopBar assessmentId={assessmentId} pack={data.pack} activeTab={activeTab} />
+      <ResultsTopBar
+        assessmentId={assessmentId}
+        pack={data.pack}
+        activeTab={activeTab}
+      />
 
       <div className="py-8">
         {activeTab === "overview" ? (
@@ -578,6 +591,137 @@ export default async function ResultadosPage({
               dimensionScores={scoreResp?.dimensionScores ?? []}
               dimensionsMeta={dimsMetaResp?.items ?? []}
             />
+
+            {/* ✅ Executive one-pager: Top 3 + link Ver todos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Top Frenos */}
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">
+                      Top 3 frenos
+                    </div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      Lo que más está bloqueando hoy
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/resultados/${assessmentId}?tab=frenos`}
+                    className="text-sm font-medium text-[#2563eb] hover:underline shrink-0"
+                  >
+                    Ver todos →
+                  </Link>
+                </div>
+
+                <div className="px-4 py-3">
+                  {topFrenos.length === 0 ? (
+                    <div className="text-sm text-slate-600">
+                      No hay frenos destacados con los datos actuales.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {topFrenos.map((b) => (
+                        <div
+                          key={`${b.criteria_code}-${b.rank}`}
+                          className="flex items-start justify-between gap-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs px-2 py-0.5 rounded-full border border-slate-200 text-slate-600 font-mono">
+                                {b.criteria_code}
+                              </span>
+                              <span className="text-sm font-semibold text-slate-900 truncate">
+                                {b.title}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-sm text-slate-600 line-clamp-2">
+                              {b.plain_impact || b.symptom || "—"}
+                            </div>
+                          </div>
+                          <span className="text-xs text-slate-500 shrink-0">
+                            #{b.rank}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Top Priorización */}
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">
+                      Top 3 prioridades
+                    </div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      Dónde concentrar la atención primero
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/resultados/${assessmentId}?tab=priorizacion`}
+                    className="text-sm font-medium text-[#2563eb] hover:underline shrink-0"
+                  >
+                    Ver todos →
+                  </Link>
+                </div>
+
+                <div className="px-4 py-3">
+                  {topPrior.length === 0 ? (
+                    <div className="text-sm text-slate-600">
+                      No hay prioridades relevantes con los datos actuales.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {topPrior.map((it) => (
+                        <div
+                          key={`${it.criteria_code}-${it.rank}`}
+                          className="flex items-start justify-between gap-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs px-2 py-0.5 rounded-full border border-slate-200 text-slate-600 font-mono">
+                                {it.criteria_code}
+                              </span>
+                              <span className="text-sm font-semibold text-slate-900 truncate">
+                                {it.title}
+                              </span>
+                            </div>
+
+                            <div className="mt-1 flex flex-wrap gap-2">
+                              {typeof it.gap_levels === "number" &&
+                              it.gap_levels > 0 ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full border border-slate-200 text-slate-600">
+                                  Gap: +{it.gap_levels}
+                                </span>
+                              ) : null}
+                              {typeof it.importance === "number" &&
+                              it.importance > 0 ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full border border-slate-200 text-slate-600">
+                                  Importancia: {it.importance}/5
+                                </span>
+                              ) : null}
+                              {it.band ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full border border-slate-200 text-slate-600">
+                                  Banda: {it.band}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <span className="text-xs text-slate-500 shrink-0">
+                            #{it.rank}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
             <div>
               <h2 className="text-lg font-semibold text-slate-900">
@@ -621,7 +765,8 @@ export default async function ResultadosPage({
                 Cobertura por áreas del negocio
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                “Evaluados” significa cuántos aspectos del diagnóstico se han analizado (no es una nota ni una puntuación).
+                “Evaluados” significa cuántos aspectos del diagnóstico se han
+                analizado (no es una nota ni una puntuación).
               </p>
 
               <div className="mt-4 overflow-x-auto">
@@ -637,10 +782,15 @@ export default async function ResultadosPage({
                   </thead>
                   <tbody>
                     {data.by_dimension.map((d) => {
-                      const kind = statusKind(d.answered_criteria, d.total_criteria);
+                      const kind = statusKind(
+                        d.answered_criteria,
+                        d.total_criteria
+                      );
                       return (
                         <tr key={d.dimension_id} className="border-b">
-                          <td className="py-2 pr-4 font-mono">{d.dimension_code}</td>
+                          <td className="py-2 pr-4 font-mono">
+                            {d.dimension_code}
+                          </td>
                           <td className="py-2 pr-4">{d.dimension_name}</td>
                           <td className="py-2 pr-4">{d.total_criteria}</td>
                           <td className="py-2 pr-4">{d.answered_criteria}</td>
@@ -672,11 +822,16 @@ export default async function ResultadosPage({
                   </thead>
                   <tbody>
                     {data.by_subdimension.map((s) => {
-                      const kind = statusKind(s.answered_criteria, s.total_criteria);
+                      const kind = statusKind(
+                        s.answered_criteria,
+                        s.total_criteria
+                      );
                       return (
                         <tr key={s.subdimension_id} className="border-b">
                           <td className="py-2 pr-4 font-mono">{s.dimension_code}</td>
-                          <td className="py-2 pr-4 font-mono">{s.subdimension_code}</td>
+                          <td className="py-2 pr-4 font-mono">
+                            {s.subdimension_code}
+                          </td>
                           <td className="py-2 pr-4">{s.subdimension_name}</td>
                           <td className="py-2 pr-4">{s.total_criteria}</td>
                           <td className="py-2 pr-4">{s.answered_criteria}</td>
@@ -691,7 +846,8 @@ export default async function ResultadosPage({
               </div>
 
               <p className="mt-3 text-xs text-slate-500">
-                Nota: esto todavía mide “cobertura”. El siguiente paso es mostrar “qué significa” (brechas y foco).
+                Nota: esto todavía mide “cobertura”. El siguiente paso es mostrar
+                “qué significa” (brechas y foco).
               </p>
             </div>
           </div>
@@ -740,12 +896,14 @@ export default async function ResultadosPage({
                 Priorización inicial
               </h2>
               <p className="text-sm text-slate-500 mt-1">
-                Criterios del diagnóstico ordenados por criticidad para el negocio
+                Criterios del diagnóstico ordenados por criticidad para el
+                negocio
               </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 text-sm text-slate-700">
-              Esta priorización se basa en el tamaño del gap y la importancia para el negocio.
+              Esta priorización se basa en el tamaño del gap y la importancia
+              para el negocio.
               <br />
               No son aún acciones, sino áreas donde concentrar la atención.
             </div>
@@ -760,7 +918,8 @@ export default async function ResultadosPage({
             {!priorResp ? (
               <div className="rounded-xl border bg-white p-4 text-sm text-slate-600">
                 Falta el endpoint de priorización o no responde. Cuando exista{" "}
-                <span className="font-mono">/api/dts/results/priorizacion</span>, aparecerá aquí.
+                <span className="font-mono">/api/dts/results/priorizacion</span>,
+                aparecerá aquí.
               </div>
             ) : priorItems.length === 0 ? (
               <div className="rounded-xl border bg-white p-4 text-sm text-slate-600">
