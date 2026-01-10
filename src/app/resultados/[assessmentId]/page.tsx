@@ -304,12 +304,29 @@ function ResultsTopBar({
   pack: string;
   activeTab: TabKey;
 }) {
+  const ctaHref =
+    activeTab === "frenos"
+      ? `/resultados/${assessmentId}/cierre`
+      : `/resultados/${assessmentId}?tab=frenos`;
+
+  const ctaLabel =
+    activeTab === "frenos" ? "Finalizar diagnóstico" : "Siguiente: Frenos";
+
+  const ctaTitle =
+    activeTab === "frenos"
+      ? "Cerrar diagnóstico y pasar al siguiente bloque"
+      : "Siguiente paso recomendado: revisar frenos";
+
   return (
     <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-100">
       <div className="py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link href="/" className="text-sm text-slate-600 hover:text-slate-900">
-            ← Volver
+          {/* ✅ FIX: volver SIEMPRE al diagnóstico del assessmentId */}
+          <Link
+            href={`/diagnostico-full?assessmentId=${assessmentId}`}
+            className="text-sm text-slate-600 hover:text-slate-900"
+          >
+            ← Volver al diagnóstico
           </Link>
 
           <div className="h-4 w-px bg-slate-200" />
@@ -356,13 +373,18 @@ function ResultsTopBar({
           />
         </div>
 
-        <button
-          disabled
-          title="Completa el diagnóstico y revisa resultados para poder construir un roadmap"
-          className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed"
+        <Link
+          href={ctaHref}
+          title={ctaTitle}
+          className={[
+            "text-sm px-4 py-2 rounded-xl border font-medium transition",
+            activeTab === "frenos"
+              ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
+              : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
+          ].join(" ")}
         >
-          Crear Roadmap
-        </button>
+          {ctaLabel}
+        </Link>
       </div>
     </div>
   );
