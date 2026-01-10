@@ -19,7 +19,7 @@ type MatrizItem = {
   title: string;
   plain_impact: string;
 
-  // futuros (cuando existan iniciativas reales)
+  // futuros (cuando exista un roadmap detallado por acciones)
   symptom: string;
   suggested_action: string;
 
@@ -209,20 +209,17 @@ export default function MatrizPage() {
                 <div className="mt-1">{data.disclaimer}</div>
               </div>
             ) : null}
-
-            {/* Aclaración “criterios vs iniciativas” */}
-            <div className={`${UI.radius.page} bg-white border border-gray-200 shadow-sm p-5`}>
-              <div className="text-sm font-semibold text-gray-900">Qué es esto</div>
-              <div className="mt-1 text-sm text-gray-600">
-                Ahora mismo esta matriz es de <b>criterios</b> (priorización del diagnóstico), porque aún no
-                existe el módulo de <b>iniciativas</b>. Cuando lo creemos, cada criterio se convertirá en
-                acciones tipo <span className="font-mono">1.1.1.a</span>,{" "}
-                <span className="font-mono">1.1.1.b</span>… y esta pantalla pasará a ser la matriz real de iniciativas.
-              </div>
-              <div className="mt-3 text-xs text-slate-500">
-                Mostrando: <b>top {data.limit}</b> (MVP12 = 12)
-              </div>
+            {/* Aclaración */}
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+              Esta matriz está calculada a nivel de <b>criterios</b> (visión ejecutiva).
+              <br />
+              Más adelante, si añadimos un roadmap detallado por acciones, esta vista podrá desglosarse a ese nivel.
             </div>
+
+            <div className="mt-3 text-xs text-slate-500">
+              Mostrando: <b>top {data.limit}</b> (MVP12 = 12)
+            </div>
+
 
             {/* Cuadrantes (4 colores “diagnóstico”) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

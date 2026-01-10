@@ -358,7 +358,7 @@ function ResultsTopBar({
 
         <button
           disabled
-          title="Primero define iniciativas para poder crear un roadmap"
+          title="Completa el diagnóstico y revisa resultados para poder construir un roadmap"
           className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed"
         >
           Crear Roadmap

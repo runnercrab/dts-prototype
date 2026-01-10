@@ -1,3 +1,4 @@
+//src/app/resultados/[assessmentId]/priorizacion/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -153,7 +154,7 @@ export default function PriorizacionPage() {
             <div className="flex items-center gap-2">
               <button
                 disabled
-                title="Disponible cuando definamos iniciativas"
+                title="Roadmap no disponible en esta versión"
                 className="px-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed text-sm font-medium"
               >
                 Crear Roadmap
@@ -179,7 +180,7 @@ export default function PriorizacionPage() {
               <br />
               Todavía no son acciones: indica dónde conviene profundizar.
               <div className="mt-2 text-xs text-slate-500">
-                Haz clic en un criterio para ver opciones de mejora (iniciativas).
+                Haz clic en un criterio para profundizar en resultados (matriz y frenos).
               </div>
             </div>
 
@@ -213,12 +214,8 @@ export default function PriorizacionPage() {
                         <div
                           key={`${it.criteria_code}-${it.rank}`}
                           className="px-5 py-4 cursor-pointer hover:bg-slate-50"
-                          onClick={() =>
-                            router.push(
-                              `/resultados/${assessmentId}/iniciativas/${it.criteria_code}`
-                            )
-                          }
-                          title="Ver opciones de mejora"
+                          onClick={() => router.push(`/resultados/${assessmentId}/matriz`)}
+                          title="Ver matriz y frenos"
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="min-w-0">
