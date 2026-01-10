@@ -1,4 +1,3 @@
-// src/app/resultados/[assessmentId]/priorizacion/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -147,7 +146,7 @@ export default function PriorizacionPage() {
                 Priorización inicial
               </div>
               <div className="text-xs sm:text-sm text-slate-600">
-                Criterios del diagnóstico ordenados por criticidad para el negocio
+                Dónde te conviene mirar primero (aún no son acciones)
               </div>
             </div>
 
@@ -174,11 +173,14 @@ export default function PriorizacionPage() {
           </div>
         ) : (
           <>
-            {/* ÚNICA caja explicativa (sin duplicados) */}
+            {/* Caja explicativa CEO */}
             <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              Esta priorización se basa en el tamaño del gap y la importancia para el negocio.
+              Esta lista muestra en qué criterios hay más riesgo u oportunidad, según tu brecha y la importancia.
               <br />
-              No son aún acciones, sino áreas donde concentrar la atención.
+              Todavía no son acciones: indica dónde conviene profundizar.
+              <div className="mt-2 text-xs text-slate-500">
+                Haz clic en un criterio para ver opciones de mejora (iniciativas).
+              </div>
             </div>
 
             {/* Nota MVP (si existe) */}
@@ -197,9 +199,7 @@ export default function PriorizacionPage() {
               return (
                 <div key={k} className="rounded-2xl border border-slate-200 bg-white">
                   <div className="px-5 py-4 border-b border-slate-100">
-                    <div className="text-sm font-semibold text-slate-900">
-                      {meta.label}
-                    </div>
+                    <div className="text-sm font-semibold text-slate-900">{meta.label}</div>
                     {meta.sub ? (
                       <div className="text-xs text-slate-500 mt-1">{meta.sub}</div>
                     ) : null}
@@ -210,7 +210,16 @@ export default function PriorizacionPage() {
                   ) : (
                     <div className="divide-y divide-slate-100">
                       {list.map((it) => (
-                        <div key={`${it.criteria_code}-${it.rank}`} className="px-5 py-4">
+                        <div
+                          key={`${it.criteria_code}-${it.rank}`}
+                          className="px-5 py-4 cursor-pointer hover:bg-slate-50"
+                          onClick={() =>
+                            router.push(
+                              `/resultados/${assessmentId}/iniciativas/${it.criteria_code}`
+                            )
+                          }
+                          title="Ver opciones de mejora"
+                        >
                           <div className="flex items-start justify-between gap-4">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -229,8 +238,8 @@ export default function PriorizacionPage() {
                               </div>
 
                               <div className="mt-3 flex items-center gap-2 flex-wrap">
-                                {pill("Gap", `${it.gap_levels}`)}
-                                {pill("Importancia", `${it.importance}/5`)}
+                                {pill("Brecha (niveles)", `${it.gap_levels}`)}
+                                {pill("Importancia (1–5)", `${it.importance}/5`)}
                               </div>
                             </div>
 

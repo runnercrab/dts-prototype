@@ -54,6 +54,42 @@ export async function GET(req: Request) {
       auth: { persistSession: false },
     });
 
+    // 1) Resolve pack from assessment (source of truth)
+    const { data: assessment, error: asErr } = await supabase
+      .from("dts_assessments")
+      .select("id, pack")
+      .eq("id", assessmentId)
+      .single();
+
+    if (asErr || !assessment) {
+      return NextResponse.json(
+        { error: "Assessment not found" },
+        { status: 404 }
+      );
+    }
+
+    // 2) Resolve criteria_total_in_pack (NO fallback to 129)
+    const { count: criteriaTotalInPack, error: pErr } = await supabase
+      .from("dts_pack_criteria")
+      .select("*", { count: "exact", head: true })
+      .eq("pack", assessment.pack);
+
+    if (pErr) {
+      return NextResponse.json(
+        { error: "Failed to resolve pack criteria" },
+        { status: 500 }
+      );
+    }
+
+    if (!criteriaTotalInPack || criteriaTotalInPack === 0) {
+      // Pack not mapped => do not invent 129
+      return NextResponse.json(
+        { error: "PACK_NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+
+    // 3) Call RPC
     const { data, error } = await supabase.rpc("dts_results_v1", {
       p_assessment_id: assessmentId,
     });
@@ -73,6 +109,21 @@ export async function GET(req: Request) {
       return NextResponse.json(
         { error: "No data (or invalid payload) for assessmentId" },
         { status: 404 }
+      );
+    }
+
+    // 4) Pack-aware guard: prevent 12/129 (no shape changes)
+    const rpcTotal = Number(payload?.totals?.total_criteria ?? NaN);
+    if (!Number.isFinite(rpcTotal) || rpcTotal !== criteriaTotalInPack) {
+      console.error("[results/v1] PACK_OUT_OF_SYNC", {
+        assessmentId,
+        pack: assessment.pack,
+        criteriaTotalInPack,
+        rpcTotal,
+      });
+      return NextResponse.json(
+        { error: "PACK_OUT_OF_SYNC" },
+        { status: 409 }
       );
     }
 

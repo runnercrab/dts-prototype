@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { headers } from "next/headers";
+import ExecutiveScorePanel from "@/components/resultados/ExecutiveScorePanel";
 
 function isUuid(v: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -140,6 +141,46 @@ async function fetchResultsV1(assessmentId: string): Promise<ResultsV1> {
 }
 
 /* ============================
+   SCORE (server fetch)
+   ============================ */
+type ScoreGetResponse = {
+  ok: boolean;
+  assessmentScore: any | null;
+  dimensionScores: any[];
+};
+
+async function fetchScore(assessmentId: string): Promise<ScoreGetResponse | null> {
+  const baseUrl = await getBaseUrl();
+  const url = new URL("/api/dts/score/get", baseUrl);
+  url.searchParams.set("assessmentId", assessmentId);
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/* ============================
+   DIMENSIONS META (server fetch)
+   ============================ */
+type DimensionsMetaResponse = {
+  ok: boolean;
+  items: Array<{
+    dimension_id: string;
+    dimension_code: string;
+    dimension_name: string;
+  }>;
+};
+
+async function fetchDimensionsMeta(): Promise<DimensionsMetaResponse | null> {
+  const baseUrl = await getBaseUrl();
+  const url = new URL("/api/dts/meta/dimensions", baseUrl);
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/* ============================
    🔴 FRENOS (server fetch)
    ============================ */
 type FrenoItem = {
@@ -210,7 +251,7 @@ async function fetchPriorizacion(
 }
 
 /* ============================
-   UI (no inventa métricas)
+   UI
    ============================ */
 const FRENOS = {
   MAIN: "#DC2626",
@@ -482,12 +523,18 @@ export default async function ResultadosPage({
   );
   const completed = total > 0 && evaluated >= total;
 
-  // Solo cargamos lo que se va a mostrar (rápido y limpio)
+  // Solo cargamos lo que se va a mostrar
   const frenosResp =
     activeTab === "frenos" ? await fetchFrenos(assessmentId) : null;
 
   const priorResp =
     activeTab === "priorizacion" ? await fetchPriorizacion(assessmentId) : null;
+
+  const scoreResp =
+    activeTab === "overview" ? await fetchScore(assessmentId) : null;
+
+  const dimsMetaResp =
+    activeTab === "overview" ? await fetchDimensionsMeta() : null;
 
   const frenosItems = (frenosResp?.items || []) as FrenoItem[];
   const priorItems = (priorResp?.items || []) as PriorityItem[];
@@ -503,6 +550,13 @@ export default async function ResultadosPage({
       <div className="py-8">
         {activeTab === "overview" ? (
           <div className="space-y-6">
+            {/* ✅ SCORE PANEL arriba, antes de cobertura */}
+            <ExecutiveScorePanel
+              assessmentScore={scoreResp?.assessmentScore ?? null}
+              dimensionScores={scoreResp?.dimensionScores ?? []}
+              dimensionsMeta={dimsMetaResp?.items ?? []}
+            />
+
             <div>
               <h2 className="text-lg font-semibold text-slate-900">
                 Visión general del diagnóstico

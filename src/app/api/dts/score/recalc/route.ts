@@ -1,3 +1,4 @@
+//src/app/api/dts/score/recalc/route.ts
 import { NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase/server'
 
@@ -26,6 +27,42 @@ export async function POST(req: Request) {
     }
 
     const supabase = supabaseService()
+
+    // -----------------------------
+    // PACK-AWARE GUARD (evita "ok:true" falso)
+    // -----------------------------
+    const { data: assessment, error: asErr } = await supabase
+      .from('dts_assessments')
+      .select('id, pack')
+      .eq('id', assessmentId)
+      .single()
+
+    if (asErr || !assessment) {
+      return NextResponse.json(
+        { ok: false, error: 'Assessment not found', requestId },
+        { status: 404 }
+      )
+    }
+
+    const { count: criteriaTotalInPack, error: pErr } = await supabase
+      .from('dts_pack_criteria')
+      .select('*', { count: 'exact', head: true })
+      .eq('pack', assessment.pack)
+
+    if (pErr) {
+      return NextResponse.json(
+        { ok: false, error: 'Failed to resolve pack criteria', requestId },
+        { status: 500 }
+      )
+    }
+
+    if (!criteriaTotalInPack || criteriaTotalInPack === 0) {
+      return NextResponse.json(
+        { ok: false, error: 'PACK_NOT_FOUND', requestId },
+        { status: 404 }
+      )
+    }
+    // -----------------------------
 
     const { data: dimAgg, error: dimAggErr } = await supabase.rpc(
       'dts_recalc_dimension_scores',
