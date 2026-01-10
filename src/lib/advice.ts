@@ -17,7 +17,7 @@ export function adviceFor(dim: Dimension, val: number): string[] {
   }
   if (val <= 6) {
     switch (dim) {
-      case 'Estrategia':  return ['Roadmap trimestral', 'KPIs digitales en comité', 'Presupuesto para iniciativas clave'];
+      case 'Estrategia':  return ['Roadmap trimestral', 'KPIs digitales en comité', 'Presupuesto para acciones clave'];
       case 'Procesos':    return ['Automatiza tareas repetitivas', 'SOPs/controles', 'Mide TAT y tasa de error'];
       case 'Personas':    return ['Rutas de carrera digitales', 'Prácticas con casos reales', 'Mide adopción y satisfacción'];
       case 'Tecnología':  return ['Consolida herramientas', 'Observabilidad y backups', 'Plan de modernización por dominios'];
