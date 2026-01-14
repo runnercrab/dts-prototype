@@ -1,3 +1,4 @@
+// src/app/resultados/[assessmentId]/cierre/page.tsx
 "use client";
 
 import { useMemo } from "react";
@@ -23,7 +24,10 @@ export default function CierreDiagnosticoPage() {
 
   const hrefFrenos = valid ? `/resultados/${assessmentId}/frenos` : `/resultados`;
   const hrefResultados = valid ? `/resultados/${assessmentId}` : `/resultados`;
-  const hrefAcciones = valid ? `/acciones-v1/${assessmentId}` : `/`;
+
+  // ✅ Antes: /acciones-v1/:assessmentId
+  // ✅ Ahora: Iniciativas como parte del flujo de Resultados
+  const hrefIniciativas = valid ? `/resultados/${assessmentId}/iniciativas` : `/resultados`;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -87,11 +91,11 @@ export default function CierreDiagnosticoPage() {
 
             <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
-                onClick={() => router.push(hrefAcciones)}
+                onClick={() => router.push(hrefIniciativas)}
                 className="px-5 py-3 rounded-2xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800"
-                title="Ver posibles opciones de acción, sin compromiso ni planificación aún"
+                title="Ver iniciativas recomendadas basadas en tus resultados"
               >
-                Explorar opciones de acción
+                Ver iniciativas recomendadas
               </button>
 
               <button

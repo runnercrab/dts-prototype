@@ -1,7 +1,7 @@
 # MVP12 — End-to-End (Onboarding → Diagnóstico → Explain JSON v1.1 → Engines → Iniciativas → Matriz → Roadmap Q1/Q2/Q3 → SaaS mensual)
 
 ## Objetivo del MVP12
-Construir una versión robusta, desacoplada y “SaaS-ready” para 10 criterios (subset), con:
+Construir una versión robusta, desacoplada y “SaaS-ready” para 12 criterios (subset), con:
 - Onboarding + Diagnóstico guiado
 - Explain JSON v1.1 por criterio (interpretación + acciones)
 - Score Engine (ya estable)
@@ -33,7 +33,7 @@ Outputs:
 Pantalla:
 - /diagnostico-full (onboarding integrado) o /onboarding separado
 
-### Fase 1 — Diagnóstico (10 criterios)
+### Fase 1 — Diagnóstico (12 criterios)
 Por cada criterio:
 - As-Is (1..5) + confidence (low/medium/high) + notes
 - To-Be (1..5) + timeframe (6m/1y/2y/3y+)
@@ -59,8 +59,9 @@ Generas un “explain_json” por criterio:
 Outputs:
 - dts_explain (tabla o JSON en dts_responses.explain_json)
 
-### Fase 3 — Engines v1 (Effort + Impact)
+### Fase 3 — Engines v1 (Score + Effort + Impact)
 Para cada iniciativa:
+- Score Engine
 - Effort: effort_base → effort_final + rango de semanas
 - Impact: horas + € (si hay revenue_range)
 
@@ -69,6 +70,7 @@ Outputs:
 - agregados opcionales por criterio/dimensión (para KPIs)
 
 ### Fase 4 — Priorización (Matriz Impacto/Esfuerzo)
+
 - Los puntos en la matriz son iniciativas (no criterios)
 - Cuadrantes:
   - Alto impacto / Bajo esfuerzo: Quick Wins
