@@ -89,7 +89,8 @@ function isAnyAnswered(r: ResponseT | undefined) {
 export default function DiagnosticoFullPage() {
   const router = useRouter()
 
-  const DEFAULT_PACK = 'mvp12_v1'
+  // ✅ IMPORTANTE: usa el pack real que estás usando en Resultados (tmf_mvp12_v1)
+  const DEFAULT_PACK = 'tmf_mvp12_v1'
   const createInFlightRef = useRef(false)
 
   const [phase, setPhase] = useState<'onboarding' | 'assessment' | 'completed'>('onboarding')
@@ -120,7 +121,10 @@ export default function DiagnosticoFullPage() {
   const completedCount = Array.from(responses.entries()).filter(([_, r]) => isCompleteResponse(r)).length
   const pendingCount = criteria.filter((c) => !isCompleteResponse(responses.get(c.id))).length
 
-  const headerPackLabel = pack === 'mvp12_v1' ? 'MVP12 (12 criterios)' : 'Versión Completa (129 criterios)'
+  const headerPackLabel =
+    pack === 'tmf_mvp12_v1' || pack === 'mvp12_v1'
+      ? 'MVP12 (12 criterios)'
+      : 'Versión Completa (129 criterios)'
 
   // ===== intro KPIs
   const totalCriteriaCount = criteria.length
@@ -148,8 +152,9 @@ export default function DiagnosticoFullPage() {
         const fromUrl = params.get('assessmentId')
 
         // ✅ Si viene assessmentId por URL, manda SIEMPRE
+        // ✅ y sincroniza LS al pack REAL del assessment (evita saltos a FULL)
         if (fromUrl) {
-          await hydrateAssessment(fromUrl)
+          await hydrateAssessment(fromUrl, { syncLocalStorage: true })
           return
         }
 
@@ -204,7 +209,7 @@ export default function DiagnosticoFullPage() {
   // ============================
   // HYDRATE assessment
   // ============================
-  const hydrateAssessment = async (id: string) => {
+  const hydrateAssessment = async (id: string, opts?: { syncLocalStorage?: boolean }) => {
     setAssessmentId(id)
 
     const aRes = await fetch(`/api/dts/assessment/get?assessmentId=${id}`, { cache: 'no-store' })
@@ -218,8 +223,16 @@ export default function DiagnosticoFullPage() {
     }
 
     const a = aJson.assessment
-    setPack(a?.pack ?? null)
+    const realPack: string | null = a?.pack ?? null
+
+    setPack(realPack)
     setOnboardingData(a?.onboarding_data ?? null)
+
+    // ✅ CLAVE: si venimos por URL, fijamos el assessmentId correcto en el LS del pack REAL
+    if (opts?.syncLocalStorage && realPack) {
+      const lsKey = `dts_assessment_id__${realPack}`
+      localStorage.setItem(lsKey, String(id))
+    }
 
     if (!a?.onboarding_data) {
       setPhase('onboarding')
@@ -525,10 +538,7 @@ export default function DiagnosticoFullPage() {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">🎉 ¡Diagnóstico Completado!</h1>
           <p className="text-gray-600 mb-8">Tus respuestas han sido guardadas.</p>
-          <button
-            onClick={goToResults}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
+          <button onClick={goToResults} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             Ver Resultados
           </button>
         </div>
@@ -579,9 +589,7 @@ export default function DiagnosticoFullPage() {
                   <div className="rounded-2xl border bg-slate-50 p-4">
                     <div className="text-xs font-semibold text-slate-500">1) AS-IS</div>
                     <div className="mt-1 font-semibold text-slate-900">Cómo estás hoy</div>
-                    <div className="mt-2 text-sm text-slate-600">
-                      Elige el nivel (1–5) que mejor describe tu realidad actual.
-                    </div>
+                    <div className="mt-2 text-sm text-slate-600">Elige el nivel (1–5) que mejor describe tu realidad actual.</div>
                   </div>
 
                   <div className="rounded-2xl border bg-slate-50 p-4">
@@ -806,10 +814,7 @@ export default function DiagnosticoFullPage() {
                 className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-4 flex flex-col"
                 style={{ height: 'calc(100vh - 120px)' }}
               >
-                <div
-                  className="flex-shrink-0 bg-gray-50 border-b border-gray-200 2xl:h-[380px]"
-                  style={{ height: '300px' }}
-                >
+                <div className="flex-shrink-0 bg-gray-50 border-b border-gray-200 2xl:h-[380px]" style={{ height: '300px' }}>
                   <AvatarPane />
                 </div>
                 <div className="flex-1 min-h-0 relative">

@@ -1,71 +1,103 @@
 // src/app/api/dts/criteria/route.ts
-import { NextResponse } from 'next/server'
-import { supabaseService } from '@/lib/supabase/server'
+import { NextResponse } from "next/server";
+import { supabaseService } from "@/lib/supabase/server";
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-
-const MVP12_CODES = [
-  '1.1.1',
-  '1.1.2',
-  '2.1.3',
-  '2.5.4',
-  '3.1.1',
-  '3.4.1',
-  '4.1.1',
-  '4.2.2',
-  '5.1.1',
-  '5.5.1',
-  '6.1.1',
-  '6.2.1',
-] as const
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const DIMENSION_NAME_MAP: Record<string, string> = {
-  Customer: 'Cliente',
-  Strategy: 'Estrategia',
-  Technology: 'Tecnología',
-  Operations: 'Operaciones',
-  Culture: 'Cultura',
-  Data: 'Datos',
-}
-
-function orderByList(order: readonly string[]) {
-  const rank = new Map<string, number>()
-  order.forEach((c, idx) => rank.set(c, idx))
-  return (a: any, b: any) => (rank.get(a.code) ?? 999) - (rank.get(b.code) ?? 999)
-}
+  Customer: "Cliente",
+  Strategy: "Estrategia",
+  Technology: "Tecnología",
+  Operations: "Operaciones",
+  Culture: "Cultura",
+  Data: "Datos",
+};
 
 function jsonError(status: number, payload: any) {
-  return NextResponse.json({ ok: false, ...payload }, { status })
+  return NextResponse.json({ ok: false, ...payload }, { status });
+}
+
+function sortByRank<T extends { id: string }>(rows: T[], orderedIds: string[]) {
+  const rank = new Map<string, number>();
+  orderedIds.forEach((id, idx) => rank.set(id, idx));
+  return rows.sort((a, b) => (rank.get(a.id) ?? 999999) - (rank.get(b.id) ?? 999999));
 }
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url)
-    const assessmentId = searchParams.get('assessmentId')
+    const { searchParams } = new URL(req.url);
+    const assessmentId = searchParams.get("assessmentId");
 
     if (!assessmentId) {
-      return jsonError(400, { error: 'assessmentId is required' })
+      return jsonError(400, { error: "assessmentId is required" });
     }
 
-    const supabase = supabaseService()
+    const supabase = supabaseService();
 
-    // 1) Leer pack del assessment
+    // 1) Leer assessment + pack (código canónico)
     const { data: assessment, error: aErr } = await supabase
-      .from('dts_assessments')
-      .select('id, pack')
-      .eq('id', assessmentId)
-      .single()
+      .from("dts_assessments")
+      .select("id, pack")
+      .eq("id", assessmentId)
+      .single();
 
     if (aErr || !assessment) {
-      return jsonError(404, { error: 'assessment not found', details: aErr?.message })
+      return jsonError(404, { error: "assessment not found", details: aErr?.message });
     }
 
-    const pack = assessment.pack as string
+    const pack = String(assessment.pack || "");
 
-    // 2) Query criterios según pack
-    let criteriaQuery = supabase
-      .from('dts_criteria')
+    // 2) Resolver pack_uuid en BD (fuente de verdad)
+    const { data: packRow, error: pErr } = await supabase
+      .from("dts_packs")
+      .select("id, pack_uuid")
+      .eq("id", pack)
+      .single();
+
+    if (pErr || !packRow?.pack_uuid) {
+      return jsonError(400, {
+        error: "pack not found in dts_packs",
+        pack,
+        hint: "Inserta este pack en dts_packs (id + pack_uuid) antes de usarlo en assessments.",
+        details: pErr?.message,
+      });
+    }
+
+    const packUuid = String(packRow.pack_uuid);
+
+    // 3) Obtener criterios del pack desde mapping (sin hardcode)
+    const { data: mapRows, error: mErr } = await supabase
+      .from("dts_pack_criteria_map")
+      .select("criteria_id, weight")
+      .eq("pack_id", packUuid);
+
+    if (mErr) {
+      return jsonError(500, { error: "pack criteria map query failed", pack, details: mErr.message });
+    }
+
+    if (!mapRows || mapRows.length === 0) {
+      return jsonError(409, {
+        error: "pack has no criteria mapping",
+        pack,
+        hint:
+          "Tu pack existe, pero no tiene filas en dts_pack_criteria_map. Debes poblar el mapping (pack_id, criteria_id, weight).",
+      });
+    }
+
+    // Orden estable por weight (asc) y luego por criteria_id (para empates)
+    const ordered = [...mapRows].sort((a: any, b: any) => {
+      const wa = Number(a.weight ?? 0);
+      const wb = Number(b.weight ?? 0);
+      if (wa !== wb) return wa - wb;
+      return String(a.criteria_id).localeCompare(String(b.criteria_id));
+    });
+
+    const orderedCriteriaIds = ordered.map((r: any) => String(r.criteria_id));
+
+    // 4) Cargar criterios (en bloque) + subdimension/dimension
+    const { data: criteriaRows, error: cErr } = await supabase
+      .from("dts_criteria")
       .select(
         `
         id, code, description, description_es, short_label, short_label_es,
@@ -79,103 +111,81 @@ export async function GET(req: Request) {
         )
       `
       )
+      .in("id", orderedCriteriaIds);
 
-    if (pack === 'mvp12_v1') {
-      criteriaQuery = criteriaQuery.in('code', MVP12_CODES as unknown as string[])
-    } else {
-      criteriaQuery = criteriaQuery.in('tier', ['tier1', 'tier2'])
+    if (cErr) {
+      return jsonError(500, { error: "criteria query failed", pack, details: cErr.message });
     }
 
-    const { data, error } = await criteriaQuery
+    if (!criteriaRows || criteriaRows.length === 0) {
+      return jsonError(404, {
+        error: "No criteria returned for mapped ids",
+        pack,
+        hint: "Revisa que criteria_id en dts_pack_criteria_map existan en dts_criteria.",
+      });
+    }
 
-    if (error) return jsonError(500, { error: error.message, hint: 'Supabase query error' })
-    if (!data || data.length === 0) return jsonError(404, { error: 'No criteria found for pack', pack })
+    // 5) Re-ordenar según mapping (porque .in() no preserva orden)
+    const rows = sortByRank(criteriaRows as any[], orderedCriteriaIds);
 
-    // 3) Transformación
-    const transformed = data.map((c: any) => {
-      const subdimension = Array.isArray(c.dts_subdimensions) ? c.dts_subdimensions[0] : c.dts_subdimensions
-      const dimension = subdimension?.dts_dimensions
-      const dimensionArray = Array.isArray(dimension) ? dimension[0] : dimension
+    // 6) Transformación “UI ready”
+    const transformed = rows.map((c: any) => {
+      const subdimension = Array.isArray(c.dts_subdimensions) ? c.dts_subdimensions[0] : c.dts_subdimensions;
+      const dimension = subdimension?.dts_dimensions;
+      const dimensionRow = Array.isArray(dimension) ? dimension[0] : dimension;
 
-      const dimensionName = dimensionArray?.name || ''
-      const dimensionNameEs = DIMENSION_NAME_MAP[dimensionName] || dimensionName
+      const dimensionName = dimensionRow?.name || "";
+      const dimensionNameEs = DIMENSION_NAME_MAP[dimensionName] || dimensionName;
 
       return {
         id: c.id,
         code: c.code,
 
-        // UX short fields
-        description: c.description_es || c.description || '',
-        short_label: c.short_label_es || c.short_label || '',
+        // UX
+        description: c.description_es || c.description || "",
+        short_label: c.short_label_es || c.short_label || "",
         context: c.context_es || c.context || null,
 
-        focus_area: c.focus_area || '',
+        focus_area: c.focus_area || "",
         subdimension_id: c.subdimension_id,
 
         subdimension: subdimension
           ? {
-              name: subdimension.name_es || subdimension.name || '',
-              code: subdimension.code || '',
+              name: subdimension.name_es || subdimension.name || "",
+              code: subdimension.code || "",
               dimension_name: dimensionNameEs,
-              dimension_display_order: dimensionArray?.display_order || 0,
+              dimension_display_order: dimensionRow?.display_order || 0,
               subdimension_display_order: subdimension.display_order || 0,
             }
           : undefined,
 
-        dimension: dimensionArray
+        dimension: dimensionRow
           ? {
               name: dimensionNameEs,
-              code: dimensionArray.code || '',
-              display_order: dimensionArray.display_order || 0,
+              code: dimensionRow.code || "",
+              display_order: dimensionRow.display_order || 0,
             }
           : undefined,
 
-        // Level texts (ES)
+        // Levels ES
         level_1_description_es: c.level_1_description_es,
         level_2_description_es: c.level_2_description_es,
         level_3_description_es: c.level_3_description_es,
         level_4_description_es: c.level_4_description_es,
         level_5_description_es: c.level_5_description_es,
 
-        // ✅ The CEO-model JSON
         explain_json: c.explain_json ?? null,
-      }
-    })
-
-    // 4) Orden estable
-    if (pack === 'mvp12_v1') {
-      transformed.sort(orderByList(MVP12_CODES))
-      const returned = new Set(transformed.map((x: any) => x.code))
-      const missing = MVP12_CODES.filter((c) => !returned.has(c))
-      if (missing.length) {
-        return jsonError(500, {
-          error: 'Pack MVP12 incompleto en BD (faltan códigos)',
-          pack,
-          missing,
-          got: transformed.map((x: any) => x.code),
-        })
-      }
-    } else {
-      transformed.sort((a: any, b: any) => {
-        const parse = (code: string) => code.split('.').map((p: string) => parseInt(p) || 0)
-        const A = parse(a.code)
-        const B = parse(b.code)
-        for (let i = 0; i < Math.max(A.length, B.length); i++) {
-          const x = A[i] || 0
-          const y = B[i] || 0
-          if (x !== y) return x - y
-        }
-        return 0
-      })
-    }
+      };
+    });
 
     return NextResponse.json({
       ok: true,
       assessmentId,
       pack,
+      n: transformed.length,
       criteria: transformed,
-    })
+    });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err?.message || 'Unknown error' }, { status: 500 })
+    return NextResponse.json({ ok: false, error: err?.message || "Unknown error" }, { status: 500 });
   }
 }

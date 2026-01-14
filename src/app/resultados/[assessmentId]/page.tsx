@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import ExecutiveScorePanel from "@/components/resultados/ExecutiveScorePanel";
 
 function isUuid(v: string) {
@@ -268,6 +269,10 @@ const FRENOS = {
 
 type TabKey = "overview" | "frenos" | "priorizacion";
 
+/**
+ * ✅ Dejamos el query param solo para backwards compat,
+ * pero la UI principal ya navega a rutas reales /frenos y /priorizacion.
+ */
 function normalizeTab(v: any): TabKey {
   const raw = (v || "").toString().toLowerCase().trim();
   if (raw === "frenos") return "frenos";
@@ -276,19 +281,17 @@ function normalizeTab(v: any): TabKey {
 }
 
 function TabLink({
-  assessmentId,
-  tab,
+  href,
   active,
   label,
 }: {
-  assessmentId: string;
-  tab: TabKey;
+  href: string;
   active: boolean;
   label: string;
 }) {
   return (
     <Link
-      href={`/resultados/${assessmentId}?tab=${tab}`}
+      href={href}
       className={[
         "px-4 py-1.5 rounded-full border text-sm transition",
         active
@@ -310,10 +313,10 @@ function ResultsTopBar({
   pack: string;
   activeTab: TabKey;
 }) {
+  const base = `/resultados/${assessmentId}`;
+
   const ctaHref =
-    activeTab === "frenos"
-      ? `/resultados/${assessmentId}/cierre`
-      : `/resultados/${assessmentId}?tab=frenos`;
+    activeTab === "frenos" ? `${base}/cierre` : `${base}/frenos`;
 
   const ctaLabel =
     activeTab === "frenos" ? "Finalizar diagnóstico" : "Siguiente: Frenos";
@@ -327,7 +330,6 @@ function ResultsTopBar({
     <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-100">
       <div className="py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          {/* ✅ FIX: volver SIEMPRE al diagnóstico del assessmentId */}
           <Link
             href={`/diagnostico-full?assessmentId=${assessmentId}`}
             className="text-sm text-slate-600 hover:text-slate-900"
@@ -360,20 +362,17 @@ function ResultsTopBar({
       <div className="pb-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <TabLink
-            assessmentId={assessmentId}
-            tab="overview"
+            href={base}
             active={activeTab === "overview"}
             label="Visión general"
           />
           <TabLink
-            assessmentId={assessmentId}
-            tab="frenos"
+            href={`${base}/frenos`}
             active={activeTab === "frenos"}
             label="Frenos"
           />
           <TabLink
-            assessmentId={assessmentId}
-            tab="priorizacion"
+            href={`${base}/priorizacion`}
             active={activeTab === "priorizacion"}
             label="Priorización"
           />
@@ -510,15 +509,9 @@ export default async function ResultadosPage({
 }) {
   const { assessmentId } = await params;
 
+  // ✅ Si el id es inválido, fuera a /start (NO a /resultados)
   if (!assessmentId || !isUuid(assessmentId)) {
-    return (
-      <div className="py-8">
-        <h1 className="text-2xl font-semibold">Resultado Ejecutivo</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          No se ha encontrado un identificador válido para este diagnóstico.
-        </p>
-      </div>
-    );
+    redirect("/start");
   }
 
   const sp = (await searchParams) || {};
@@ -553,13 +546,18 @@ export default async function ResultadosPage({
   const completed = total > 0 && evaluated >= total;
 
   // ✅ Solo cargamos lo que se va a mostrar (y en overview, Top 3)
-  const frenosResp = activeTab === "frenos" ? await fetchFrenos(assessmentId, 12) : null;
+  const frenosResp =
+    activeTab === "frenos" ? await fetchFrenos(assessmentId, 12) : null;
 
   const priorResp =
-    activeTab === "priorizacion" ? await fetchPriorizacion(assessmentId, 12) : null;
+    activeTab === "priorizacion"
+      ? await fetchPriorizacion(assessmentId, 12)
+      : null;
 
   const topFrenosResp = isOverview ? await fetchFrenos(assessmentId, 3) : null;
-  const topPriorResp = isOverview ? await fetchPriorizacion(assessmentId, 3) : null;
+  const topPriorResp = isOverview
+    ? await fetchPriorizacion(assessmentId, 3)
+    : null;
 
   const scoreResp = isOverview ? await fetchScore(assessmentId) : null;
   const dimsMetaResp = isOverview ? await fetchDimensionsMeta() : null;
@@ -585,16 +583,13 @@ export default async function ResultadosPage({
       <div className="py-8">
         {activeTab === "overview" ? (
           <div className="space-y-6">
-            {/* ✅ SCORE PANEL arriba, antes de cobertura */}
             <ExecutiveScorePanel
               assessmentScore={scoreResp?.assessmentScore ?? null}
               dimensionScores={scoreResp?.dimensionScores ?? []}
               dimensionsMeta={dimsMetaResp?.items ?? []}
             />
 
-            {/* ✅ Executive one-pager: Top 3 + link Ver todos */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Top Frenos */}
               <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
                   <div>
@@ -606,8 +601,9 @@ export default async function ResultadosPage({
                     </div>
                   </div>
 
+                  {/* ✅ ruta real */}
                   <Link
-                    href={`/resultados/${assessmentId}?tab=frenos`}
+                    href={`/resultados/${assessmentId}/frenos`}
                     className="text-sm font-medium text-[#2563eb] hover:underline shrink-0"
                   >
                     Ver todos →
@@ -649,7 +645,6 @@ export default async function ResultadosPage({
                 </div>
               </div>
 
-              {/* Top Priorización */}
               <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
                   <div>
@@ -661,8 +656,9 @@ export default async function ResultadosPage({
                     </div>
                   </div>
 
+                  {/* ✅ ruta real */}
                   <Link
-                    href={`/resultados/${assessmentId}?tab=priorizacion`}
+                    href={`/resultados/${assessmentId}/priorizacion`}
                     className="text-sm font-medium text-[#2563eb] hover:underline shrink-0"
                   >
                     Ver todos →
