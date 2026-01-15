@@ -3,20 +3,22 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-function isUuid(v: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    v
-  );
+type ParamsInput =
+  | { assessmentId?: string | string[] }
+  | Promise<{ assessmentId?: string | string[] }>;
+
+function normalizeParam(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (Array.isArray(v) && typeof v[0] === "string") return v[0];
+  return "";
 }
 
-export default function Page({ params }: { params: { assessmentId: string } }) {
-  const { assessmentId } = params;
+export default async function Page({ params }: { params: ParamsInput }) {
+  const p = await Promise.resolve(params as any);
+  const assessmentId = normalizeParam(p?.assessmentId);
 
-  // Si el id es inválido, cae en /resultados (pantalla informativa)
-  if (!assessmentId || !isUuid(assessmentId)) {
-    redirect("/resultados");
-  }
+  // Bridge route: NO valida UUID, solo enruta.
+  if (!assessmentId) redirect("/resultados");
 
-  // ✅ Unificamos navegación: tabs por querystring
-  redirect(`/resultados/${assessmentId}?tab=priorizacion`);
+  redirect(`/resultados/${encodeURIComponent(assessmentId)}?tab=priorizacion`);
 }
