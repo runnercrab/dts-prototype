@@ -1,7 +1,7 @@
+// src/app/layout.tsx
 import type { Metadata } from 'next'
 import { Montserrat } from 'next/font/google'
 import './globals.css'
-import Header from '@/components/Header'
 
 const montserrat = Montserrat({
   weight: ['400', '600', '700'],
@@ -11,7 +11,8 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: 'Gapply — Transformación Digital para PYMEs',
-  description: 'Transforma tu negocio con decisiones digitales inteligentes. Evaluación rápida de madurez digital con plan personalizado para PYMEs.',
+  description:
+    'Transforma tu negocio con decisiones digitales inteligentes. Evaluación rápida de madurez digital con plan personalizado para PYMEs.',
   keywords: ['transformación digital', 'madurez digital', 'pymes', 'diagnóstico digital', 'TM Forum', 'DMM'],
   authors: [{ name: 'Gapply' }],
   icons: {
@@ -28,17 +29,10 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={montserrat.className}>
-        <Header />
-        {children}
-      </body>
+      <body className={montserrat.className}>{children}</body>
     </html>
   )
 }
