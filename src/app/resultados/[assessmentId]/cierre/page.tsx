@@ -16,24 +16,22 @@ export default function CierreDiagnosticoPage() {
   const router = useRouter();
   const params = useParams<{ assessmentId: string }>();
 
-  const assessmentId = useMemo(() => {
-    return (params?.assessmentId || "").toString().trim();
-  }, [params]);
-
+  const assessmentId = useMemo(() => (params?.assessmentId || "").toString().trim(), [params]);
   const valid = assessmentId && isUuid(assessmentId);
 
   const hrefFrenos = valid ? `/resultados/${assessmentId}/frenos` : `/resultados`;
   const hrefResultados = valid ? `/resultados/${assessmentId}` : `/resultados`;
 
-  // ✅ Antes: /acciones-v1/:assessmentId
-  // ✅ Ahora: Iniciativas como parte del flujo de Resultados
-  const hrefIniciativas = valid ? `/resultados/${assessmentId}/iniciativas` : `/resultados`;
+  // ✅ Canonical: PROGRAMAS (Big4)
+  const hrefProgramas = valid
+  ? `/resultados/${assessmentId}/ejecucion/programas`
+  : `/resultados`;
+
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Top bar (simple, sin ruido) */}
       <div className="bg-white border-b border-slate-200">
-        <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between gap-4">
+        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between gap-4">
           <button
             onClick={() => router.push(hrefFrenos)}
             className="text-sm text-slate-600 hover:text-slate-900 flex items-center gap-2"
@@ -55,21 +53,16 @@ export default function CierreDiagnosticoPage() {
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white p-8">
-            <div className="text-2xl font-semibold text-slate-900">
-              Diagnóstico completado
-            </div>
+            <div className="text-2xl font-semibold text-slate-900">Diagnóstico completado</div>
 
             <div className="mt-3 text-slate-700 leading-relaxed">
               Ya tienes una visión clara de tu situación digital actual.
               <br />
-              Has identificado qué áreas requieren atención prioritaria y qué frenos reales
-              están impidiendo avanzar.
+              Has identificado qué áreas requieren atención prioritaria y qué frenos reales están impidiendo avanzar.
             </div>
 
             <div className="mt-6 border-t border-slate-100 pt-6">
-              <div className="text-sm font-semibold text-slate-900">
-                Qué has obtenido con este diagnóstico:
-              </div>
+              <div className="text-sm font-semibold text-slate-900">Qué has obtenido con este diagnóstico:</div>
 
               <ul className="mt-3 space-y-2 text-sm text-slate-700 list-disc pl-5">
                 <li>Una priorización clara de los criterios con mayor impacto en el negocio</li>
@@ -84,18 +77,18 @@ export default function CierreDiagnosticoPage() {
               <div className="mt-2 text-sm text-slate-700 leading-relaxed">
                 El siguiente paso no es ejecutar todavía.
                 <br />
-                Antes de tomar decisiones o aprobar proyectos, conviene explorar qué opciones
-                reales existen para desbloquear esos frenos de forma efectiva.
+                Antes de aprobar proyectos, conviene explorar qué <b>programas</b> conviene activar primero y qué
+                <b> acciones</b> concretas los hacen realidad.
               </div>
             </div>
 
             <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
-                onClick={() => router.push(hrefIniciativas)}
+                onClick={() => router.push(hrefProgramas)}
                 className="px-5 py-3 rounded-2xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800"
-                title="Ver iniciativas recomendadas basadas en tus resultados"
+                title="Ver programas recomendados basados en tus resultados"
               >
-                Ver iniciativas recomendadas
+                Ver programas recomendados
               </button>
 
               <button

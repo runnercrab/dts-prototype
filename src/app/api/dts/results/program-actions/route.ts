@@ -39,6 +39,15 @@ function toInt(v: any, fallback = 0) {
   return Math.round(toNum(v, fallback));
 }
 
+type ActionStatus = "todo" | "in_progress" | "done" | null;
+
+function normalizeStatus(s: any): Exclude<ActionStatus, null> {
+  if (s === "done") return "done";
+  if (s === "in_progress") return "in_progress";
+  // Tratamos null/undefined/otros como "todo" para consistencia ejecutiva
+  return "todo";
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
@@ -48,7 +57,6 @@ export async function GET(req: Request) {
   const assessmentId = normalizeUuid(assessmentIdRaw);
   const programId = normalizeUuid(programIdRaw);
 
-  const onlyShortlist = parseBool(searchParams.get("onlyShortlist"), false);
   const useOverrides = parseBool(searchParams.get("useOverrides"), true);
 
   if (!assessmentId || !isUuid(assessmentId)) {
@@ -78,7 +86,7 @@ export async function GET(req: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // opcional: validar assessment existe
+  // validar assessment existe
   const { data: assessment, error: aErr } = await supabase
     .from("dts_assessments")
     .select("id, pack")
@@ -92,56 +100,81 @@ export async function GET(req: Request) {
     );
   }
 
-  // RPC
-  const { data, error } = await supabase.rpc("dts_results_program_actions_v1", {
+  // RPC (checklist ordenada)
+  const { data, error } = await supabase.rpc("dts_results_program_actions_v2", {
     p_assessment_id: assessmentId,
     p_program_id: programId,
-    p_only_shortlist: onlyShortlist,
     p_use_overrides: useOverrides,
   });
 
   if (error) {
     console.error("[api program-actions] rpc error:", error);
     return NextResponse.json(
-      { error: "Error ejecutando ranking de acciones", details: error.message },
+      { error: "Error obteniendo acciones del programa", details: error.message },
       { status: 500 }
     );
   }
 
   const rows = Array.isArray(data) ? data : [];
 
-  // Normalización de tipos (NUMERIC de Postgres a number)
   const items = rows.map((r: any) => ({
-    rank: toInt(r.rank),
+    sort_order: toInt(r.sort_order, 1000),
     action_id: r.action_id,
     action_code: r.action_code,
     title: r.title,
     description: r.description ?? null,
-    status: r.status ?? null,
+
     impact_score: toInt(r.impact_score),
     effort_score: toInt(r.effort_score),
-    weighted_need: toNum(r.weighted_need),
-    value_score: toNum(r.value_score),
-    action_score: toNum(r.action_score),
-    criteria_covered: toInt(r.criteria_covered),
+    typical_duration_weeks:
+      r.typical_duration_weeks === null || r.typical_duration_weeks === undefined
+        ? null
+        : toInt(r.typical_duration_weeks),
+
+    owner_hint: r.owner_hint ?? null,
+    prerequisites: r.prerequisites ?? null,
+    tools_hint: r.tools_hint ?? null,
+    tags: Array.isArray(r.tags) ? r.tags : r.tags ?? null,
+
+    status: r.status ?? null,
     notes: r.notes ?? null,
     owner: r.owner ?? null,
-    priority_badge: r.priority_badge,
-    priority_reason: r.priority_reason,
-    top_contributors: Array.isArray(r.top_contributors) ? r.top_contributors : (r.top_contributors ?? []),
-    top_contributors_need: toNum(r.top_contributors_need),
-    top_contributors_share: toNum(r.top_contributors_share),
-    top_contributors_count: toInt(r.top_contributors_count),
   }));
 
-  const thresholds = { top: 5, mid_end: 12 };
+  // Orden estable por sort_order
+  items.sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+  // ✅ Progress (backend-calculated)
+  let done = 0;
+  let in_progress = 0;
+  let todo = 0;
+
+  for (const it of items) {
+    const s = normalizeStatus(it.status);
+    if (s === "done") done += 1;
+    else if (s === "in_progress") in_progress += 1;
+    else todo += 1;
+  }
+
+  const total = items.length;
+  const pct_done = total > 0 ? Math.round((done / total) * 1000) / 10 : 0; // 1 decimal
+  const pct_started =
+    total > 0 ? Math.round(((done + in_progress) / total) * 1000) / 10 : 0;
 
   return NextResponse.json({
     assessment_id: assessmentId,
     program_id: programId,
     pack: assessment.pack,
-    thresholds,
+    mode: "checklist",
     count: items.length,
+    progress: {
+      total,
+      done,
+      in_progress,
+      todo,
+      pct_done,
+      pct_started,
+    },
     items,
   });
 }
