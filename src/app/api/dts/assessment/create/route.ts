@@ -5,7 +5,7 @@ import { supabaseService } from '@/lib/supabase/server'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const ALLOWED_PACKS = ['tmf_full_v5', 'mvp12_v1'] as const
+const ALLOWED_PACKS = ['tmf_full_v5', 'tmf_mvp12_v1'] as const
 type AllowedPack = (typeof ALLOWED_PACKS)[number]
 
 function isAllowedPack(x: any): x is AllowedPack {

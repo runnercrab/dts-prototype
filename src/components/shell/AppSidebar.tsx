@@ -1,85 +1,186 @@
-'use client'
+// src/components/shell/AppSidebar.tsx
+"use client";
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import Link from "next/link";
+import { usePathname, useParams } from "next/navigation";
 
-function NavItem({
-  href,
-  label,
-  disabled,
-}: {
-  href: string
-  label: string
-  disabled?: boolean
-}) {
-  const pathname = usePathname()
-  const active = !disabled && (pathname === href || pathname.startsWith(href + '/'))
+interface NavItemProps {
+  href: string;
+  label: string;
+  icon: string;
+  disabled?: boolean;
+}
+
+function NavItem({ href, label, icon, disabled }: NavItemProps) {
+  const pathname = usePathname();
+  const isActive =
+    !disabled && (pathname === href || pathname.startsWith(href + "/"));
 
   return (
     <Link
-      href={disabled ? '#' : href}
-      aria-disabled={disabled ? true : undefined}
+      href={disabled ? "#" : href}
+      aria-disabled={disabled}
       className={[
-        'block rounded-xl px-3 py-2 text-sm font-semibold transition',
-        disabled ? 'text-slate-400 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-100',
-        active ? 'bg-slate-100 text-slate-900' : '',
-      ].join(' ')}
-      onClick={(e) => {
-        if (disabled) e.preventDefault()
-      }}
+        "nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all relative",
+        disabled
+          ? "text-slate-400 cursor-not-allowed"
+          : "text-slate-700 hover:bg-slate-50 hover:translate-x-0.5",
+        isActive ? "bg-blue-50 text-blue-800 font-semibold" : "",
+      ].join(" ")}
+      onClick={(e) => disabled && e.preventDefault()}
     >
-      {label}
+      {isActive && (
+        <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-blue-800 rounded-r" />
+      )}
+      <span className="text-lg">{icon}</span>
+      <span>{label}</span>
     </Link>
-  )
+  );
 }
 
 export default function AppSidebar() {
-  // OJO: aquí ponemos rutas “canon” (las reales)
-  // Marketing NO entra aquí, esto es solo (app)
+  const params = useParams();
+  const assessmentId = params?.assessmentId as string | undefined;
+
+  // Rutas base (sin assessmentId)
+  const baseRoutes = {
+    diagnostico: "/diagnostico-full",
+    resultados: "/resultados",
+  };
+
+  // Rutas con assessmentId (si existe)
+  const assessmentRoutes = assessmentId
+    ? {
+        resumen: `/resultados/${assessmentId}`,
+        frenos: `/resultados/${assessmentId}/frenos`,
+        priorizacion: `/resultados/${assessmentId}/priorizacion`,
+        cierre: `/resultados/${assessmentId}/cierre`,
+        programas: `/resultados/${assessmentId}/ejecucion/programas`,
+        matriz: `/resultados/${assessmentId}/ejecucion/matriz`,
+        roadmap: `/resultados/${assessmentId}/ejecucion/roadmap`,
+      }
+    : null;
+
   return (
-    <aside className="h-screen sticky top-0 border-r border-slate-200 bg-white">
-      <div className="h-full flex flex-col">
-        {/* Logo */}
-        <div className="px-4 py-4 border-b border-slate-200">
-          <div className="text-lg font-extrabold tracking-tight text-slate-900">
-            Gapply
+    <aside className="w-64 bg-white border-r border-slate-200 fixed left-0 top-0 bottom-0 overflow-y-auto z-40">
+      {/* Logo */}
+      <div className="px-4 py-6 border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-800 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+            G
           </div>
-          <div className="text-xs text-slate-500">
-            Diagnóstico → Roadmap → Seguimiento
+          <span className="text-xl font-bold text-slate-900">Gapply</span>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="py-4 px-3">
+        {/* Diagnóstico */}
+        <div className="mb-6">
+          <div className="px-3 mb-2">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Diagnóstico
+            </h3>
+          </div>
+          <div className="space-y-1">
+            <NavItem
+              href={baseRoutes.diagnostico}
+              label="Evaluación"
+              icon="📋"
+            />
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto">
-          <div className="px-2 pt-2 pb-1 text-xs font-bold text-slate-400 uppercase">
-            Flujo
+        {/* Resultados */}
+        <div className="mb-6">
+          <div className="px-3 mb-2">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Resultados
+            </h3>
           </div>
-
-          <NavItem href="/diagnostico-full" label="1) Diagnóstico" />
-          <NavItem href="/resultados" label="2) Resultados" />
-
-          <div className="px-2 pt-4 pb-1 text-xs font-bold text-slate-400 uppercase">
-            Ejecución
+          <div className="space-y-1">
+            {assessmentRoutes ? (
+              <>
+                <NavItem
+                  href={assessmentRoutes.resumen}
+                  label="Resumen"
+                  icon="📊"
+                />
+                <NavItem
+                  href={assessmentRoutes.frenos}
+                  label="Frenos"
+                  icon="⚠️"
+                />
+                <NavItem
+                  href={assessmentRoutes.priorizacion}
+                  label="Priorización"
+                  icon="🎯"
+                />
+                <NavItem
+                  href={assessmentRoutes.cierre}
+                  label="Cierre"
+                  icon="✅"
+                />
+              </>
+            ) : (
+              <NavItem
+                href={baseRoutes.resultados}
+                label="Ver resultados"
+                icon="📊"
+              />
+            )}
           </div>
+        </div>
 
-          {/* Nota: estas existen por assessmentId, pero dejamos accesos genéricos;
-             la navegación real se hace desde Resultados -> Ejecución */}
-          <NavItem href="/resultados" label="Programas y acciones" />
-          <NavItem href="/resultados" label="Matriz impacto-esfuerzo" />
-          <NavItem href="/resultados" label="Roadmap" />
-
-          <div className="px-2 pt-4 pb-1 text-xs font-bold text-slate-400 uppercase">
-            Cuenta
+        {/* Ejecución */}
+        <div className="mb-6">
+          <div className="px-3 mb-2">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Ejecución
+            </h3>
           </div>
-          <NavItem href="/start" label="Start (legacy)" disabled />
-        </nav>
+          <div className="space-y-1">
+            {assessmentRoutes ? (
+              <>
+                <NavItem
+                  href={assessmentRoutes.programas}
+                  label="Programas"
+                  icon="📅"
+                />
+                <NavItem
+                  href={assessmentRoutes.matriz}
+                  label="Matriz"
+                  icon="📐"
+                />
+                <NavItem
+                  href={assessmentRoutes.roadmap}
+                  label="Roadmap"
+                  icon="🗺️"
+                />
+              </>
+            ) : (
+              <div className="px-3 py-2 text-xs text-slate-400">
+                Completa un diagnóstico para ver opciones de ejecución
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
 
-        {/* Footer user */}
-        <div className="px-4 py-4 border-t border-slate-200">
-          <div className="text-sm font-semibold text-slate-900">Usuario</div>
-          <div className="text-xs text-slate-500">Demo / MVP</div>
+      {/* User Footer */}
+      <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-3">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50">
+          <div className="w-9 h-9 rounded-full bg-blue-800 flex items-center justify-center text-white font-bold text-sm">
+            DA
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-slate-900 truncate">
+              David Arias
+            </div>
+            <div className="text-xs text-slate-500">CEO</div>
+          </div>
         </div>
       </div>
     </aside>
-  )
+  );
 }

@@ -1,22 +1,19 @@
-// src/app/(app)/layout.tsx
+// src/app/diagnostico-full/layout.tsx
 import type { ReactNode } from "react";
 import CollapsibleSidebar from "@/components/shell/CollapsibleSidebar";
-import RightAssistantPane from "@/components/shell/RightAssistantPane";
 
 export const dynamic = "force-dynamic";
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default function DiagnosticoLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Left Sidebar - Collapsible */}
       <CollapsibleSidebar />
 
-      {/* Right Assistant Pane - Fixed */}
-      <RightAssistantPane />
-
-      {/* Main Content */}
-      <main className="ml-16 mr-[560px] min-h-screen transition-all duration-200 pb-20">
-        <div className="p-6">{children}</div>
+      {/* Main Content - Solo margen izquierdo */}
+      {/* El avatar está integrado en el grid interno de la página */}
+      <main className="ml-16 min-h-screen transition-all duration-200">
+        {children}
       </main>
 
       {/* Mobile overlay */}

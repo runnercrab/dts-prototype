@@ -1,3 +1,4 @@
+// src/components/ejecucion/EjecucionTabsClient.tsx
 "use client";
 
 import Link from "next/link";
@@ -17,6 +18,7 @@ export default function EjecucionTabsClient({
   const pathname = usePathname();
 
   const base = `/resultados/${assessmentId}/ejecucion`;
+  const hrefSeguimiento = `${base}/seguimiento`;
   const hrefProgramas = `${base}/programas`;
   const hrefMatriz = `${base}/matriz`;
   const hrefRoadmap = `${base}/roadmap`;
@@ -24,7 +26,7 @@ export default function EjecucionTabsClient({
   return (
     <>
       <div className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-100">
-        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
               href={`/resultados/${assessmentId}`}
@@ -40,7 +42,7 @@ export default function EjecucionTabsClient({
                 Ejecución
               </div>
               <div className="text-sm text-slate-500">
-                Programas, matriz y roadmap (lo accionable)
+                Seguimiento, programas, matriz y roadmap (lo accionable)
               </div>
             </div>
           </div>
@@ -50,8 +52,20 @@ export default function EjecucionTabsClient({
           </span>
         </div>
 
-        <div className="mx-auto max-w-7xl px-6 pb-4">
+        <div className="px-6 pb-4">
           <div className="flex items-center gap-2">
+            <Link
+              href={hrefSeguimiento}
+              className={[
+                "px-4 py-2 rounded-full border text-sm transition",
+                isActive(pathname, hrefSeguimiento)
+                  ? "border-slate-300 bg-white text-slate-900 shadow-sm"
+                  : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white",
+              ].join(" ")}
+            >
+              Seguimiento
+            </Link>
+
             <Link
               href={hrefProgramas}
               className={[
@@ -91,7 +105,7 @@ export default function EjecucionTabsClient({
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
+      <div className="px-6 py-8">{children}</div>
     </>
   );
 }
