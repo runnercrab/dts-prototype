@@ -1,97 +1,106 @@
-// src/app/api/dts/assessment/create/route.ts
-import { NextResponse } from 'next/server'
-import { supabaseService } from '@/lib/supabase/server'
+import { NextResponse } from "next/server";
+import { supabaseService } from "@/lib/supabase/server";
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-const ALLOWED_PACKS = ['tmf_full_v5', 'tmf_mvp12_v1'] as const
-type AllowedPack = (typeof ALLOWED_PACKS)[number]
+// ✅ Default explícito para demo (cámbialo si quieres otra política)
+const DEFAULT_PACK = "tmf_mvp12_v2";
 
-function isAllowedPack(x: any): x is AllowedPack {
-  return typeof x === 'string' && (ALLOWED_PACKS as readonly string[]).includes(x)
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, { status });
 }
 
 export async function POST(req: Request) {
-  const requestId = `create_${Date.now()}_${Math.random().toString(16).slice(2)}`
+  const requestId = `create_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
   try {
-    const supabase = supabaseService()
+    const supabase = supabaseService();
+    const body = await req.json().catch(() => ({}));
+    const packReceived = typeof body?.pack === "string" ? body.pack.trim() : "";
 
-    const body = await req.json().catch(() => ({}))
-    const packReceived = body?.pack
+    // 1) Resolver pack (si no viene -> default explícito)
+    const pack = packReceived || DEFAULT_PACK;
 
-    // Si viene pack inválido -> 400 (estricto, sin defaults silenciosos)
-    if (!isAllowedPack(packReceived)) {
-      return NextResponse.json(
-        {
-          ok: false,
-          requestId,
-          error: `pack inválido: ${String(packReceived)}`,
-          allowed: ALLOWED_PACKS,
-          hint: 'Usa exactamente uno de los packs permitidos por el CHECK de la tabla.',
-        },
-        { status: 400 }
-      )
+    // 2) Validar pack contra dts_packs (fuente de verdad)
+    const { data: packRow, error: pErr } = await supabase
+      .from("dts_packs")
+      .select("id")
+      .eq("id", pack)
+      .single();
+
+    if (pErr || !packRow?.id) {
+      // Devolvemos lista para debugging (limitada)
+      const { data: allowed } = await supabase
+        .from("dts_packs")
+        .select("id")
+        .order("id", { ascending: true })
+        .limit(50);
+
+      return json(400, {
+        ok: false,
+        requestId,
+        error: `pack inválido: ${pack}`,
+        packReceived: packReceived || null,
+        packUsed: pack,
+        allowed_packs: (allowed || []).map((r: any) => r.id),
+        hint: "Crea el pack en dts_packs antes de usarlo (id debe existir).",
+      });
     }
 
-    const pack: AllowedPack = packReceived
-    const now = new Date().toISOString()
+    const now = new Date().toISOString();
 
-    // Prueba de vida: esto debe aparecer en logs del server.
-    console.log('✅ [assessment/create] requestId=', requestId, 'packReceived=', packReceived, 'packUsed=', pack)
+    console.log("✅ [assessment/create]", {
+      requestId,
+      packReceived: packReceived || null,
+      packUsed: pack,
+    });
 
     const insertPayload = {
-      pack, // <- CLAVE
-      status: 'draft',
+      pack, // ✅ clave
+      status: "draft",
       current_phase: 0,
       phase_0_completed: false,
       started_at: now,
       created_at: now,
       updated_at: now,
       is_demo: false,
-    }
+    };
 
     const { data, error } = await supabase
-      .from('dts_assessments')
+      .from("dts_assessments")
       .insert(insertPayload)
-      .select('id, pack, status, current_phase')
-      .single()
+      .select("id, pack, status, current_phase, created_at")
+      .single();
 
     if (error) {
-      // 🔥 Forense: devolvemos qué intentamos insertar
-      return NextResponse.json(
-        {
-          ok: false,
-          requestId,
-          error: error.message,
-          code: (error as any)?.code,
-          details: (error as any)?.details,
-          hint: 'insert dts_assessments failed',
-          packReceived,
-          packUsed: pack,
-          attemptedPayload: insertPayload,
-        },
-        { status: 500 }
-      )
+      return json(500, {
+        ok: false,
+        requestId,
+        error: error.message,
+        code: (error as any)?.code,
+        details: (error as any)?.details,
+        packReceived: packReceived || null,
+        packUsed: pack,
+        attemptedPayload: insertPayload,
+      });
     }
 
-    return NextResponse.json({
+    return json(200, {
       ok: true,
       requestId,
       assessmentId: data.id,
       pack: data.pack,
       status: data.status,
       current_phase: data.current_phase,
-    })
+      created_at: data.created_at,
+    });
   } catch (err: any) {
-    return NextResponse.json(
-      {
-        ok: false,
-        requestId,
-        error: err?.message || 'Unknown error',
-        hint: 'Unhandled server error in assessment/create',
-      },
-      { status: 500 }
-    )
+    return json(500, {
+      ok: false,
+      requestId,
+      error: err?.message || "Unknown error",
+      hint: "Unhandled server error in assessment/create",
+    });
   }
 }
