@@ -1,82 +1,119 @@
 // src/app/api/dts/results/action-status/route.ts
+//
+// ✅ CANÓNICO (compatibilidad legacy)
+// Este endpoint existía para actualizar status en "results".
+// Para evitar inconsistencias (todo vs not_started) y doble fuente,
+// lo convertimos en un PROXY al comando canónico:
+//   POST /api/dts/tracking/actions/status
+//
+// Reglas:
+// - Frontend NO calcula nada.
+// - Acepta assessmentId/actionId/status (camel o snake) y opcionales.
+// - Normaliza status a: not_started | doing | done
+// - Ejecuta RPC canónica dts_action_set_status_v1 (la misma que usa tracking).
+
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
-function isUuid(v: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+function isUuid(v: unknown): v is string {
+  if (typeof v !== "string") return false;
+  const s = v.trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 }
 
-type Payload = {
-  assessment_id: string;
-  action_id: string;
-  status: "todo" | "in_progress" | "done" | null;
-  notes?: string | null;
-  owner?: string | null;
-};
+type CanonStatus = "not_started" | "doing" | "done";
+
+function normalizeStatus(raw: unknown): CanonStatus {
+  const v = String(raw ?? "").toLowerCase().trim();
+
+  // legacy aliases
+  if (v === "todo" || v === "not_started" || v === "notstarted" || v === "no_iniciada") return "not_started";
+  if (v === "doing" || v === "in_progress" || v === "inprogress" || v === "en_curso") return "doing";
+  if (v === "done" || v === "completed" || v === "complete" || v === "cerrada") return "done";
+
+  // safe default
+  return "not_started";
+}
+
+type BodyAny = Record<string, any>;
 
 export async function POST(req: Request) {
-  try {
-    const body = (await req.json()) as Partial<Payload>;
+  const requestId = `action_status_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
-    const assessment_id = (body.assessment_id || "").trim();
-    const action_id = (body.action_id || "").trim();
-    const status = body.status ?? null;
-
-    if (!assessment_id || !isUuid(assessment_id)) {
-      return NextResponse.json({ error: "assessment_id inválido (UUID requerido)" }, { status: 400 });
-    }
-    if (!action_id || !isUuid(action_id)) {
-      return NextResponse.json({ error: "action_id inválido (UUID requerido)" }, { status: 400 });
-    }
-
-    // status permitido
-    const allowed = new Set([null, "todo", "in_progress", "done"]);
-    if (!allowed.has(status as any)) {
-      return NextResponse.json({ error: "status inválido", allowed: [null, "todo", "in_progress", "done"] }, { status: 400 });
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // Verificar assessment existe (evita basura)
-    const { data: assessment, error: aErr } = await supabase
-      .from("dts_assessments")
-      .select("id")
-      .eq("id", assessment_id)
-      .single();
-
-    if (aErr || !assessment) {
-      return NextResponse.json({ error: "Assessment no encontrado", details: aErr?.message ?? null }, { status: 404 });
-    }
-
-    // Upsert en instancia
-    const row = {
-      assessment_id,
-      action_id,
-      status, // null permitido
-      notes: body.notes ?? null,
-      owner: body.owner ?? null,
-      updated_at: new Date().toISOString(),
-    };
-
-    // IMPORTANTE: requiere UNIQUE (assessment_id, action_id) o PK equivalente en dts_assessment_actions
-    const { data, error } = await supabase
-      .from("dts_assessment_actions")
-      .upsert(row, { onConflict: "assessment_id,action_id" })
-      .select("assessment_id, action_id, status, notes, owner")
-      .single();
-
-    if (error) {
-      console.error("[api action-status] upsert error:", error);
-      return NextResponse.json({ error: "Error guardando estado de acción", details: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ ok: true, item: data });
-  } catch (e: any) {
-    return NextResponse.json({ error: "Payload inválido", details: e?.message ?? null }, { status: 400 });
+  const body = (await req.json().catch(() => null)) as BodyAny | null;
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ ok: false, requestId, error: "Body inválido (JSON requerido)" }, { status: 400 });
   }
+
+  // Accept snake_case and camelCase
+  const assessmentId = String(body.assessment_id ?? body.assessmentId ?? "").trim();
+  const actionId = String(body.action_id ?? body.actionId ?? "").trim();
+
+  const status: CanonStatus = normalizeStatus(body.status);
+
+  // Optional enrichments (still backend-owned)
+  const owner = body.owner != null ? String(body.owner).trim() : null;
+  const startDate = body.start_date ?? body.startDate ?? null; // YYYY-MM-DD (string)
+  const dueDate = body.due_date ?? body.dueDate ?? null;       // YYYY-MM-DD (string)
+  const notes = body.notes != null ? String(body.notes).trim() : null;
+
+  // For safety: default false here so legacy screens don't accidentally filter
+  // (Tracking endpoint defaulted to true unless specified; that can hide rows and look like "reset".)
+  const onlyTop = body.onlyTop === null || body.onlyTop === undefined ? false : !!body.onlyTop;
+
+  if (!isUuid(assessmentId) || !isUuid(actionId)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        requestId,
+        error: "Invalid assessmentId/actionId",
+        details: { assessmentId, actionId },
+      },
+      { status: 400 }
+    );
+  }
+
+  const sb = supabaseAdmin();
+
+  // ✅ Single source of truth: RPC
+  const { data: rpcData, error: rpcError } = await sb.rpc("dts_action_set_status_v1", {
+    p_assessment_id: assessmentId,
+    p_action_id: actionId,
+    p_status: status,
+    p_owner: owner,
+    p_start_date: startDate,
+    p_due_date: dueDate,
+    p_notes: notes,
+    p_only_top: onlyTop,
+  });
+
+  if (rpcError) {
+    return NextResponse.json(
+      { ok: false, requestId, error: rpcError.message, details: rpcError },
+      { status: 500 }
+    );
+  }
+
+  const payload = rpcData as any;
+  if (!payload?.ok) {
+    return NextResponse.json(
+      { ok: false, requestId, error: payload?.error || "Status update failed", payload },
+      { status: 400 }
+    );
+  }
+
+  // Minimal response for repaint (frontend only pinta)
+  return NextResponse.json(
+    {
+      ok: true,
+      requestId,
+      assessmentId,
+      actionId,
+      status,
+      result: payload,
+    },
+    { status: 200 }
+  );
 }

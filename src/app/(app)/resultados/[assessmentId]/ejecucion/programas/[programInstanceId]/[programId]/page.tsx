@@ -1,4 +1,4 @@
-//src/app/resultados/[assessmentId]/ejecucion/programas/[programId]/page.tsx
+// src/app/(app)/resultados/[assessmentId]/ejecucion/programas/[programId]/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -12,7 +12,8 @@ function isUuid(v: string) {
   );
 }
 
-type ActionStatus = "todo" | "in_progress" | "done" | null;
+// ✅ Canonical con tu API actual: todo | doing | done
+type ActionStatus = "todo" | "doing" | "done" | null;
 
 type ActionItem = {
   sort_order?: number;
@@ -38,7 +39,7 @@ type ActionItem = {
 type Progress = {
   total: number;
   done: number;
-  in_progress: number;
+  doing: number;
   todo: number;
   pct_done: number; // 0..100 (1 decimal)
   pct_started: number;
@@ -56,13 +57,13 @@ type ApiResponse = {
 
 function statusLabel(s: ActionStatus) {
   if (s === "done") return "Hecho";
-  if (s === "in_progress") return "En curso";
+  if (s === "doing") return "En curso";
   return "Pendiente";
 }
 
 function statusPillClass(s: ActionStatus) {
   if (s === "done") return "border-emerald-200 bg-emerald-50 text-emerald-800";
-  if (s === "in_progress") return "border-blue-200 bg-blue-50 text-blue-800";
+  if (s === "doing") return "border-amber-200 bg-amber-50 text-amber-900";
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
@@ -92,8 +93,11 @@ export default function ProgramActionsPage() {
   async function load() {
     const url = `/api/dts/results/program-actions?assessmentId=${assessmentId}&programId=${programId}`;
     const res = await fetch(url, { cache: "no-store" });
-    const json = await res.json();
+    const json = await res.json().catch(() => null);
+
+    if (!json) throw new Error(`Invalid JSON (HTTP ${res.status})`);
     if (!res.ok) throw new Error(json?.error || "Error cargando acciones");
+
     setData(json as ApiResponse);
   }
 
@@ -120,12 +124,15 @@ export default function ProgramActionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId, programId, valid]);
 
-  async function setActionStatus(actionId: string, status: Exclude<ActionStatus, null>) {
+  async function setActionStatus(
+    actionId: string,
+    status: Exclude<ActionStatus, null>
+  ) {
     try {
       setSavingActionId(actionId);
       setSaveErr(null);
 
-      // Optimista: reflejar instantáneo
+      // Optimista
       setData((prev) => {
         if (!prev) return prev;
         return {
@@ -143,20 +150,17 @@ export default function ProgramActionsPage() {
         body: JSON.stringify({
           assessment_id: assessmentId,
           action_id: actionId,
-          status,
+          status, // todo|doing|done
         }),
       });
 
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(json?.error || "No se pudo guardar el estado");
-      }
+      if (!res.ok) throw new Error(json?.error || "No se pudo guardar el estado");
 
-      // Verdad backend: recargar (también recalcula progress en backend)
+      // Verdad backend
       await load();
     } catch (e: any) {
       setSaveErr(e?.message || "Error guardando estado");
-      // Si falla, forzamos recarga para volver a verdad backend
       try {
         await load();
       } catch {}
@@ -180,7 +184,9 @@ export default function ProgramActionsPage() {
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
         <button
-          onClick={() => router.push(`/resultados/${assessmentId}/ejecucion/programas`)}
+          onClick={() =>
+            router.push(`/resultados/${assessmentId}/ejecucion/programas`)
+          }
           className="text-sm text-slate-600 hover:text-slate-900"
         >
           ← Volver a programas
@@ -192,7 +198,8 @@ export default function ProgramActionsPage() {
               Checklist de ejecución
             </h1>
             <div className="mt-1 text-sm text-slate-600">
-              Marca el estado de cada acción. Se guarda automáticamente.
+              Marca el estado de cada acción. Se guarda y se recarga desde el
+              servidor.
             </div>
           </div>
 
@@ -210,8 +217,9 @@ export default function ProgramActionsPage() {
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs text-slate-600">
               <div>
-                Hechas <b>{progress.done}</b> · En curso <b>{progress.in_progress}</b> · Pendientes{" "}
-                <b>{progress.todo}</b> · Total <b>{progress.total}</b>
+                Hechas <b>{progress.done}</b> · En curso <b>{progress.doing}</b>{" "}
+                · Pendientes <b>{progress.todo}</b> · Total{" "}
+                <b>{progress.total}</b>
               </div>
               <div className="text-slate-500">
                 Iniciadas: <b>{progress.pct_started}%</b>
@@ -249,7 +257,7 @@ export default function ProgramActionsPage() {
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100">
           {data!.items.map((a) => {
-            const s: ActionStatus = (a.status ?? null);
+            const s: ActionStatus = a.status ?? null;
             const busy = savingActionId === a.action_id;
 
             return (
@@ -270,7 +278,9 @@ export default function ProgramActionsPage() {
                         {statusLabel(s)}
                       </span>
                       {busy ? (
-                        <span className="text-xs text-slate-500">Guardando…</span>
+                        <span className="text-xs text-slate-500">
+                          Guardando…
+                        </span>
                       ) : null}
                     </div>
 
@@ -299,7 +309,6 @@ export default function ProgramActionsPage() {
                     </div>
                   </div>
 
-                  {/* Toggles (backend-driven save) */}
                   <div className="shrink-0">
                     <div className="inline-flex rounded-xl border border-slate-200 bg-white overflow-hidden">
                       <button
@@ -307,7 +316,7 @@ export default function ProgramActionsPage() {
                         onClick={() => setActionStatus(a.action_id, "todo")}
                         className={[
                           "px-3 py-2 text-xs font-semibold transition",
-                          (s === null || s === "todo")
+                          s === null || s === "todo"
                             ? "bg-slate-900 text-white"
                             : "bg-white text-slate-700 hover:bg-slate-50",
                         ].join(" ")}
@@ -317,11 +326,11 @@ export default function ProgramActionsPage() {
                       </button>
                       <button
                         disabled={busy}
-                        onClick={() => setActionStatus(a.action_id, "in_progress")}
+                        onClick={() => setActionStatus(a.action_id, "doing")}
                         className={[
                           "px-3 py-2 text-xs font-semibold transition border-l border-slate-200",
-                          s === "in_progress"
-                            ? "bg-blue-600 text-white"
+                          s === "doing"
+                            ? "bg-amber-600 text-white"
                             : "bg-white text-slate-700 hover:bg-slate-50",
                         ].join(" ")}
                         title="En curso"

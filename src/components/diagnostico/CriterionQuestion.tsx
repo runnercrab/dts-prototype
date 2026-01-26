@@ -1,9 +1,14 @@
 // ============================================================================
 // FILE: src/components/diagnostico/CriterionQuestion.tsx
 // PURPOSE: UI pregunta — permite guardar nulls (parcial).
+//          ✅ Cambio: usar descripciones de niveles desde explain_json (endpoint ya trae):
+//            - pregunta
+//            - nivel_1..nivel_5
+//          ✅ Cambio: quitar bloque "Contexto" (no mostrarlo en UI).
+//          ✅ Cambio: código de criterio (criterion.code) mucho más grande y en negrita.
 //          ✅ Cambio: NO bloquear navegación si está incompleto.
-//          - Si está totalmente vacío: navega sin guardar.
-//          - Si hay algo (parcial o completo): guarda (permitiendo nulls) y navega.
+//            - Si está totalmente vacío: navega sin guardar.
+//            - Si hay algo (parcial o completo): guarda (permitiendo nulls) y navega.
 // ============================================================================
 
 'use client'
@@ -14,17 +19,30 @@ import { Info } from 'lucide-react'
 interface Criterion {
   id: string
   code: string
+
+  // copy “DTS”
   description: string
   short_label: string
-  focus_area: string
   context?: string
+
+  // ✅ campos derivados de explain_json (vienen del endpoint)
+  pregunta?: string | null
+  nivel_1?: string | null
+  nivel_2?: string | null
+  nivel_3?: string | null
+  nivel_4?: string | null
+  nivel_5?: string | null
+
+  // fallback legacy (por si algún pack viejo no trae nivel_*)
+  level_1_description_es?: string | null
+  level_2_description_es?: string | null
+  level_3_description_es?: string | null
+  level_4_description_es?: string | null
+  level_5_description_es?: string | null
+
+  focus_area: string
   subdimension?: { name: string; code: string }
   dimension?: { name: string; code: string }
-  level_1_description_es?: string
-  level_2_description_es?: string
-  level_3_description_es?: string
-  level_4_description_es?: string
-  level_5_description_es?: string
 }
 
 type Confidence = 'low' | 'medium' | 'high'
@@ -83,9 +101,19 @@ function getLevelLabel(level: number) {
   return labels[level] || ''
 }
 
+// ✅ Preferencia: nivel_1..nivel_5 (del explain_json)
+// Fallback: level_X_description_es (legacy)
 function getLevelDescription(criterion: Criterion, level: number): string | null {
-  const key = `level_${level}_description_es` as keyof Criterion
-  return (criterion[key] as string) || null
+  const directKey = `nivel_${level}` as keyof Criterion
+  const legacyKey = `level_${level}_description_es` as keyof Criterion
+
+  const direct = criterion[directKey]
+  if (typeof direct === 'string' && direct.trim()) return direct.trim()
+
+  const legacy = criterion[legacyKey]
+  if (typeof legacy === 'string' && legacy.trim()) return legacy.trim()
+
+  return null
 }
 
 function gapMeta(g: number) {
@@ -130,6 +158,11 @@ export default function CriterionQuestion({
 
   const hasLevelDescriptions = useMemo(() => {
     return !!(
+      criterion.nivel_1 ||
+      criterion.nivel_2 ||
+      criterion.nivel_3 ||
+      criterion.nivel_4 ||
+      criterion.nivel_5 ||
       criterion.level_1_description_es ||
       criterion.level_2_description_es ||
       criterion.level_3_description_es ||
@@ -249,14 +282,12 @@ export default function CriterionQuestion({
     }
   }
 
-  // ✅ “Totalmente vacío” => no guardes, solo navega (política de parcialidad)
   const isTotallyEmpty = useMemo(() => {
     const noLevels = asIsLevel == null && toBeLevel == null && importance == null
     const noNotes = !comments?.trim()
     return noLevels && noNotes
   }, [asIsLevel, toBeLevel, importance, comments])
 
-  // ✅ Navegación: no bloquea por incompleto
   const handleNext = async () => {
     if (saving) return
     if (isTotallyEmpty) {
@@ -278,7 +309,6 @@ export default function CriterionQuestion({
     if (ok) onPrevious()
   }
 
-  // Paleta
   const ASIS_MAIN = '#2563EB'
   const ASIS_BORDER = 'border-[#2563EB]'
   const ASIS_BG = 'bg-[#EFF6FF]'
@@ -287,7 +317,6 @@ export default function CriterionQuestion({
   const TOBE_BORDER = 'border-[#15803D]'
   const TOBE_BG = 'bg-[#ECFDF5]'
 
-  // ✅ Importancia seleccionada: borde fuerte + relleno suave (homogéneo)
   const IMPORT_SELECTED_BG = '#ECFDF5'
   const IMPORT_SELECTED_BORDER = '#15803D'
   const IMPORT_SELECTED_TEXT = '#14532D'
@@ -322,6 +351,11 @@ export default function CriterionQuestion({
 
   const levels: Array<1 | 2 | 3 | 4 | 5> = [1, 2, 3, 4, 5]
 
+  const questionTitle =
+    typeof criterion.pregunta === 'string' && criterion.pregunta.trim()
+      ? criterion.pregunta.trim()
+      : criterion.short_label
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       {/* Header con progreso */}
@@ -351,14 +385,15 @@ export default function CriterionQuestion({
 
       {/* Código y Título */}
       <div className="mb-6">
-        <div className="text-sm text-gray-500 mb-1">{criterion.code}</div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{criterion.short_label}</h2>
-        <p className="text-gray-600">{criterion.description}</p>
-        {criterion.context && (
-          <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-500 text-sm text-gray-700">
-            <strong>Contexto:</strong> {criterion.context}
-          </div>
-        )}
+        {/* ✅ Código MUCHO más grande y en negrita */}
+        <div className="text-3xl font-extrabold text-slate-900 mb-2">{criterion.code}</div>
+
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">{questionTitle}</h2>
+
+        {/* Copy de apoyo */}
+        {criterion.description && <p className="text-gray-600">{criterion.description}</p>}
+
+        {/* ✅ Contexto eliminado a propósito */}
       </div>
 
       {/* Selección AS-IS / TO-BE */}
@@ -379,7 +414,14 @@ export default function CriterionQuestion({
             <circle cx={connector.x1} cy={connector.y1} r="6" fill={ASIS_MAIN} />
             <circle cx={connector.x2} cy={connector.y2} r="6" fill={TOBE_MAIN} />
 
-            <path d={connectorPath} fill="none" stroke={TOBE_MAIN} strokeWidth="3" markerEnd="url(#arrowHead)" style={{ opacity: 0.95 }} />
+            <path
+              d={connectorPath}
+              fill="none"
+              stroke={TOBE_MAIN}
+              strokeWidth="3"
+              markerEnd="url(#arrowHead)"
+              style={{ opacity: 0.95 }}
+            />
           </svg>
         )}
 
@@ -503,7 +545,6 @@ export default function CriterionQuestion({
           </div>
         </div>
 
-        {/* GAP */}
         {gap != null && gap > 0 && (
           <div
             className="mt-6 p-4 rounded-xl border-2"
@@ -568,7 +609,6 @@ export default function CriterionQuestion({
         />
       </div>
 
-      {/* ✅ Aviso se mantiene, pero NO bloquea */}
       {!completeNow && (
         <div className="mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-sm">
           Para continuar, selecciona <strong>AS-IS</strong>, <strong>TO-BE</strong> e <strong>Importancia</strong>.
@@ -576,7 +616,6 @@ export default function CriterionQuestion({
         </div>
       )}
 
-      {/* Botones (✅ solo bloquea por saving) */}
       <div className="flex gap-4">
         {onPrevious && (
           <button
