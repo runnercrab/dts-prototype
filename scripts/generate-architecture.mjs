@@ -28,9 +28,11 @@ function readFileSafe(relPath) {
 function extractPacksFromCreateRoute(src) {
   if (!src) return { defaultPack: null, allowedPacks: [] };
 
+  // const DEFAULT_PACK = "tmf_mvp12_v2";
   const mDefault = src.match(/const\s+DEFAULT_PACK\s*=\s*["']([^"']+)["']/);
   const defaultPack = mDefault ? mDefault[1] : null;
 
+  // const ALLOWED_CREATE_PACKS = new Set([ "a", "b" ]);
   const mSet = src.match(
     /const\s+ALLOWED_CREATE_PACKS\s*=\s*new\s+Set\s*\(\s*\[([\s\S]*?)\]\s*\)\s*;/
   );
@@ -46,10 +48,22 @@ function extractPacksFromCreateRoute(src) {
   return { defaultPack, allowedPacks };
 }
 
-// Detecta supabase.rpc("fn_name", ...) o supabase.rpc('fn_name', ...)
+// ✅ Detecta supabase.rpc("fn", ...) / sb.rpc('fn', ...) incluso si el nombre va en la línea siguiente
 function extractRpcCallsFromSource(src) {
   if (!src) return [];
-  const r = /(?:\w+\.)?rpc\s*\(\s*["']([a-zA-Z0-9_]+)["']/g;
+
+  // Soporta:
+  // supabase.rpc("fn", ...)
+  // sb.rpc('fn', ...)
+  // supabase.rpc(
+  //   "fn",
+  //   ...
+  // )
+  //
+  // Importante: permitimos saltos de línea y espacios entre "(" y la string.
+  const r =
+    /(?:\b\w+\.)?rpc\s*\(\s*[\r\n\s]*["']([a-zA-Z0-9_]+)["']/g;
+
   const out = [];
   let m;
   while ((m = r.exec(src)) !== null) out.push(m[1]);
@@ -57,8 +71,6 @@ function extractRpcCallsFromSource(src) {
 }
 
 function phaseForApiPath(relPath) {
-  // relPath: "src/app/api/dts/results/frenos/route.ts"
-  // Base: "src/app/api/dts/..."
   const p = relPath.replace(/\\/g, "/");
 
   // Diagnóstico (criteria + responses + score)
@@ -67,10 +79,12 @@ function phaseForApiPath(relPath) {
     p.includes("/responses/") ||
     p.includes("/score/") ||
     p.includes("/mvp12/criteria/")
-  ) return "Diagnóstico";
+  )
+    return "Diagnóstico";
 
   // Resultados
-  if (p.includes("/results/") && !p.includes("/results/program-actions/")) return "Resultados";
+  if (p.includes("/results/") && !p.includes("/results/program-actions/"))
+    return "Resultados";
 
   // Ejecución (programs/actions/roadmap gates)
   if (
@@ -79,37 +93,45 @@ function phaseForApiPath(relPath) {
     p.includes("/results/programs/") ||
     p.includes("/results/program-actions/") ||
     p.includes("/results/roadmap/")
-  ) return "Ejecución";
+  )
+    return "Ejecución";
 
   // Seguimiento / tracking
-  if (p.includes("/tracking/") || p.includes("/results/seguimiento/")) return "Seguimiento";
+  if (p.includes("/tracking/") || p.includes("/results/seguimiento/"))
+    return "Seguimiento";
 
   return "Otros";
 }
 
 function generateBlock() {
-  const rpcsVersioned = listFiles(RPC_DIR, ".sql").map((f) => path.relative(ROOT, f));
-  const apiRoutes = listFiles(API_DIR, "route.ts").map((f) => path.relative(ROOT, f));
+  const rpcsVersioned = listFiles(RPC_DIR, ".sql").map((f) =>
+    path.relative(ROOT, f)
+  );
+  const apiRoutes = listFiles(API_DIR, "route.ts").map((f) =>
+    path.relative(ROOT, f)
+  );
 
   // Packs (from assessment/create route)
-  const createRouteSrc = readFileSafe("src/app/api/dts/assessment/create/route.ts");
+  const createRouteSrc = readFileSafe(
+    "src/app/api/dts/assessment/create/route.ts"
+  );
   const packsInfo = extractPacksFromCreateRoute(createRouteSrc);
 
   // RPC usage by phase (from API code)
   const rpcUsage = {
-    "Diagnóstico": new Set(),
-    "Resultados": new Set(),
-    "Ejecución": new Set(),
-    "Seguimiento": new Set(),
-    "Otros": new Set(),
+    Diagnóstico: new Set(),
+    Resultados: new Set(),
+    Ejecución: new Set(),
+    Seguimiento: new Set(),
+    Otros: new Set(),
   };
 
   const endpointsByPhase = {
-    "Diagnóstico": [],
-    "Resultados": [],
-    "Ejecución": [],
-    "Seguimiento": [],
-    "Otros": [],
+    Diagnóstico: [],
+    Resultados: [],
+    Ejecución: [],
+    Seguimiento: [],
+    Otros: [],
   };
 
   for (const route of apiRoutes) {
@@ -126,7 +148,6 @@ function generateBlock() {
     endpointsByPhase[k].sort((a, b) => a.localeCompare(b));
   }
 
-  // Helper para pintar sets
   const renderSet = (set) => {
     const arr = Array.from(set);
     arr.sort((a, b) => a.localeCompare(b));
