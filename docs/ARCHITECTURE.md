@@ -31,7 +31,7 @@ diagnóstico → resultados → frenos → priorización → programas → accio
 
 ## Backend real detectado
 
-### RPCs (Supabase)
+### RPCs versionadas en repo (Supabase)
 - supabase/functions/dts_results_overview_v2.sql
 
 ### API Routes (Next.js)
@@ -83,5 +83,89 @@ diagnóstico → resultados → frenos → priorización → programas → accio
 - ALLOWED_CREATE_PACKS:
   - `tmf_mvp12_v2`
   - `tmf_full_v1`
+
+## RPCs por fase (detectadas en código)
+
+### Diagnóstico
+**RPCs usadas**
+- `dts_recalc_assessment_scores`
+- `dts_recalc_dimension_scores`
+
+**Endpoints relacionados**
+- `src/app/api/dts/criteria/route.ts`
+- `src/app/api/dts/mvp12/criteria/route.ts`
+- `src/app/api/dts/responses/get/route.ts`
+- `src/app/api/dts/responses/route.ts`
+- `src/app/api/dts/responses/upsert/route.ts`
+- `src/app/api/dts/score/get/route.ts`
+- `src/app/api/dts/score/recalc/route.ts`
+
+### Resultados
+**RPCs usadas**
+- `dts_action_set_status_v1`
+- `dts_results_programs_v2`
+- `dts_results_v1`
+
+**Endpoints relacionados**
+- `src/app/api/dts/results/action-status/route.ts`
+- `src/app/api/dts/results/executive-summary/route.ts`
+- `src/app/api/dts/results/frenos/route.ts`
+- `src/app/api/dts/results/initiatives/route.ts`
+- `src/app/api/dts/results/matriz/route.ts`
+- `src/app/api/dts/results/priorizacion/route.ts`
+- `src/app/api/dts/results/programs/route.ts`
+- `src/app/api/dts/results/roadmap/route.ts`
+- `src/app/api/dts/results/seguimiento/route.ts`
+- `src/app/api/dts/results/v1/route.ts`
+
+### Ejecución
+**RPCs usadas**
+- `dts_activate_program_v1`
+- `dts_execution_gate_v1`
+- `dts_results_program_actions_v2`
+
+**Endpoints relacionados**
+- `src/app/api/dts/execution/activate_from_roadmap/route.ts`
+- `src/app/api/dts/execution/activate_program/route.ts`
+- `src/app/api/dts/execution/close-program/route.ts`
+- `src/app/api/dts/execution/gate/route.ts`
+- `src/app/api/dts/execution/program-results/route.ts`
+- `src/app/api/dts/results/program-actions/route.ts`
+- `src/app/api/dts/roadmap/activate-program/route.ts`
+
+### Seguimiento
+**RPCs usadas**
+- `dts_action_set_status_v1`
+- `dts_action_update_v1`
+- `dts_action_validate_impact_v1`
+- `dts_tracking_actions_scoped_v1`
+- `dts_tracking_overview_v1`
+
+**Endpoints relacionados**
+- `src/app/api/dts/tracking/actions/route.ts`
+- `src/app/api/dts/tracking/actions/status/route.ts`
+- `src/app/api/dts/tracking/actions/update/route.ts`
+- `src/app/api/dts/tracking/actions/validate/route.ts`
+- `src/app/api/dts/tracking/overview/route.ts`
+
+### Otros
+**RPCs usadas**
+- `dts_assessment_complete_v1`
+
+**Endpoints relacionados**
+- `src/app/api/dts/assessment/actions/route.ts`
+- `src/app/api/dts/assessment/actions/status/route.ts`
+- `src/app/api/dts/assessment/complete/route.ts`
+- `src/app/api/dts/assessment/create/route.ts`
+- `src/app/api/dts/assessment/get/route.ts`
+- `src/app/api/dts/assessment/onboarding/route.ts`
+- `src/app/api/dts/chat/add/route.ts`
+- `src/app/api/dts/chat/get/route.ts`
+- `src/app/api/dts/chat/messages/add/route.ts`
+- `src/app/api/dts/chat/messages/list/route.ts`
+- `src/app/api/dts/chat/post/route.ts`
+- `src/app/api/dts/chat/save/route.ts`
+- `src/app/api/dts/meta/dimensions/route.ts`
+
 
 <!-- GENERATED:END -->
