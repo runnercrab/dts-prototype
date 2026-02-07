@@ -1,23 +1,19 @@
 name: Export Supabase RPCs
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-      - fix/**
-  workflow_dispatch: {}
-
-permissions:
-  contents: write
+      - fix/activate-program-endpoint
 
 jobs:
   export-rpcs:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install psql client
         run: |
@@ -26,21 +22,19 @@ jobs:
 
       - name: Export RPCs to supabase/functions
         env:
-          DATABASE_URL: ${{ secrets.DTS_DATABASE_URL }}
+          DTS_DATABASE_URL: ${{ secrets.DTS_DATABASE_URL }}
         run: |
           chmod +x scripts/export-rpcs.sh
-          scripts/export-rpcs.sh
+          ./scripts/export-rpcs.sh
 
       - name: Commit & push if changed
         run: |
-          if git diff --quiet; then
-            echo "No changes to commit."
-            exit 0
+          if [[ -n "$(git status --porcelain supabase/functions)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add supabase/functions
+            git commit -m "chore: auto export Supabase RPCs"
+            git push
+          else
+            echo "No changes in supabase/functions"
           fi
-
-          git config user.name "dts-bot"
-          git config user.email "dts-bot@users.noreply.github.com"
-
-          git add supabase/functions/*.sql
-          git commit -m "DB: auto-export Supabase RPCs"
-          git push
