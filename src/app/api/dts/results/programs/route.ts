@@ -8,8 +8,10 @@ export const dynamic = "force-dynamic";
  * ✅ CANÓNICO
  * /api/dts/results/programs?assessmentId=...&onlyShortlist=0|1&useOverrides=0|1
  *
- * Devuelve el ranking de Programas (macro) ya calculado por backend (RPC),
- * para que el frontend SOLO pinte.
+ * - Modo normal: ranking por RPC dts_results_programs_v2 (backend calcula todo).
+ * - Modo fallback (si RPC devuelve 0 filas): catálogo del pack (para que UI NUNCA quede vacía).
+ *
+ * Regla: este endpoint NO inventa scoring/prioridad. Solo devuelve lo que haya en RPC/DB.
  */
 
 function isUuid(v: string) {
@@ -33,9 +35,9 @@ function parseBool(v: string | null, defaultValue: boolean) {
   return defaultValue;
 }
 
-function toNum(v: any, fallback = 0) {
+function toNum(v: any, fallback: number | null = null) {
   if (v === null || v === undefined) return fallback;
-  if (typeof v === "number") return v;
+  if (typeof v === "number") return Number.isFinite(v) ? v : fallback;
   if (typeof v === "string") {
     const n = Number(v);
     return Number.isFinite(n) ? n : fallback;
@@ -43,22 +45,40 @@ function toNum(v: any, fallback = 0) {
   return fallback;
 }
 
-function toInt(v: any, fallback = 0) {
-  return Math.round(toNum(v, fallback));
+function toInt(v: any, fallback: number | null = null) {
+  const n = toNum(v, null);
+  if (n === null) return fallback;
+  const r = Math.round(n);
+  return Number.isFinite(r) ? r : fallback;
 }
 
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
+async function safeCount(
+  supabase: any,
+  table: string,
+  filters: Array<[string, any]> = []
+) {
+  let q = supabase.from(table).select("*", { count: "exact", head: true });
+  for (const [col, val] of filters) q = q.eq(col, val);
+  const { count, error } = await q;
+  return { count: count ?? 0, error: error?.message ?? null };
 }
 
-/**
- * Si tu RPC ya trae "priority_badge" y "priority_reason", perfecto.
- * Si no, lo calculamos aquí de forma determinista.
- */
-function priorityBadge(rank: number, thresholds: { top: number; mid_end: number }) {
-  if (rank <= thresholds.top) return "🟢 TOP";
-  if (rank <= thresholds.mid_end) return "🟡 MEDIA";
-  return "⚪ BAJA";
+function buildState(assessmentId: string) {
+  return {
+    where_you_are:
+      "Estos son los programas con más impacto para mejorar tu negocio",
+    primary_cta: {
+      label: "Ver detalle y acciones",
+      // El front puede sustituir {programId} por item.program_id.
+      href_template: `/resultados/${assessmentId}/ejecucion/programas/{programId}`,
+    },
+    secondary_cta: {
+      label: "Ver roadmap",
+      href: `/resultados/${assessmentId}/ejecucion/roadmap`,
+    },
+    business_impact:
+      "Prioriza cash (ahorro/ingreso), mejora experiencia cliente y reduce riesgo operativo.",
+  };
 }
 
 export async function GET(req: Request) {
@@ -70,15 +90,11 @@ export async function GET(req: Request) {
   const onlyShortlist = parseBool(searchParams.get("onlyShortlist"), false);
   const useOverrides = parseBool(searchParams.get("useOverrides"), true);
 
-  // Umbrales de badges (por defecto como en tus ejemplos)
-  const thresholds = {
-    top: clamp(toInt(searchParams.get("top"), 8), 1, 50),
-    mid_end: clamp(toInt(searchParams.get("midEnd"), 18), 1, 200),
-  };
-
   if (!assessmentId || !isUuid(assessmentId)) {
     return NextResponse.json(
       {
+        ok: false,
+        version: "v1",
         error: "assessmentId inválido (UUID requerido)",
         received: assessmentIdRaw,
         normalized: assessmentId,
@@ -87,10 +103,23 @@ export async function GET(req: Request) {
     );
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  // ✅ Server-only envs
+  const url = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url)
+    return NextResponse.json(
+      { ok: false, version: "v1", error: "Missing env SUPABASE_URL" },
+      { status: 500 }
+    );
+  if (!serviceKey)
+    return NextResponse.json(
+      { ok: false, version: "v1", error: "Missing env SUPABASE_SERVICE_ROLE_KEY" },
+      { status: 500 }
+    );
+
+  const supabase = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
   // 1) assessment + pack
   const { data: assessment, error: aErr } = await supabase
@@ -101,13 +130,17 @@ export async function GET(req: Request) {
 
   if (aErr || !assessment) {
     return NextResponse.json(
-      { error: "Assessment no encontrado", details: aErr?.message ?? null },
+      {
+        ok: false,
+        version: "v1",
+        error: "Assessment no encontrado",
+        details: aErr?.message ?? null,
+      },
       { status: 404 }
     );
   }
 
-  // 2) Programas canónicos (RPC)
-  // Debe devolver filas ya rankeadas y con métricas (need, impact, effort, score, etc.)
+  // 2) RPC ranking
   const { data, error } = await supabase.rpc("dts_results_programs_v2", {
     p_assessment_id: assessmentId,
     p_only_shortlist: onlyShortlist,
@@ -117,120 +150,166 @@ export async function GET(req: Request) {
   if (error) {
     console.error("[api programs] rpc error:", error);
     return NextResponse.json(
-      { error: "Error obteniendo programas", details: error.message },
+      {
+        ok: false,
+        version: "v1",
+        error: "Error obteniendo programas",
+        details: error.message,
+      },
       { status: 500 }
     );
   }
 
   const rows = Array.isArray(data) ? data : [];
 
-  // Normalización de salida (NUMERIC/NULL -> number/null) sin inventar datos.
-  const items = rows
-    .map((r: any) => {
-      const rank = clamp(toInt(r.rank, 999), 1, 999);
-
-      const impact = clamp(toInt(r.impact_score, 0), 0, 5);
-      const effort = clamp(toInt(r.effort_score, 0), 0, 5);
-
-      const weighted_need =
-        r.weighted_need === null || r.weighted_need === undefined
-          ? null
-          : toNum(r.weighted_need, 0);
-
-      const value_score =
-        r.value_score === null || r.value_score === undefined
-          ? null
-          : toNum(r.value_score, 0);
-
-      const program_score =
-        r.program_score === null || r.program_score === undefined
-          ? null
-          : toNum(r.program_score, 0);
-
-      // "criteria_covered" suele ser int
-      const criteria_covered =
-        r.criteria_covered === null || r.criteria_covered === undefined
-          ? null
-          : toInt(r.criteria_covered, 0);
-
-      // top_contributors (si viene del RPC, lo respetamos)
-      const top_contributors = Array.isArray(r.top_contributors)
-        ? r.top_contributors.map((c: any) => ({
-            gap: toInt(c.gap, 0),
-            title: c.title ?? null,
-            importance: toInt(c.importance, 0),
-            map_weight: toNum(c.map_weight, 0),
-            pack_weight: toNum(c.pack_weight, 0),
-            criteria_code: c.criteria_code ?? null,
-            need_component: toNum(c.need_component, 0),
-          }))
-        : [];
-
-      const top_contributors_need =
-        r.top_contributors_need === null || r.top_contributors_need === undefined
-          ? null
-          : toNum(r.top_contributors_need, 0);
-
-      const top_contributors_share =
-        r.top_contributors_share === null || r.top_contributors_share === undefined
-          ? null
-          : toNum(r.top_contributors_share, 0);
-
-      const top_contributors_count =
-        r.top_contributors_count === null || r.top_contributors_count === undefined
-          ? null
-          : toInt(r.top_contributors_count, 0);
-
-      // badge/reason: si el RPC no los trae, los generamos con lo que haya.
-      const computedBadge = priorityBadge(rank, thresholds);
-
-      // reason: si viene del RPC la respetamos; si no, intentamos construir una frase mínima.
-      let computedReason: string | null = r.priority_reason ?? null;
-      if (!computedReason) {
-        // Solo si tenemos los 3 ingredientes; si no, lo dejamos null (sin inventar).
-        if (weighted_need !== null && impact > 0 && effort > 0 && program_score !== null) {
-          computedReason = `Need ${weighted_need.toFixed(2)} × Impact ${impact} / Effort ${effort} ⇒ ${program_score.toFixed(
-            2
-          )} (${rank <= thresholds.top ? `Top ${thresholds.top}` : rank <= thresholds.mid_end ? `Rank ${thresholds.top + 1}..${thresholds.mid_end}` : `Rank > ${thresholds.mid_end}`})`;
-        }
-      }
-
-      return {
-        rank,
+  // ✅ Modo normal: ranking con datos
+  if (rows.length > 0) {
+    const items = rows
+      .map((r: any) => ({
+        rank: toInt(r.rank, null),
         program_id: r.program_id ?? null,
         program_code: r.program_code ?? null,
         title: r.title ?? null,
-
         status: r.status ?? null,
 
-        impact_score: impact || null,
-        effort_score: effort || null,
+        impact_score: toInt(r.impact_score, null),
+        effort_score: toInt(r.effort_score, null),
 
-        weighted_need,
-        value_score,
-        program_score,
+        weighted_need: toNum(r.weighted_need, null),
+        value_score: toNum(r.value_score, null),
+        program_score: toNum(r.program_score, null),
 
-        criteria_covered,
+        criteria_covered: toInt(r.criteria_covered, null),
 
         notes: r.notes ?? null,
         owner: r.owner ?? null,
 
-        // si el RPC trae badge, lo usamos; si no, usamos el calculado
-        priority_badge: r.priority_badge ?? computedBadge,
-        priority_reason: computedReason,
+        priority_badge: r.priority_badge ?? null,
+        priority_reason: r.priority_reason ?? null,
 
-        top_contributors,
-        top_contributors_need,
-        top_contributors_share,
-        top_contributors_count,
-      };
-    })
-    .sort((a: any, b: any) => (a.rank ?? 999) - (b.rank ?? 999));
+        top_contributors: Array.isArray(r.top_contributors)
+          ? r.top_contributors.map((c: any) => ({
+              gap: toInt(c.gap, 0) ?? 0,
+              title: c.title ?? null,
+              importance: toInt(c.importance, 0) ?? 0,
+              map_weight: toNum(c.map_weight, 0) ?? 0,
+              pack_weight: toNum(c.pack_weight, 0) ?? 0,
+              criteria_code: c.criteria_code ?? null,
+              need_component: toNum(c.need_component, 0) ?? 0,
+            }))
+          : [],
+
+        top_contributors_need: toNum(r.top_contributors_need, null),
+        top_contributors_share: toNum(r.top_contributors_share, null),
+        top_contributors_count: toInt(r.top_contributors_count, null),
+      }))
+      .sort((a: any, b: any) => (a.rank ?? 999) - (b.rank ?? 999));
+
+    return NextResponse.json({
+      ok: true,
+      version: "v1",
+      assessment_id: assessmentId,
+      pack: assessment.pack,
+      mode: "ranked",
+      state: buildState(assessmentId),
+      count: items.length,
+      items,
+    });
+  }
+
+  // ✅ Modo fallback: catálogo del pack (para que UI nunca quede vacía)
+  // ✅ FIX: NO usar inner join. Si hay filas en dts_pack_programs pero falta catálogo/relación,
+  // igualmente devolvemos la lista para que el CEO pueda avanzar (sin inventar scores).
+  const { data: packPrograms, error: pErr } = await supabase
+    .from("dts_pack_programs")
+    // LEFT join por defecto (sin !inner)
+    .select("program_id, display_order, is_active, dts_program_catalog(code, title)")
+    .eq("pack", assessment.pack)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+
+  if (pErr) {
+    return NextResponse.json(
+      {
+        ok: false,
+        version: "v1",
+        error: "Error obteniendo programas del pack (fallback)",
+        details: pErr.message,
+      },
+      { status: 500 }
+    );
+  }
+
+  const fallbackRows = Array.isArray(packPrograms) ? packPrograms : [];
+
+  // Si aun así no hay nada, devolvemos MOTIVO REAL + contadores
+  if (fallbackRows.length === 0) {
+    const c1 = await safeCount(supabase, "dts_pack_programs", [["pack", assessment.pack]]);
+    const c2 = await safeCount(supabase, "dts_pack_programs", [
+      ["pack", assessment.pack],
+      ["is_active", true],
+    ]);
+    const c3 = await safeCount(supabase, "dts_program_catalog");
+
+    return NextResponse.json({
+      ok: true,
+      version: "v1",
+      assessment_id: assessmentId,
+      pack: assessment.pack,
+      mode: "empty",
+      state: buildState(assessmentId),
+      hint:
+        "El backend no tiene programas configurados para este pack (o están inactivos). No es un problema del diagnóstico.",
+      count: 0,
+      items: [],
+      debug: {
+        pack_programs_total: c1.count,
+        pack_programs_active: c2.count,
+        program_catalog_total: c3.count,
+        warnings: [
+          c1.count === 0
+            ? "No hay filas en dts_pack_programs para este pack."
+            : "Hay filas en dts_pack_programs pero ninguna activa o el join no aporta title/code.",
+        ],
+      },
+    });
+  }
+
+  const items = fallbackRows.map((r: any, idx: number) => ({
+    rank: idx + 1,
+    program_id: r.program_id ?? null,
+    program_code: r?.dts_program_catalog?.code ?? null,
+    title: r?.dts_program_catalog?.title ?? null,
+    status: null,
+
+    impact_score: null,
+    effort_score: null,
+    weighted_need: null,
+    value_score: null,
+    program_score: null,
+    criteria_covered: null,
+
+    notes: null,
+    owner: null,
+
+    priority_badge: null,
+    priority_reason:
+      "Completa el diagnóstico para priorizar este programa con datos (ranking desde backend).",
+    top_contributors: [],
+    top_contributors_need: null,
+    top_contributors_share: null,
+    top_contributors_count: null,
+  }));
 
   return NextResponse.json({
+    ok: true,
+    version: "v1",
     assessment_id: assessmentId,
     pack: assessment.pack,
-    thresholds,
+    mode: "catalog_fallback",
+    state: buildState(assessmentId),
+    hint:
+      "No hay ranking disponible (RPC devolvió 0 filas). Se muestra el catálogo del pack para permitir activar ejecución.",
     count: items.length,
     items,
   });

@@ -1,72 +1,60 @@
-"use client";
+// src/app/start/page.tsx
+import { redirect } from "next/navigation";
+import { supabaseService } from "@/lib/supabase/server";
 
-import { useState } from "react";
-import Link from "next/link";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export default function StartPage() {
-  const [email, setEmail] = useState("");
-  const [saved, setSaved] = useState(false);
+type Mode = "mvp" | "demo";
 
-  const handleSubmit = () => {
-    if (!email) return;
-    localStorage.setItem("dts_interest_email", email);
-    setSaved(true);
-  };
+function asText(v: unknown) {
+  return typeof v === "string" ? v.trim() : "";
+}
 
-  return (
-    <main className="flex flex-col items-center justify-center min-h-screen px-6 py-20 text-center">
-      <section className="max-w-3xl">
-        <h1 className="text-4xl font-bold mb-6">
-          Empieza el diagnóstico de tu empresa
-        </h1>
+export default async function StartPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
 
-        <p className="text-lg opacity-80 mb-6">
-          DTS no es un formulario ni un informe automático.
-          Es un sistema guiado que analiza tu empresa, detecta bloqueos
-          reales y te muestra qué mejorar, en qué orden y con qué impacto.
-        </p>
+  const mode = (asText(sp.mode) as Mode) || "mvp";
+  const pack = asText(sp.pack) || "tmf_mvp12_v2";
 
-        <p className="text-lg opacity-80 mb-10">
-          Estamos abriendo el acceso de forma progresiva para acompañar
-          bien a las primeras empresas.
-        </p>
+  const supabase = supabaseService();
 
-        {!saved ? (
-          <div className="flex flex-col items-center gap-4">
-            <input
-              type="email"
-              placeholder="Tu email profesional"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full max-w-md px-4 py-3 rounded-md text-black"
-            />
+  // Backend decide. Frontend solo sigue.
+  if (mode === "demo") {
+    const { data, error } = await supabase.rpc("dts_assessment_get_demo_v1", {
+      p_pack: pack,
+    });
 
-            <button
-              onClick={handleSubmit}
-              className="btn btn-primary text-lg px-8 py-4"
-            >
-              Avísame cuando pueda empezar
-            </button>
+    if (error || !data) {
+      // Si falla, volvemos a Home con error visible en query (simple, sin romper)
+      redirect(`/?err=demo_not_found&pack=${encodeURIComponent(pack)}`);
+    }
 
-            <p className="text-sm opacity-60">
-              Sin spam · Solo para avisarte cuando abramos el acceso
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-6">
-            <p className="text-lg font-semibold">
-              Perfecto 👍 Te avisaremos cuando puedas empezar.
-            </p>
+    const assessmentId = String(data);
+    redirect(
+      `/diagnostico-full?assessmentId=${encodeURIComponent(
+        assessmentId
+      )}&readonly=true`
+    );
+  }
 
-            <Link
-              href="/diagnostico-full"
-              className="btn btn-primary text-lg px-8 py-4"
-            >
-              Ver un ejemplo completo de diagnóstico →
-            </Link>
-          </div>
-        )}
-      </section>
-    </main>
+  // mode === "mvp"
+  const { data, error } = await supabase.rpc("dts_assessment_resume_or_create_v1", {
+    p_pack: pack,
+  });
+
+  if (error || !data) {
+    redirect(`/?err=mvp_start_failed&pack=${encodeURIComponent(pack)}`);
+  }
+
+  const assessmentId = String(data);
+  redirect(
+    `/diagnostico-full?assessmentId=${encodeURIComponent(
+      assessmentId
+    )}&pack=${encodeURIComponent(pack)}`
   );
 }

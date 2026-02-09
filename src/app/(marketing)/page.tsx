@@ -1,9 +1,10 @@
-import Image from 'next/image'
-import Link from 'next/link'
+// src/app/(marketing)/page.tsx
+import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
-  const GOOGLE_DRIVE_VIDEO_ID = '1ULLdAeUSFMf5f5A6KyKFTfXMC863xbHt'
-  const GOOGLE_DRIVE_PREVIEW_URL = `https://drive.google.com/file/d/${GOOGLE_DRIVE_VIDEO_ID}/preview`
+  const GOOGLE_DRIVE_VIDEO_ID = "1ULLdAeUSFMf5f5A6KyKFTfXMC863xbHt";
+  const GOOGLE_DRIVE_PREVIEW_URL = `https://drive.google.com/file/d/${GOOGLE_DRIVE_VIDEO_ID}/preview`;
 
   return (
     <>
@@ -21,23 +22,25 @@ export default function Home() {
           </h2>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            {/* ✅ Botón 1: MVP (editable) — backend decide resume/create */}
             <Link
-              href="/diagnostico-full?pack=mvp12_v1"
+              href="/start?mode=mvp&pack=tmf_mvp12_v2"
               className="px-8 py-4 rounded-2xl bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition-all text-center"
             >
-              Versión reducida (12 criterios)
+              Continuar diagnóstico
               <div className="text-sm font-normal opacity-90">
-                Exploración inicial · no es el diagnóstico completo
+                Retoma donde lo dejaste · si no existe, se crea uno nuevo
               </div>
             </Link>
 
+            {/* ✅ Botón 2: Demo fijo (solo lectura) */}
             <Link
-              href="/diagnostico-full?pack=tmf_full_v5&demo=true"
+              href="/start?mode=demo&pack=tmf_mvp12_v2"
               className="px-8 py-4 rounded-2xl border border-blue-600 text-blue-700 font-semibold hover:bg-blue-50 transition-all text-center"
             >
-              Ver ejemplo completo (129 criterios)
+              Ver ejemplo (solo lectura)
               <div className="text-sm font-normal opacity-80">
-                Referencia metodológica · no editable
+                Ejemplo completo del informe · no editable
               </div>
             </Link>
           </div>
@@ -49,13 +52,13 @@ export default function Home() {
         className="w-full mb-12"
         style={{
           background:
-            'linear-gradient(135deg, #eff6ff 0%, #dbeafe 25%, #bfdbfe 50%, #93c5fd 75%, #60a5fa 100%)',
-          paddingTop: '24px',
-          paddingBottom: '24px',
+            "linear-gradient(135deg, #eff6ff 0%, #dbeafe 25%, #bfdbfe 50%, #93c5fd 75%, #60a5fa 100%)",
+          paddingTop: "24px",
+          paddingBottom: "24px",
         }}
       >
         <div className="max-w-7xl mx-auto px-6">
-          <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ aspectRatio: '16/9' }}>
+          <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ aspectRatio: "16/9" }}>
             <iframe
               src={GOOGLE_DRIVE_PREVIEW_URL}
               className="w-full h-full"
@@ -80,22 +83,22 @@ export default function Home() {
         <div className="grid lg:grid-cols-3 gap-6">
           {[
             {
-              step: '① Lo que realmente te frena',
-              title: 'Falta de dirección práctica',
+              step: "① Lo que realmente te frena",
+              title: "Falta de dirección práctica",
               text:
-                'Sabes que deberías mejorar procesos, tecnología, equipo y datos, pero nadie te ordena el camino: qué hacer primero, cuánto cuesta y qué impacto tiene en ventas, costes y eficiencia.',
+                "Sabes que deberías mejorar procesos, tecnología, equipo y datos, pero nadie te ordena el camino: qué hacer primero, cuánto cuesta y qué impacto tiene en ventas, costes y eficiencia.",
             },
             {
-              step: '② Un plan claro, realista',
-              title: 'Diagnóstico → frenos → decisiones',
+              step: "② Un plan claro, realista",
+              title: "Diagnóstico → frenos → decisiones",
               text:
-                'Medimos AS-IS, TO-BE e Importancia, lo traducimos a frenos reales (tiempo, dinero y foco) y lo convertimos en prioridades y un roadmap trimestral que se revisa cada mes.',
+                "Medimos AS-IS, TO-BE e Importancia, lo traducimos a frenos reales (tiempo, dinero y foco) y lo convertimos en prioridades y un roadmap trimestral que se revisa cada mes.",
             },
             {
-              step: '③ No avanzas solo',
-              title: 'Copiloto Digital 24/7',
+              step: "③ No avanzas solo",
+              title: "Copiloto Digital 24/7",
               text:
-                'Te guía con tu lenguaje, explica lo que no entiendas y te avisa cuando toca decidir o cuando algo bloquea el avance.',
+                "Te guía con tu lenguaje, explica lo que no entiendas y te avisa cuando toca decidir o cuando algo bloquea el avance.",
             },
           ].map((b) => (
             <div key={b.title} className="card">
@@ -120,12 +123,12 @@ export default function Home() {
 
         <div className="grid md:grid-cols-3 gap-6">
           {[
-            ['Estrategia', 'Prioridades claras y foco real.'],
-            ['Cliente', 'Experiencia, captación y retención.'],
-            ['Tecnología', 'Que el negocio no se frene.'],
-            ['Operaciones', 'Procesos, ejecución y métricas.'],
-            ['Equipo', 'Adopción, hábitos y forma de trabajar.'],
-            ['Datos', 'Calidad, gobierno y decisiones con datos.'],
+            ["Estrategia", "Prioridades claras y foco real."],
+            ["Cliente", "Experiencia, captación y retención."],
+            ["Tecnología", "Que el negocio no se frene."],
+            ["Operaciones", "Procesos, ejecución y métricas."],
+            ["Equipo", "Adopción, hábitos y forma de trabajar."],
+            ["Datos", "Calidad, gobierno y decisiones con datos."],
           ].map(([t, d]) => (
             <div key={t} className="card">
               <div className="card-body">
@@ -153,9 +156,7 @@ export default function Home() {
                 <li>
                   <strong>MIT – Chief Digital Officer Candidate</strong>
                 </li>
-                <li>
-                  Metodologías de grandes corporaciones, adaptadas a la realidad de las pymes.
-                </li>
+                <li>Metodologías de grandes corporaciones, adaptadas a la realidad de las pymes.</li>
               </ul>
 
               <div className="flex flex-col gap-4 items-center">
@@ -169,9 +170,7 @@ export default function Home() {
 
       {/* 🟦 BLOQUE 6 — SERVICIOS */}
       <main className="container-page">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">
-          Nuestros Servicios
-        </h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">Nuestros Servicios</h2>
         <p className="text-center text-lg mb-8 text-slate-600">
           Evaluaciones profesionales para impulsar tu transformación digital
         </p>
@@ -200,9 +199,7 @@ export default function Home() {
                 🚀 Próximamente
               </span>
               <h3 className="text-xl font-bold mb-3 text-slate-900">Madurez de Datos</h3>
-              <p className="text-slate-600">
-                Gobernanza, calidad y monetización con estándares internacionales.
-              </p>
+              <p className="text-slate-600">Gobernanza, calidad y monetización con estándares internacionales.</p>
             </div>
           </div>
 
@@ -212,13 +209,11 @@ export default function Home() {
                 🚀 Próximamente
               </span>
               <h3 className="text-xl font-bold mb-3 text-slate-900">Certificaciones ISO</h3>
-              <p className="text-slate-600">
-                Preparación guiada para ISO 27001, ISO 9001 y otros estándares.
-              </p>
+              <p className="text-slate-600">Preparación guiada para ISO 27001, ISO 9001 y otros estándares.</p>
             </div>
           </div>
         </div>
       </main>
     </>
-  )
+  );
 }

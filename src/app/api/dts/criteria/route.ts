@@ -1,4 +1,11 @@
-// src/app/api/dts/criteria/route.ts
+// ============================================================================
+// FILE: src/app/api/dts/criteria/route.ts
+// PURPOSE: Entregar criterios UI-ready en español.
+//          ✅ Cambio: usar explain_json.es.pregunta_clave y explain_json.es.niveles[N].descripcion
+//          para pregunta + niveles (nivel_1..nivel_5).
+//          Frontend SOLO pinta estos campos.
+// ============================================================================
+
 import { NextResponse } from "next/server";
 import { supabaseService } from "@/lib/supabase/server";
 
@@ -37,12 +44,10 @@ function sortByBestEffort(rows: any[], priorityKeys: string[]) {
 
 /**
  * Intenta resolver criteria_ids para un pack usando:
- * 1) dts_pack_criteria (source-of-truth actual en tu sistema)
+ * 1) dts_pack_criteria (source-of-truth actual)
  * 2) fallback: dts_pack_criteria_map (legacy)
  */
 async function resolvePackCriteriaIds(supabase: any, pack: string) {
-  // 1) SOURCE OF TRUTH: dts_pack_criteria
-  // No asumimos columnas: seleccionamos todo y usamos heurística para ordenar.
   const { data: pcRows, error: pcErr } = await supabase
     .from("dts_pack_criteria")
     .select("*")
@@ -53,7 +58,6 @@ async function resolvePackCriteriaIds(supabase: any, pack: string) {
   }
 
   if (pcRows && pcRows.length > 0) {
-    // heurística de orden: display_order / sort_order / position / weight / order / idx
     const ordered = sortByBestEffort(pcRows, [
       "display_order",
       "sort_order",
@@ -71,7 +75,6 @@ async function resolvePackCriteriaIds(supabase: any, pack: string) {
     return { ids, meta: { used: "dts_pack_criteria", rows: pcRows.length } };
   }
 
-  // 2) FALLBACK legacy: dts_pack_criteria_map via pack_uuid (si existe)
   const { data: packRow } = await supabase
     .from("dts_packs")
     .select("id, pack_uuid")
@@ -94,7 +97,15 @@ async function resolvePackCriteriaIds(supabase: any, pack: string) {
     return { ids: [], meta: { used: "dts_pack_criteria_map", rows: 0 } };
   }
 
-  const ordered = sortByBestEffort(mapRows, ["weight", "display_order", "sort_order", "position", "order", "idx"]);
+  const ordered = sortByBestEffort(mapRows, [
+    "weight",
+    "display_order",
+    "sort_order",
+    "position",
+    "order",
+    "idx",
+  ]);
+
   const ids = ordered
     .map((r: any) => r.criteria_id ?? r.criterion_id ?? r.criteriaId)
     .filter(Boolean)
@@ -104,19 +115,12 @@ async function resolvePackCriteriaIds(supabase: any, pack: string) {
 }
 
 /**
- * Carga respuestas del assessment sin asumir nombres de columnas.
- * Devuelve un mapa: criteria_id -> payload
- *
- * Front normalmente necesita as_is/to_be/importance, pero como tu schema no lo sabemos,
- * devolvemos raw y además intentamos normalizar si encontramos campos típicos.
+ * Carga respuestas del assessment (best-effort).
  */
 async function loadResponsesBestEffort(supabase: any, assessmentId: string) {
-  // Intenta dts_responses (si existe). Si no existe o no deja, devolvemos vacío.
   const { data, error } = await supabase.from("dts_responses").select("*").eq("assessment_id", assessmentId);
-
   if (error || !Array.isArray(data)) return { list: [] as any[], map: {} as Record<string, any> };
 
-  // Normalización best-effort (sin romper si no existen columnas)
   const normalized = data.map((r: any) => {
     const criteriaId = String(r.criteria_id ?? r.criterion_id ?? r.criteriaId ?? "");
     const asIs =
@@ -146,7 +150,6 @@ async function loadResponsesBestEffort(supabase: any, assessmentId: string) {
     return {
       ...r,
       criteria_id: criteriaId || r.criteria_id,
-      // campos normalizados (si existen)
       as_is: asIs,
       to_be: toBe,
       importance,
@@ -161,6 +164,37 @@ async function loadResponsesBestEffort(supabase: any, assessmentId: string) {
   return { list: normalized, map };
 }
 
+function pickExplainEs(explain_json: any) {
+  const es = explain_json?.es;
+  if (!es || typeof es !== "object") {
+    return {
+      pregunta: null as string | null,
+      nivel_1: null as string | null,
+      nivel_2: null as string | null,
+      nivel_3: null as string | null,
+      nivel_4: null as string | null,
+      nivel_5: null as string | null,
+    };
+  }
+
+  const pregunta = typeof es?.pregunta_clave === "string" ? es.pregunta_clave : null;
+
+  const niveles = es?.niveles;
+  const getNivel = (n: "1" | "2" | "3" | "4" | "5") => {
+    const d = niveles?.[n]?.descripcion;
+    return typeof d === "string" ? d : null;
+  };
+
+  return {
+    pregunta,
+    nivel_1: getNivel("1"),
+    nivel_2: getNivel("2"),
+    nivel_3: getNivel("3"),
+    nivel_4: getNivel("4"),
+    nivel_5: getNivel("5"),
+  };
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -170,7 +204,7 @@ export async function GET(req: Request) {
 
     const supabase = supabaseService();
 
-    // 1) Leer assessment + pack (fuente de verdad)
+    // 1) Leer assessment + pack
     const { data: assessment, error: aErr } = await supabase
       .from("dts_assessments")
       .select("id, pack")
@@ -184,7 +218,7 @@ export async function GET(req: Request) {
     const pack = String(assessment.pack || "").trim();
     if (!pack) return jsonError(409, { error: "assessment has empty pack", assessmentId });
 
-    // 2) Resolver criteria_ids del pack (dts_pack_criteria primero)
+    // 2) Resolver criteria_ids del pack
     const { ids: orderedCriteriaIds, meta } = await resolvePackCriteriaIds(supabase, pack);
 
     if (!orderedCriteriaIds || orderedCriteriaIds.length === 0) {
@@ -193,12 +227,11 @@ export async function GET(req: Request) {
         pack,
         meta,
         hint:
-          "En tu sistema, el source-of-truth debe ser dts_pack_criteria. Asegúrate de que hay filas con pack + criteria_id. " +
-          "El endpoint ya intenta fallback a dts_pack_criteria_map, pero no debería ser necesario.",
+          "Source-of-truth: dts_pack_criteria. Debe haber filas con pack + criteria_id.",
       });
     }
 
-    // 3) Cargar criterios (bloque) + subdimension/dimension
+    // 3) Cargar criterios + dimensión/subdimensión
     const { data: criteriaRows, error: cErr } = await supabase
       .from("dts_criteria")
       .select(
@@ -227,14 +260,14 @@ export async function GET(req: Request) {
       });
     }
 
-    // 4) Re-ordenar según mapping (porque .in() no preserva orden)
+    // 4) Re-ordenar según mapping
     const rank = new Map<string, number>();
     orderedCriteriaIds.forEach((id, idx) => rank.set(id, idx));
     const rows = [...criteriaRows].sort((a: any, b: any) => {
       return (rank.get(String(a.id)) ?? 999999) - (rank.get(String(b.id)) ?? 999999);
     });
 
-    // 5) Transformación UI-ready
+    // 5) Transformación UI-ready (✅ pregunta/niveles desde explain_json)
     const transformed = rows.map((c: any) => {
       const subdimension = Array.isArray(c.dts_subdimensions) ? c.dts_subdimensions[0] : c.dts_subdimensions;
       const dimension = subdimension?.dts_dimensions;
@@ -243,10 +276,13 @@ export async function GET(req: Request) {
       const dimensionName = dimensionRow?.name || "";
       const dimensionNameEs = DIMENSION_NAME_MAP[dimensionName] || dimensionName;
 
+      const ex = pickExplainEs(c.explain_json);
+
       return {
         id: c.id,
         code: c.code,
 
+        // legacy (mantengo)
         description: c.description_es || c.description || "",
         short_label: c.short_label_es || c.short_label || "",
         context: c.context_es || c.context || null,
@@ -272,17 +308,26 @@ export async function GET(req: Request) {
             }
           : undefined,
 
-        level_1_description_es: c.level_1_description_es,
-        level_2_description_es: c.level_2_description_es,
-        level_3_description_es: c.level_3_description_es,
-        level_4_description_es: c.level_4_description_es,
-        level_5_description_es: c.level_5_description_es,
+        // ✅ CANÓNICO (UI debe usar esto)
+        pregunta: ex.pregunta,
+        nivel_1: ex.nivel_1,
+        nivel_2: ex.nivel_2,
+        nivel_3: ex.nivel_3,
+        nivel_4: ex.nivel_4,
+        nivel_5: ex.nivel_5,
+
+        // fallback legacy (por si explain_json viene incompleto)
+        level_1_description_es: ex.nivel_1 ?? c.level_1_description_es,
+        level_2_description_es: ex.nivel_2 ?? c.level_2_description_es,
+        level_3_description_es: ex.nivel_3 ?? c.level_3_description_es,
+        level_4_description_es: ex.nivel_4 ?? c.level_4_description_es,
+        level_5_description_es: ex.nivel_5 ?? c.level_5_description_es,
 
         explain_json: c.explain_json ?? null,
       };
     });
 
-    // 6) Respuestas (best-effort, no rompemos si schema difiere)
+    // 6) Respuestas
     const { list: responses } = await loadResponsesBestEffort(supabase, assessmentId);
 
     return NextResponse.json({
@@ -291,8 +336,8 @@ export async function GET(req: Request) {
       pack,
       n: transformed.length,
       criteria: transformed,
-      responses, // importante para hidratar inputs
-      meta, // para debug (puedes quitarlo luego)
+      responses,
+      meta,
     });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || "Unknown error" }, { status: 500 });

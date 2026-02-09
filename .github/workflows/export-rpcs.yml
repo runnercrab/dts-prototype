@@ -1,0 +1,44 @@
+name: Export Supabase RPCs
+
+on:
+  push:
+    branches:
+      - "**"
+
+permissions:
+  contents: write
+
+jobs:
+  export-rpcs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install psql client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Export RPCs to supabase/functions
+        env:
+          DTS_DATABASE_URL: ${{ secrets.DTS_DATABASE_URL }}
+        run: |
+          chmod +x scripts/export-rpcs.sh
+          bash scripts/export-rpcs.sh
+
+      - name: Commit & push if changed
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add supabase/functions/*.sql
+          git commit -m "chore: export Supabase RPCs"
+          git push

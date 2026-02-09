@@ -39,13 +39,30 @@ function toInt(v: any, fallback = 0) {
   return Math.round(toNum(v, fallback));
 }
 
-type ActionStatus = "todo" | "in_progress" | "done" | null;
+// Canónico MVP
+type ActionStatus = "todo" | "doing" | "done" | null;
 
-function normalizeStatus(s: any): Exclude<ActionStatus, null> {
+function normalizeStatus(raw: any): ActionStatus {
+  if (raw == null) return null;
+
+  const s = String(raw).trim();
+  if (!s) return null;
+
   if (s === "done") return "done";
-  if (s === "in_progress") return "in_progress";
-  // Tratamos null/undefined/otros como "todo" para consistencia ejecutiva
-  return "todo";
+  if (s === "doing") return "doing";
+  if (s === "todo") return "todo";
+
+  // legacy
+  if (s === "in_progress") return "doing";
+  if (s === "not_started") return "todo";
+
+  // castellano accidental
+  const sl = s.toLowerCase();
+  if (sl === "en curso") return "doing";
+  if (sl === "no iniciada") return "todo";
+  if (sl === "cerrada") return "done";
+
+  return null;
 }
 
 export async function GET(req: Request) {
@@ -86,7 +103,6 @@ export async function GET(req: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // validar assessment existe
   const { data: assessment, error: aErr } = await supabase
     .from("dts_assessments")
     .select("id, pack")
@@ -100,7 +116,6 @@ export async function GET(req: Request) {
     );
   }
 
-  // RPC (checklist ordenada)
   const { data, error } = await supabase.rpc("dts_results_program_actions_v2", {
     p_assessment_id: assessmentId,
     p_program_id: programId,
@@ -117,49 +132,51 @@ export async function GET(req: Request) {
 
   const rows = Array.isArray(data) ? data : [];
 
-  const items = rows.map((r: any) => ({
-    sort_order: toInt(r.sort_order, 1000),
-    action_id: r.action_id,
-    action_code: r.action_code,
-    title: r.title,
-    description: r.description ?? null,
+  const items = rows.map((r: any) => {
+    const status = normalizeStatus(r.status);
 
-    impact_score: toInt(r.impact_score),
-    effort_score: toInt(r.effort_score),
-    typical_duration_weeks:
-      r.typical_duration_weeks === null || r.typical_duration_weeks === undefined
-        ? null
-        : toInt(r.typical_duration_weeks),
+    return {
+      sort_order: toInt(r.sort_order, 1000),
+      action_id: r.action_id,
+      action_code: r.action_code,
+      title: r.title,
+      description: r.description ?? null,
 
-    owner_hint: r.owner_hint ?? null,
-    prerequisites: r.prerequisites ?? null,
-    tools_hint: r.tools_hint ?? null,
-    tags: Array.isArray(r.tags) ? r.tags : r.tags ?? null,
+      impact_score: toInt(r.impact_score),
+      effort_score: toInt(r.effort_score),
+      typical_duration_weeks:
+        r.typical_duration_weeks === null || r.typical_duration_weeks === undefined
+          ? null
+          : toInt(r.typical_duration_weeks),
 
-    status: r.status ?? null,
-    notes: r.notes ?? null,
-    owner: r.owner ?? null,
-  }));
+      owner_hint: r.owner_hint ?? null,
+      prerequisites: r.prerequisites ?? null,
+      tools_hint: r.tools_hint ?? null,
+      tags: Array.isArray(r.tags) ? r.tags : r.tags ?? null,
 
-  // Orden estable por sort_order
+      status,
+      notes: r.notes ?? null,
+      owner: r.owner ?? null,
+    };
+  });
+
   items.sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-  // ✅ Progress (backend-calculated)
   let done = 0;
-  let in_progress = 0;
+  let doing = 0;
   let todo = 0;
 
   for (const it of items) {
-    const s = normalizeStatus(it.status);
+    const s = it.status;
     if (s === "done") done += 1;
-    else if (s === "in_progress") in_progress += 1;
-    else todo += 1;
+    else if (s === "doing") doing += 1;
+    else todo += 1; // incluye null
   }
 
   const total = items.length;
-  const pct_done = total > 0 ? Math.round((done / total) * 1000) / 10 : 0; // 1 decimal
+  const pct_done = total > 0 ? Math.round((done / total) * 1000) / 10 : 0;
   const pct_started =
-    total > 0 ? Math.round(((done + in_progress) / total) * 1000) / 10 : 0;
+    total > 0 ? Math.round(((done + doing) / total) * 1000) / 10 : 0;
 
   return NextResponse.json({
     assessment_id: assessmentId,
@@ -170,7 +187,7 @@ export async function GET(req: Request) {
     progress: {
       total,
       done,
-      in_progress,
+      doing,
       todo,
       pct_done,
       pct_started,
