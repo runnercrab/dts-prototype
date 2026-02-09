@@ -167,5 +167,140 @@ diagnóstico → resultados → frenos → priorización → programas → accio
 - `src/app/api/dts/chat/save/route.ts`
 - `src/app/api/dts/meta/dimensions/route.ts`
 
+Estado final de la BD:
+Elemento Con teoEstadoframeworks2DTS (Gapply) + TMF_DMM (TM Forum) ✅framework_versionsDTS 1.0 active✅dts_dmm_versionsdts_v1 active✅dts_packsdts_ceo30_v1 (30 criterios)✅dts_dimensions6 (EST/OPE/PER/DAT/TEC/GOB)✅dts_subdimensions6 dummy (.0)✅dts_criteria30 con 5 levels cada uno✅dts_pack_criteria_map30 mappings✅dts_pack_config1 JSON (scoring + frenos + mensajes + resumen + onboarding)✅TMF packsintactos (12+12)✅
 
+
+1) DDL corregido (framework_version_id incluido)
+
+Objetivo: soportar un framework propio (DTS) sin contaminar TMF.
+
+Se crea/usa un framework en frameworks con type='maturity_model' (por el CHECK frameworks_type_check).
+
+Se crea/usa una versión en framework_versions (columna version existe).
+
+Se crea/usa un registro en dts_dmm_versions con version_code='dts_v1' y is_active=true.
+
+Punto crítico del schema (importante dejarlo por escrito):
+
+Hay un trigger enforce_criteria_version_coherence() que prohíbe usar dmm_version_id en dts_criteria si framework_version_id no está mapeado en framework_dmm_map.
+
+Solución aplicada en DTS: en dts_criteria dejamos dmm_version_id = NULL (permitido por el trigger) y usamos framework_version_id como fuente de verdad.
+
+Las dimensiones (dts_dimensions) sí tienen dmm_version_id relleno para la versión dts_v1 (porque no pasan por ese trigger).
+
+2) Seeds 100% deterministas (DTS_V1)
+
+Objetivo: idempotencia + reproducibilidad (cero “seeds a mano”).
+
+dts_packs: se añadió dts_ceo30_v1 con pack_uuid estable.
+
+dts_dimensions: se insertaron 6 dimensiones DTS con codes:
+
+EST, OPE, PER, DAT, TEC, GOB
+
+dts_subdimensions: se insertaron 6 subdims dummy (1 por dimensión) para cumplir el modelo actual (porque dts_criteria históricamente estaba ligado a subdimensiones TMF).
+
+dts_criteria: se insertaron 30 criterios (CEO-30), con:
+
+framework_version_id = DTS framework version
+
+subdimension_id = dummy subdim
+
+códigos tipo E1..E5, O1..O5, P1..P5, D1..D5, T1..T5, G1..G5
+
+dts_pack_criteria_map: mapeo pack → 30 criterios con weights (si son todos 1, perfecto para V1).
+
+(Si aplica en tu deploy) tablas de frenos:
+
+catálogo de tipos de freno (normalizado)
+
+catálogo de pares transversales (direccionales y activables)
+
+plantillas de mensaje CEO (por tipo + dimensión / por par transversal)
+
+configuración/umbrales del motor (si lo has modelado como tabla)
+
+Regla de oro documentada: seeds con ON CONFLICT DO UPDATE o “UPSERT determinista” para poder ejecutar el deploy N veces sin duplicados.
+
+3) RPC corregida (pack_uuid + assessment.pack + joins reales + determinismo + validación ruidosa)
+
+Objetivo: backend produce el payload final; frontend pinta.
+
+Contrato conceptual de dts_v1_results(assessment_id)
+
+Lee dts_assessments.pack (text) y lo resuelve:
+
+dts_packs.id (pack_key) → dts_packs.pack_uuid
+
+Construye scope real (joins):
+
+dts_pack_criteria_map(pack_uuid) → dts_criteria → dts_subdimensions → dts_dimensions
+
+Calcula:
+
+score por dimensión (media de as_is_level)
+
+score global (media de dimensiones; y si quieres 0–100, lo mapeas al final)
+
+Detecta frenos candidatos:
+
+Crítico (por criterio)
+
+Estructural (por dimensión)
+
+Transversal (por gap direccional en pares oficiales)
+
+Selecciona Top 3 determinista:
+
+Iteración en orden fijo (greedy con FOR ... ORDER BY rank)
+
+Regla de diversidad que acordaste: máximo 1 Crítico/Estructural por dimensión; transversales exentos del bloqueo dimensional pero máximo 1 transversal total.
+
+Validación ruidosa:
+
+Si un freno seleccionado no tiene plantilla de mensaje CEO → RAISE EXCEPTION
+
+Esto evita el bug de “silenciar frenos” por JOIN estricto.
+
+
+Lo que queda FROZEN:
+PiezaEstadoDDL (3 tablas: dts_freno_types, dts_freno_pair_catalog, dts_freno_message_templates)✅ FROZENSeeds (3 tipos + 4 pares + 16 plantillas CEO)✅ FROZENRPC dts_results_frenos_v1(uuid)✅ FROZENReglas motor (Crítico=1, Estructural avg≤2.0 / soft<2.5+disp≥2, Transversal gap≥1.0, diversidad 1/dim + 1 trans, top 3)✅ FROZENPayload contract (campos, estructura JSON)✅ FROZEN
+
+
+Qué hemos añadido en DB para DTS_V1 (dts_ceo30_v1):
+
+Framework y versionado propios
+
+Insert de frameworks (type permitido: maturity_model|standard|control_framework)
+
+Insert de framework_versions
+
+Insert del pack dts_ceo30_v1 en dts_packs
+
+Dimensiones DTS V1
+
+6 dimensiones: EST, OPE, PER, DAT, TEC, GOB en dts_dimensions
+
+Subdimensiones dummy (1 por dimensión) para compatibilidad con dts_criteria (aunque subdimension_id ahora sea nullable)
+
+Criterios CEO-30
+
+30 criterios insertados en dts_criteria con framework_version_id (y sin dmm_version_id)
+
+Mapeo pack→criteria en dts_pack_criteria_map (30 filas)
+
+Motor de frenos (data-driven + determinista)
+
+Tablas normalizadas: tipos, pares transversales, templates CEO, etc.
+
+RPC determinista con FOR LOOP greedy + validación ruidosa si falta template
+
+Circuito de ejecución V1
+
+dts_assessments usa pack (text) como key del pack.
+
+dts_responses captura as_is_level, notas, etc.
+
+dts_v1_results(assessment_id) compone: scores + top3 frenos + resumen ejecutivo.
 <!-- GENERATED:END -->

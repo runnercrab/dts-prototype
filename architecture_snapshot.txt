@@ -1,0 +1,313 @@
+.
+├── architecture_snapshot.txt
+├── backup_pre_nuke_iniciativas.tgz
+├── backups
+│   ├── layout.tsx.backup
+│   ├── page.backup-2025-01-29.tsx
+│   ├── page.tsx.backup-20251127-010927
+│   └── page.tsx.backup-20251127-103016
+├── CLAUDE.md
+├── docs
+│   ├── ARCHITECTURE.md
+│   ├── DMM_Final_Excel_Cleaned_NoExtra.xlsx
+│   └── MVP
+│       ├── 00_ESTRUCTURA.md
+│       ├── 01_End-to-End.md
+│       ├── 02_CRITERIA_MVP12.md
+│       ├── 03_EXPLAIN_JSON_V1_1.md
+│       ├── 04_EFFORT_ENGINE_V1.md
+│       ├── 05_IMPACT_ENGINE_V1.md
+│       ├── 06_ROADMAP_Q123.md
+│       ├── 07_SAAS_MONTHLY_OPERATING_SYSTEM.md
+│       ├── 08_FRONTEND_SCREENS_MVP10.md
+│       ├── 09_API_CONTRACTS_MVP10.md
+│       ├── 10_DB_SCHEMA_MVP10
+│       ├── 11_VERSION_CLIENTE.md
+│       ├── 12_MVP_CONTEXT.md
+│       └── 12_PROMPT PARA NUEVA VENTANA – CONTEXTO DTS.md
+├── eslint.config.mjs
+├── fix-supabase.sh
+├── L15d2l3n1
+├── L15d2l3n1.pub
+├── Navbar.tsx
+├── next-env.d.ts
+├── next.config.js
+├── next.config.ts
+├── node_modules
+│   ├── @eslint
+│   │   └── eslintrc -> ../.pnpm/@eslint+eslintrc@3.3.3/node_modules/@eslint/eslintrc
+│   ├── @heygen
+│   │   └── streaming-avatar -> ../.pnpm/@heygen+streaming-avatar@2.1.0/node_modules/@heygen/streaming-avatar
+│   ├── @sentry
+│   │   └── nextjs -> ../.pnpm/@sentry+nextjs@10.32.1_@opentelemetry+context-async-hooks@2.3.0_@opentelemetry+api@1.9._4df3494d45013c7081f3e36dbd3e28cd/node_modules/@sentry/nextjs
+│   ├── @supabase
+│   │   └── supabase-js -> ../.pnpm/@supabase+supabase-js@2.90.1/node_modules/@supabase/supabase-js
+│   ├── @tailwindcss
+│   │   └── postcss -> ../.pnpm/@tailwindcss+postcss@4.1.18/node_modules/@tailwindcss/postcss
+│   ├── @types
+│   │   ├── node -> ../.pnpm/@types+node@20.19.28/node_modules/@types/node
+│   │   ├── react -> ../.pnpm/@types+react@19.2.8/node_modules/@types/react
+│   │   └── react-dom -> ../.pnpm/@types+react-dom@19.2.3_@types+react@19.2.8/node_modules/@types/react-dom
+│   ├── autoprefixer -> .pnpm/autoprefixer@10.4.23_postcss@8.5.6/node_modules/autoprefixer
+│   ├── axios -> .pnpm/axios@1.13.2/node_modules/axios
+│   ├── chart.js -> .pnpm/chart.js@4.5.1/node_modules/chart.js
+│   ├── eslint -> .pnpm/eslint@9.39.2_jiti@1.21.7/node_modules/eslint
+│   ├── eslint-config-next -> .pnpm/eslint-config-next@15.5.4_eslint@9.39.2_jiti@1.21.7__typescript@5.9.3/node_modules/eslint-config-next
+│   ├── lucide-react -> .pnpm/lucide-react@0.554.0_react@19.2.3/node_modules/lucide-react
+│   ├── next -> .pnpm/next@16.1.1_@babel+core@7.28.5_@opentelemetry+api@1.9.0_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next
+│   ├── openai -> .pnpm/openai@5.23.2_ws@8.19.0/node_modules/openai
+│   ├── postcss -> .pnpm/postcss@8.5.6/node_modules/postcss
+│   ├── react -> .pnpm/react@19.2.3/node_modules/react
+│   ├── react-chartjs-2 -> .pnpm/react-chartjs-2@5.3.1_chart.js@4.5.1_react@19.2.3/node_modules/react-chartjs-2
+│   ├── react-dom -> .pnpm/react-dom@19.2.3_react@19.2.3/node_modules/react-dom
+│   ├── recharts -> .pnpm/recharts@3.6.0_@types+react@19.2.8_react-dom@19.2.3_react@19.2.3__react-is@16.13.1_react@19.2.3_redux@5.0.1/node_modules/recharts
+│   ├── tailwindcss -> .pnpm/tailwindcss@3.4.19/node_modules/tailwindcss
+│   └── typescript -> .pnpm/typescript@5.9.3/node_modules/typescript
+├── package-lock.json
+├── package.json
+├── pnpm-lock.yaml
+├── postcss.config.js
+├── public
+│   ├── apple-touch-icon.png
+│   ├── favicon.png
+│   ├── file.svg
+│   ├── gapply-icon_old.png
+│   ├── gapply-icon.png
+│   ├── gapply-logo.png
+│   ├── globe.svg
+│   ├── Hoja_Ruta.png
+│   ├── icons
+│   │   ├── chip_old.png
+│   │   ├── chip.png
+│   │   ├── database_old.png
+│   │   ├── database.png
+│   │   ├── gears_old.png
+│   │   ├── gears.png
+│   │   ├── handshake_old.png
+│   │   ├── handshake.png
+│   │   ├── target_old.png
+│   │   ├── target.png
+│   │   ├── users_old.png
+│   │   └── users.png
+│   ├── MIT-logo.png
+│   ├── next.svg
+│   ├── roadmap_old.png
+│   ├── roadmap.png
+│   ├── TMForum-logo.png
+│   ├── vercel.svg
+│   ├── Welcome_1.mp4
+│   ├── Welcome_3.mp4
+│   ├── Welcome.mp4
+│   ├── Welcome2.mp4
+│   └── window.svg
+├── README.md
+├── scripts
+│   ├── export-rpcs.sh
+│   └── generate-architecture.mjs
+├── sentry.client.config.ts
+├── sentry.client.config.ts .js
+├── sentry.edge.config.ts
+├── sentry.edge.config.ts .js
+├── sentry.server.config.ts
+├── sentry.server.config.ts .js
+├── Shawn_DTS.mp4
+├── src
+│   ├── _trash
+│   │   ├── api_iniciativas_20260110
+│   │   │   └── iniciativas
+│   │   │       └── route.ts
+│   │   ├── iniciativas_20260110
+│   │   │   └── iniciativas
+│   │   │       ├── [criteriaSlug]
+│   │   │       │   └── page.tsx
+│   │   │       └── page.tsx
+│   │   └── semantic_cleanup_20260110
+│   │       └── components
+│   │           ├── ClaridadSection.tsx
+│   │           ├── KPICards.tsx
+│   │           └── TimelineRoadmap.tsx
+│   ├── app
+│   │   ├── (app)
+│   │   │   ├── layout.tsx
+│   │   │   └── resultados
+│   │   │       ├── [assessmentId]
+│   │   │       │   ├── cierre
+│   │   │       │   ├── ejecucion
+│   │   │       │   ├── frenos
+│   │   │       │   ├── layout.tsx
+│   │   │       │   ├── page.tsx
+│   │   │       │   └── priorizacion
+│   │   │       └── page.tsx
+│   │   ├── (marketing)
+│   │   │   ├── layout.tsx
+│   │   │   └── page.tsx
+│   │   ├── api
+│   │   │   ├── chat
+│   │   │   │   └── route.ts
+│   │   │   ├── debug
+│   │   │   │   └── env
+│   │   │   │       └── route.ts
+│   │   │   ├── dts
+│   │   │   │   ├── assessment
+│   │   │   │   │   ├── actions
+│   │   │   │   │   ├── complete
+│   │   │   │   │   ├── create
+│   │   │   │   │   ├── get
+│   │   │   │   │   └── onboarding
+│   │   │   │   ├── chat
+│   │   │   │   │   ├── add
+│   │   │   │   │   ├── get
+│   │   │   │   │   ├── messages
+│   │   │   │   │   ├── post
+│   │   │   │   │   └── save
+│   │   │   │   ├── criteria
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── execution
+│   │   │   │   │   ├── activate_from_roadmap
+│   │   │   │   │   ├── activate_program
+│   │   │   │   │   ├── close-program
+│   │   │   │   │   ├── gate
+│   │   │   │   │   └── program-results
+│   │   │   │   ├── meta
+│   │   │   │   │   └── dimensions
+│   │   │   │   ├── mvp12
+│   │   │   │   │   └── criteria
+│   │   │   │   ├── responses
+│   │   │   │   │   ├── get
+│   │   │   │   │   ├── route.ts
+│   │   │   │   │   └── upsert
+│   │   │   │   ├── results
+│   │   │   │   │   ├── action-status
+│   │   │   │   │   ├── executive-summary
+│   │   │   │   │   ├── frenos
+│   │   │   │   │   ├── initiatives
+│   │   │   │   │   ├── matriz
+│   │   │   │   │   ├── priorizacion
+│   │   │   │   │   ├── program-actions
+│   │   │   │   │   ├── programs
+│   │   │   │   │   ├── roadmap
+│   │   │   │   │   ├── seguimiento
+│   │   │   │   │   └── v1
+│   │   │   │   ├── roadmap
+│   │   │   │   │   └── activate-program
+│   │   │   │   ├── score
+│   │   │   │   │   ├── get
+│   │   │   │   │   └── recalc
+│   │   │   │   └── tracking
+│   │   │   │       ├── actions
+│   │   │   │       └── overview
+│   │   │   ├── health
+│   │   │   │   └── route.ts
+│   │   │   ├── heygen
+│   │   │   │   ├── new-session
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── start-and-test
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── token
+│   │   │   │       └── route.tsx
+│   │   │   ├── openai
+│   │   │   │   └── route.ts
+│   │   │   └── stt
+│   │   │       └── route.ts
+│   │   ├── asistente
+│   │   │   └── page.tsx
+│   │   ├── debug
+│   │   │   └── heygen-demo
+│   │   │       └── page.tsx
+│   │   ├── demo
+│   │   │   └── route.ts
+│   │   ├── diagnostico-full
+│   │   │   ├── debug-vars.txt
+│   │   │   ├── layout.tsx
+│   │   │   └── page.tsx
+│   │   ├── dts-chat
+│   │   │   ├── heygen-demo
+│   │   │   │   └── page.tsx
+│   │   │   └── page.tsx
+│   │   ├── globals.css
+│   │   ├── globals.css.backup
+│   │   ├── heygen-demo
+│   │   │   └── page.tsx
+│   │   ├── layout.tsx
+│   │   └── start
+│   │       └── page.tsx
+│   ├── components
+│   │   ├── AssistantChat.tsx
+│   │   ├── AssistantChat.tsx.backup
+│   │   ├── AvatarPane.tsx
+│   │   ├── diagnostico
+│   │   │   ├── CriterionQuestion.tsx
+│   │   │   ├── DiagnosticoIntro.tsx
+│   │   │   ├── DimensionProgressMap.tsx
+│   │   │   ├── DimensionProgressMapVisual.tsx
+│   │   │   └── OnboardingWorkshop.tsx
+│   │   ├── ejecucion
+│   │   │   ├── EjecucionTabsClient.tsx
+│   │   │   └── SeguimientoTrackingClient.tsx
+│   │   ├── Header.tsx
+│   │   ├── HeatMapChart.tsx
+│   │   ├── HeygenEmbed.tsx
+│   │   ├── layout
+│   │   ├── LoginDemo.tsx
+│   │   ├── MinimalHeader.tsx
+│   │   ├── Navbar.tsx
+│   │   ├── ProblemaSection.tsx
+│   │   ├── RadarChartComponent.tsx
+│   │   ├── RadarScore.tsx
+│   │   ├── resultados
+│   │   │   └── ExecutiveScorePanel.tsx
+│   │   ├── shell
+│   │   │   ├── AppSidebar.tsx
+│   │   │   ├── CollapsibleSidebar.tsx
+│   │   │   ├── NavigationFooter.tsx
+│   │   │   ├── ResultsShell.tsx
+│   │   │   └── RightAssistantPane.tsx
+│   │   └── SolucionSection.tsx
+│   ├── config
+│   │   ├── avatarPhrases.ts
+│   │   └── terminology.ts
+│   ├── hooks
+│   │   └── useRealtimeSaver.ts
+│   ├── lib
+│   │   ├── advice.ts
+│   │   ├── bus.ts
+│   │   ├── businessImpactEngine.ts
+│   │   ├── chatHelpers.ts
+│   │   ├── demo.ts
+│   │   ├── dts
+│   │   │   └── quadrants.ts
+│   │   ├── http
+│   │   │   └── getBaseUrl.ts
+│   │   ├── prompts
+│   │   │   └── dtsPrompt.ts
+│   │   ├── routes.ts
+│   │   ├── score.ts
+│   │   ├── scoring-utils.ts
+│   │   ├── supabase
+│   │   │   ├── client.ts
+│   │   │   ├── index.ts
+│   │   │   └── server.ts
+│   │   ├── supabase.ts
+│   │   ├── supabaseAdmin.ts
+│   │   └── ui-tokens.ts
+│   └── tailwind.config.ts
+├── supabase
+│   └── functions
+│       ├── dts_action_set_status_v1.sql
+│       ├── dts_action_update_v1.sql
+│       ├── dts_action_validate_impact_v1.sql
+│       ├── dts_activate_program_v1.sql
+│       ├── dts_assessment_complete_v1.sql
+│       ├── dts_execution_gate_v1.sql
+│       ├── dts_recalc_assessment_scores.sql
+│       ├── dts_recalc_dimension_scores.sql
+│       ├── dts_results_overview_v2.sql
+│       ├── dts_results_program_actions_v2.sql
+│       ├── dts_results_programs_v2.sql
+│       ├── dts_results_v1.sql
+│       ├── dts_tracking_actions_scoped_v1.sql
+│       └── dts_tracking_overview_v1.sql
+├── tailwind.config.ts
+└── tsconfig.json
+
+137 directories, 174 files

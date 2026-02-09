@@ -144,16 +144,18 @@ function buildCopyFallbackFromLegacy(c: Criterion): CriterionCopy {
 }
 
 // ============================================
-// 🆕 SIDEBAR COMPONENT
+// 🆕 SIDEBAR COMPONENT (con slide down)
 // ============================================
 interface SidebarProps {
   currentPhase: 'onboarding' | 'diagnostico' | 'resultados' | 'ejecucion'
   completedPhases?: string[]
   assessmentId?: string | null
   userName?: string
+  isOpen?: boolean
+  onToggle?: () => void
 }
 
-function Sidebar({ currentPhase, completedPhases = [], assessmentId, userName = 'Usuario' }: SidebarProps) {
+function Sidebar({ currentPhase, completedPhases = [], assessmentId, userName = 'Usuario', isOpen = true, onToggle }: SidebarProps) {
   const PHASES = [
     { id: 'onboarding', label: 'Onboarding', href: '/diagnostico-full', step: 1 },
     { id: 'diagnostico', label: 'Diagnóstico', href: '/diagnostico-full', step: 2 },
@@ -188,97 +190,127 @@ function Sidebar({ currentPhase, completedPhases = [], assessmentId, userName = 
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-slate-50 border-r border-slate-200 flex flex-col z-40">
-      {/* Logo */}
-      <div className="p-6 border-b border-slate-200">
-        <Link href="/" className="flex items-center">
-          <Image
-            src="/gapply-logo.png"
-            alt="Gapply"
-            width={100}
-            height={32}
-            className="object-contain"
-            priority
-          />
-        </Link>
-      </div>
-
-      {/* Fases */}
-      <div className="flex-1 p-4 pt-6">
-        <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-4 px-2">
-          Fases
+    <>
+      {/* Sidebar */}
+      <aside className={`
+        fixed left-0 top-0 h-full w-64 bg-slate-50 border-r border-slate-200 flex flex-col z-40
+        transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Logo */}
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/gapply-logo.png"
+              alt="Gapply"
+              width={100}
+              height={32}
+              className="object-contain"
+              priority
+            />
+          </Link>
+          {/* Botón cerrar dentro del sidebar */}
+          <button
+            onClick={onToggle}
+            className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 transition-colors"
+            title="Ocultar menú"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
         </div>
 
-        <nav className="space-y-1">
-          {PHASES.map((phase) => {
-            const { isCompleted, isCurrent, isDisabled } = getPhaseState(phase.id, phase.step)
-
-            return (
-              <Link
-                key={phase.id}
-                href={isDisabled ? '#' : phase.href}
-                className={`
-                  flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
-                  ${isCurrent 
-                    ? 'bg-green-100' 
-                    : isCompleted
-                      ? 'bg-green-50 hover:bg-green-100'
-                      : isDisabled
-                        ? 'opacity-60 cursor-not-allowed'
-                        : 'hover:bg-slate-100'
-                  }
-                `}
-                onClick={(e) => isDisabled && e.preventDefault()}
-              >
-                <div className={`
-                  w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0
-                  ${isCompleted 
-                    ? 'bg-green-500 text-white' 
-                    : isCurrent
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-200 text-slate-500'
-                  }
-                `}>
-                  {isCompleted ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    phase.step
-                  )}
-                </div>
-
-                <span className={`
-                  font-medium text-[15px]
-                  ${isCurrent 
-                    ? 'text-green-700' 
-                    : isCompleted 
-                      ? 'text-slate-700'
-                      : isDisabled
-                        ? 'text-slate-400'
-                        : 'text-slate-600'
-                  }
-                `}>
-                  {phase.label}
-                </span>
-              </Link>
-            )
-          })}
-        </nav>
-      </div>
-
-      {/* Usuario */}
-      <div className="p-4 border-t border-slate-200">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base">
-            {getInitials(userName)}
+        {/* Fases */}
+        <div className="flex-1 p-4 pt-6">
+          <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-4 px-2">
+            Fases
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-slate-900 truncate">{userName}</div>
+
+          <nav className="space-y-1">
+            {PHASES.map((phase) => {
+              const { isCompleted, isCurrent, isDisabled } = getPhaseState(phase.id, phase.step)
+
+              return (
+                <Link
+                  key={phase.id}
+                  href={isDisabled ? '#' : phase.href}
+                  className={`
+                    flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
+                    ${isCurrent 
+                      ? 'bg-green-100' 
+                      : isCompleted
+                        ? 'bg-green-50 hover:bg-green-100'
+                        : isDisabled
+                          ? 'opacity-60 cursor-not-allowed'
+                          : 'hover:bg-slate-100'
+                    }
+                  `}
+                  onClick={(e) => isDisabled && e.preventDefault()}
+                >
+                  <div className={`
+                    w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0
+                    ${isCompleted 
+                      ? 'bg-green-500 text-white' 
+                      : isCurrent
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-200 text-slate-500'
+                    }
+                  `}>
+                    {isCompleted ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      phase.step
+                    )}
+                  </div>
+
+                  <span className={`
+                    font-medium text-[15px]
+                    ${isCurrent 
+                      ? 'text-green-700' 
+                      : isCompleted 
+                        ? 'text-slate-700'
+                        : isDisabled
+                          ? 'text-slate-400'
+                          : 'text-slate-600'
+                    }
+                  `}>
+                    {phase.label}
+                  </span>
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+
+        {/* Usuario */}
+        <div className="p-4 border-t border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base">
+              {getInitials(userName)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-slate-900 truncate">{userName}</div>
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+
+      {/* Botón abrir sidebar (cuando está cerrado) */}
+      {!isOpen && (
+        <button
+          onClick={onToggle}
+          className="fixed left-4 top-4 z-50 p-2.5 bg-white rounded-xl shadow-lg border border-slate-200 hover:bg-slate-50 transition-all duration-200"
+          title="Mostrar menú"
+        >
+          <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      )}
+    </>
   )
 }
 
@@ -540,6 +572,7 @@ export default function DiagnosticoFullPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showCheckAnimation, setShowCheckAnimation] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // ============================
   // Helpers (sin hooks)
@@ -973,8 +1006,10 @@ export default function DiagnosticoFullPage() {
           completedPhases={[]} 
           assessmentId={assessmentId}
           userName="David A."
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
         />
-        <div className="ml-64">
+        <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
           <div className="container mx-auto px-4 py-8">
             <OnboardingWorkshop
               onComplete={handleOnboardingComplete}
@@ -997,8 +1032,10 @@ export default function DiagnosticoFullPage() {
           completedPhases={['onboarding', 'diagnostico']} 
           assessmentId={assessmentId}
           userName="David A."
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
         />
-        <div className="ml-64 flex items-center justify-center min-h-screen">
+        <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'} flex items-center justify-center min-h-screen`}>
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">🎉 ¡Diagnóstico Completado!</h1>
             <p className="text-gray-600 mb-8">Tus respuestas han sido guardadas.</p>
@@ -1023,8 +1060,10 @@ export default function DiagnosticoFullPage() {
           completedPhases={['onboarding']} 
           assessmentId={assessmentId}
           userName="David A."
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
         />
-        <div className="ml-64">
+        <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
           {/* Top bar (simplified) */}
           <div className="bg-white border-b border-gray-200">
             <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -1182,8 +1221,10 @@ export default function DiagnosticoFullPage() {
         completedPhases={['onboarding']} 
         assessmentId={assessmentId}
         userName="David A."
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
       />
-      <div className="ml-64">
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {/* Top bar - simplificado */}
         <div className="bg-white border-b border-gray-200">
           <div className="px-4 py-3">
