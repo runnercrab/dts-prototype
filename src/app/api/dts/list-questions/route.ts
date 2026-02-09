@@ -23,12 +23,10 @@ export async function POST(req: Request) {
     .in("id", criteriaIds);
   if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
 
-  // ✅ BUGFIX: was "notes" → actual column is "as_is_notes"
-  const { data: responses, error: rErr } = await sb
+  const { data: responses } = await sb
     .from("dts_responses")
-    .select("criteria_id, as_is_level, as_is_notes")
+    .select("criteria_id, as_is_level, notes")
     .eq("assessment_id", assessmentId);
-  if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 });
 
   const criteriaMap = Object.fromEntries((criteria || []).map((c: any) => [c.id, c]));
   const responseMap = Object.fromEntries((responses || []).map((r: any) => [r.criteria_id, r]));
@@ -42,7 +40,7 @@ export async function POST(req: Request) {
       dimension_code: q.dimension_code,
       dimension_name: q.dimension_name,
       question: q.question_es,
-      context: c.context_es || null,
+      context: q.dimension_context || c.context_es || null,
       display_order: q.display_order,
       levels: [
         c.level_1_description_es,
@@ -51,7 +49,7 @@ export async function POST(req: Request) {
         c.level_4_description_es,
         c.level_5_description_es,
       ],
-      response: r ? { as_is_level: r.as_is_level, notes: r.as_is_notes || "" } : null,
+      response: r ? { as_is_level: r.as_is_level, notes: r.notes } : null,
     };
   });
 
