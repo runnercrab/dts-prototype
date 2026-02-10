@@ -136,7 +136,7 @@ export default function DtsHomePage() {
         <section className="px-10 lg:px-16 py-16">
           <div className="text-center mb-10">
             <h2 className="text-[28px] font-bold text-slate-900 mb-3">El diagnóstico cubre 6 dimensiones del negocio</h2>
-            <p className="text-[16px] text-slate-500">Misma lógica en versión reducida (30) y completa (129 criterios).</p>
+            <p className="text-[16px] text-slate-500">Cada dimensión revela dónde estás hoy y qué te frena para avanzar.</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
             {[
