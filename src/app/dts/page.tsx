@@ -118,14 +118,14 @@ export default function DtsHomePage() {
                 <p className="text-[15px] text-slate-600 leading-relaxed">Visión clara de lo que está impidiendo avanzar, sin teoría, con un primer foco de actuación.</p>
               </div>
               <div className="rounded-2xl border-2 border-amber-400 bg-amber-50/30 p-8">
-                <div className="text-[13px] font-bold text-amber-500 uppercase tracking-wider mb-4">V2 — Seguimiento</div>
-                <h3 className="text-[18px] font-bold text-slate-900 mb-3">Controla cómo evolucionan</h3>
-                <p className="text-[15px] text-slate-600 leading-relaxed">Re-evaluaciones periódicas, evolución de frenos, KPIs e histórico claro del progreso.</p>
+                <div className="text-[13px] font-bold text-amber-500 uppercase tracking-wider mb-4">V2 — Transformación</div>
+                <h3 className="text-[18px] font-bold text-slate-900 mb-3">De diagnóstico a acción</h3>
+                <p className="text-[15px] text-slate-600 leading-relaxed">Plan de acción priorizado por impacto y esfuerzo, con pasos concretos, responsables y plazos. Y seguimiento vivo para que nada se quede en el cajón.</p>
               </div>
               <div className="rounded-2xl border-2 border-emerald-400 bg-emerald-50/30 p-8">
                 <div className="text-[13px] font-bold text-emerald-500 uppercase tracking-wider mb-4">V3 — Inteligencia</div>
-                <h3 className="text-[18px] font-bold text-slate-900 mb-3">Decide con anticipación</h3>
-                <p className="text-[15px] text-slate-600 leading-relaxed">Benchmark sectorial, recomendaciones automáticas y simulaciones para decidir mejor.</p>
+                <h3 className="text-[18px] font-bold text-slate-900 mb-3">Decide antes que tu competencia</h3>
+                <p className="text-[15px] text-slate-600 leading-relaxed">Benchmark contra empresas de tu sector y tamaño, simulaciones de escenarios y alertas predictivas antes de que los problemas lleguen.</p>
               </div>
             </div>
             <p className="text-[14px] text-slate-400 text-center">Cada fase se activa cuando tiene sentido. Sin saltos. Sin complejidad innecesaria.</p>
