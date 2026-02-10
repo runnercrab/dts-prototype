@@ -3,6 +3,7 @@ import Link from "next/link";
 
 interface DtsSidebarProps {
   currentPhase: number; // 0=Inicio, 1=Onboarding, 2=Diagnóstico, 3=Resultado, 4=Programas, 5=Ejecución
+  assessmentId?: string;
 }
 
 const PHASES = [
@@ -14,7 +15,20 @@ const PHASES = [
   { num: 5, label: "Ejecución" },
 ];
 
-export default function DtsSidebar({ currentPhase }: DtsSidebarProps) {
+function getPhaseHref(num: number, assessmentId?: string): string | null {
+  if (!assessmentId) {
+    if (num === 0) return "/dts";
+    return null;
+  }
+  switch (num) {
+    case 0: return "/dts";
+    case 2: return `/dts/diagnostico/${assessmentId}`;
+    case 3: return `/dts/resultados/${assessmentId}`;
+    default: return null;
+  }
+}
+
+export default function DtsSidebar({ currentPhase, assessmentId }: DtsSidebarProps) {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-white border-r border-slate-200 flex flex-col z-30">
       {/* LOGO */}
@@ -31,19 +45,12 @@ export default function DtsSidebar({ currentPhase }: DtsSidebarProps) {
           const isCompleted = phase.num < currentPhase;
           const isFuture = phase.num > currentPhase;
           const isFarFuture = phase.num >= 4;
+          const href = getPhaseHref(phase.num, assessmentId);
+          const isClickable = href && !isActive;
 
-          return (
-            <div
-              key={phase.num}
-              className={`flex items-center gap-3 px-3 py-3 rounded-lg mb-1.5 transition-colors ${
-                isActive
-                  ? "bg-blue-50 border-2 border-blue-300"
-                  : isCompleted
-                  ? "bg-slate-50"
-                  : ""
-              }`}
-            >
-              {/* Number / Check / Arrow */}
+          const content = (
+            <>
+              {/* Number / Check */}
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                   isActive
@@ -82,6 +89,24 @@ export default function DtsSidebar({ currentPhase }: DtsSidebarProps) {
               >
                 {isActive ? "→ " : ""}{phase.label}
               </span>
+            </>
+          );
+
+          const className = `flex items-center gap-3 px-3 py-3 rounded-lg mb-1.5 transition-colors ${
+            isActive
+              ? "bg-blue-50 border-2 border-blue-300"
+              : isCompleted
+              ? "bg-slate-50 hover:bg-slate-100 cursor-pointer"
+              : ""
+          }`;
+
+          return isClickable ? (
+            <Link key={phase.num} href={href} className={className}>
+              {content}
+            </Link>
+          ) : (
+            <div key={phase.num} className={className}>
+              {content}
             </div>
           );
         })}

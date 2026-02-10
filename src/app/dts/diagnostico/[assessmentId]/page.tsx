@@ -57,6 +57,9 @@ export default function DiagnosticoPage() {
   const [asIsLevel, setAsIsLevel] = useState<number | null>(null);
   const [showDimIntro, setShowDimIntro] = useState(true);
   const [showAvatarTooltip, setShowAvatarTooltip] = useState(true);
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   /* ── load questions ── */
   useEffect(() => {
@@ -79,6 +82,10 @@ export default function DiagnosticoPage() {
             dimCode(data.questions[idx].criteria_code) !==
               dimCode(data.questions[idx - 1]?.criteria_code || "");
           setShowDimIntro(isFirstOfDim && !data.questions[idx]?.response);
+
+          // If all answered, show completion
+          const allAnswered = data.questions.every((q: Question) => q.response);
+          if (allAnswered && data.questions.length > 0) setShowCompletion(true);
         }
       } catch (e) {
         console.error(e);
@@ -93,7 +100,7 @@ export default function DiagnosticoPage() {
     return () => clearTimeout(t);
   }, []);
 
-  /* ── save + auto-advance ── */
+  /* ── save response ── */
   const saveResponse = useCallback(
     async (level?: number) => {
       const lvl = level || asIsLevel;
@@ -122,10 +129,9 @@ export default function DiagnosticoPage() {
     [asIsLevel, currentIndex, questions, assessmentId]
   );
 
+  /* ── select level ── */
   async function handleSelect(level: number) {
     setAsIsLevel(level);
-
-    // Save immediately
     setSaving(true);
     try {
       await fetch("/api/dts/save-response", {
@@ -142,21 +148,48 @@ export default function DiagnosticoPage() {
           i === currentIndex ? { ...q, response: { as_is_level: level, notes: "" } } : q
         )
       );
+      // ✅ MEJORA 2: Flash de confirmación
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 800);
     } catch (e) {
       console.error(e);
     }
     setSaving(false);
   }
 
+  /* ── navigate ── */
   async function goTo(index: number) {
     if (asIsLevel) await saveResponse();
     setCurrentIndex(index);
     setAsIsLevel(questions[index]?.response?.as_is_level || null);
     setShowDimIntro(false);
+    setShowCompletion(false);
   }
 
   async function handlePrev() {
     if (currentIndex > 0) await goTo(currentIndex - 1);
+  }
+
+  function handleNext() {
+    if (currentIndex < questions.length - 1) {
+      const nextIdx = currentIndex + 1;
+      const isNewDim = dimCode(questions[nextIdx].criteria_code) !== dimCode(questions[currentIndex].criteria_code);
+      setCurrentIndex(nextIdx);
+      setAsIsLevel(questions[nextIdx]?.response?.as_is_level || null);
+      setShowDimIntro(isNewDim);
+    } else {
+      // ✅ MEJORA 1: Pantalla de cierre en vez de ir directo a resultados
+      setShowCompletion(true);
+    }
+  }
+
+  /* ── copy link ── */
+  function handleCopyLink() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    });
   }
 
   /* ── computed ── */
@@ -207,7 +240,7 @@ export default function DiagnosticoPage() {
         <div className="bg-white border-b border-slate-200 px-8 py-5">
           <div className="flex items-center justify-between gap-3">
             {dimensions.map((dim, idx) => {
-              const isActive = dim.code === currentDim;
+              const isActive = dim.code === currentDim && !showCompletion;
               const isComplete = dim.answered === dim.total;
               const dm = DIM_META[dim.code];
               return (
@@ -259,7 +292,31 @@ export default function DiagnosticoPage() {
         <main className="flex-1 flex items-start justify-center px-10 py-12">
           <div className="w-full max-w-4xl">
 
-            {showDimIntro && currentDimInfo ? (
+            {/* ─── MEJORA 1: COMPLETION SCREEN ─── */}
+            {showCompletion ? (
+              <div className="flex flex-col items-center justify-center text-center py-20">
+                <div className="w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center mb-8">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </div>
+                <h1 className="text-[36px] font-bold text-slate-900 mb-4">
+                  Diagnóstico completado
+                </h1>
+                <p className="text-[18px] text-slate-600 mb-3 max-w-lg leading-relaxed">
+                  Has evaluado las {questions.length} áreas clave de tu empresa.
+                </p>
+                <p className="text-[16px] text-slate-500 mb-12 max-w-md">
+                  Tu informe incluye tu nivel de madurez digital, los frenos que te están frenando y el primer paso concreto para avanzar.
+                </p>
+                <button
+                  onClick={() => router.push(`/dts/resultados/${assessmentId}`)}
+                  className="px-10 py-4 rounded-xl bg-emerald-600 text-white text-[17px] font-semibold shadow-lg hover:bg-emerald-700 hover:shadow-xl transition-all"
+                >
+                  Ver mis resultados →
+                </button>
+              </div>
+            ) : showDimIntro && currentDimInfo ? (
               /* ─── DIMENSION INTRO ─── */
               <div className="flex flex-col items-center justify-center text-center py-20">
                 <div
@@ -305,6 +362,15 @@ export default function DiagnosticoPage() {
                     <span className="text-[17px] text-slate-700 font-semibold">
                       Pregunta {questionInDim} de {dimTotal}
                     </span>
+                    {/* ✅ MEJORA 2: Saved flash */}
+                    {savedFlash && (
+                      <span className="inline-flex items-center gap-1.5 text-[14px] text-emerald-600 font-semibold animate-pulse">
+                        <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
+                          <path d="M3 7L6 10L11 4" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        Guardado
+                      </span>
+                    )}
                   </div>
                   {/* Dimension progress segments */}
                   <div className="flex items-center gap-2">
@@ -385,21 +451,11 @@ export default function DiagnosticoPage() {
                     {totalAnswered} de {questions.length} respondidas
                   </div>
                   <button
-                    onClick={() => {
-                      if (currentIndex < questions.length - 1) {
-                        const nextIdx = currentIndex + 1;
-                        const isNewDim = dimCode(questions[nextIdx].criteria_code) !== dimCode(questions[currentIndex].criteria_code);
-                        setCurrentIndex(nextIdx);
-                        setAsIsLevel(questions[nextIdx]?.response?.as_is_level || null);
-                        setShowDimIntro(isNewDim);
-                      } else {
-                        router.push(`/dts/resultados/${assessmentId}`);
-                      }
-                    }}
+                    onClick={handleNext}
                     disabled={!asIsLevel}
                     className="px-6 py-3 rounded-xl bg-blue-600 text-white text-[15px] font-semibold hover:bg-blue-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
                   >
-                    Siguiente →
+                    {currentIndex === questions.length - 1 ? "Finalizar" : "Siguiente →"}
                   </button>
                 </div>
               </div>
@@ -409,7 +465,7 @@ export default function DiagnosticoPage() {
       </div>
 
       {/* ═══════════════════════════════════════════ */}
-      {/* ── AVATAR FAB                            ── */}
+      {/* ── MEJORA 3: CONTINUAR DESPUÉS + AVATAR  ── */}
       {/* ═══════════════════════════════════════════ */}
       <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
         {showAvatarTooltip && (
@@ -428,6 +484,33 @@ export default function DiagnosticoPage() {
             </p>
           </div>
         )}
+
+        {/* Continue later button */}
+        {!showCompletion && totalAnswered > 0 && totalAnswered < questions.length && (
+          <button
+            onClick={handleCopyLink}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-[13px] font-medium shadow-md hover:shadow-lg hover:border-slate-300 transition-all"
+          >
+            {linkCopied ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 7L6 10L11 4" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="text-emerald-600">Enlace copiado</span>
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Continuar después
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Avatar FAB */}
         <button
           onClick={() => {
             setShowAvatarTooltip(false);
