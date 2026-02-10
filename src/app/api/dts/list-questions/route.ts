@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
   const { data: responses } = await sb
     .from("dts_responses")
-    .select("criteria_id, as_is_level, notes")
+    .select("criteria_id, as_is_level, as_is_notes")
     .eq("assessment_id", assessmentId);
 
   const criteriaMap = Object.fromEntries((criteria || []).map((c: any) => [c.id, c]));
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         c.level_4_description_es,
         c.level_5_description_es,
       ],
-      response: r ? { as_is_level: r.as_is_level, notes: r.notes } : null,
+      response: r ? { as_is_level: r.as_is_level, notes: r.as_is_notes } : null,
     };
   });
 
