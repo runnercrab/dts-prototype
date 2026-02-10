@@ -159,21 +159,24 @@ export default function DtsHomePage() {
         </section>
 
         {/* ══════ CREDENCIALES ══════ */}
-        <section className="px-10 lg:px-16 py-14 bg-white border-t border-slate-200">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-12">
-            <div className="flex items-center gap-4">
-              <img src="/TMForum-logo.png" alt="TM Forum" className="w-16 h-16 object-contain" />
+        <section className="px-10 lg:px-16 py-20 bg-white border-t border-slate-200">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <h2 className="text-[28px] font-bold text-slate-900 mb-3">Construido sobre estándares de referencia mundial</h2>
+            <p className="text-[16px] text-slate-500 leading-relaxed">Gapply no inventa metodologías. Utiliza los mismos frameworks que usan las grandes consultoras, adaptados para que sean accesibles a cualquier PyME.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            <div className="flex items-start gap-5 p-8 rounded-2xl border border-slate-200 bg-slate-50/50">
+              <img src="/TMForum-logo.png" alt="TM Forum" className="w-20 h-20 object-contain shrink-0" />
               <div>
-                <div className="text-[15px] font-semibold text-slate-800">TM Forum Member</div>
-                <div className="text-[13px] text-slate-500">Digital Maturity Model v5.0.1</div>
+                <div className="text-[16px] font-bold text-slate-800 mb-1">TM Forum Member</div>
+                <div className="text-[14px] text-slate-600 leading-relaxed">Digital Maturity Model v5.0.1 — el estándar de facto en transformación digital, usado por más de 850 empresas en el mundo.</div>
               </div>
             </div>
-            <div className="hidden sm:block w-px h-12 bg-slate-200" />
-            <div className="flex items-center gap-4">
-              <img src="/MIT-logo.png" alt="MIT" className="w-16 h-16 object-contain" />
+            <div className="flex items-start gap-5 p-8 rounded-2xl border border-slate-200 bg-slate-50/50">
+              <img src="/MIT-logo.png" alt="MIT" className="w-20 h-20 object-contain shrink-0" />
               <div>
-                <div className="text-[15px] font-semibold text-slate-800">MIT CDO Candidate 2025-26</div>
-                <div className="text-[13px] text-slate-500">Frameworks CISR · Metodología Big4</div>
+                <div className="text-[16px] font-bold text-slate-800 mb-1">MIT CDO Candidate 2025-26</div>
+                <div className="text-[14px] text-slate-600 leading-relaxed">Frameworks CISR y metodología Big4 aplicados al contexto real de PyMEs españolas. Rigor académico, enfoque práctico.</div>
               </div>
             </div>
           </div>
