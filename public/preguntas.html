@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapply — Estado Actual y Preguntas para SECOT</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue: #1a90ff;
+  --blue-soft: #e8f4ff;
+  --blue-10: rgba(26, 144, 255, 0.08);
+  --white: #ffffff;
+  --gray-50: #f7f9fb;
+  --gray-100: #eef2f6;
+  --gray-200: #dde3eb;
+  --gray-500: #6b7a8d;
+  --gray-700: #374151;
+  --gray-900: #111827;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'Space Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font); color: var(--gray-900);
+  background: var(--white); line-height: 1.7; font-size: 18px;
+  -webkit-font-smoothing: antialiased;
+}
+.page {
+  max-width: 860px; margin: 0 auto;
+  padding: 4rem 2.5rem 6rem;
+}
+
+/* Header */
+.header {
+  text-align: center; margin-bottom: 4rem;
+  padding-bottom: 3rem; border-bottom: 1.5px solid var(--gray-200);
+}
+.logo {
+  font-weight: 800; font-size: 2rem; color: var(--blue);
+  letter-spacing: -0.03em; margin-bottom: 1.5rem;
+}
+.header h1 {
+  font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em;
+  line-height: 1.2; margin-bottom: 0.8rem;
+}
+.header p { color: var(--gray-500); font-size: 1.05rem; }
+.date-badge {
+  display: inline-block; margin-top: 1.2rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  background: var(--blue-10); border: 1.5px solid rgba(26,144,255,0.15);
+  padding: 0.4rem 1.2rem; border-radius: 100px;
+  color: var(--blue); font-weight: 700;
+}
+
+/* Sections */
+.section { margin-bottom: 3.5rem; }
+.section-label {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--blue); font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 1.2rem;
+}
+.section h2 {
+  font-size: 1.6rem; font-weight: 800;
+  letter-spacing: -0.02em; margin-bottom: 1.2rem;
+}
+.section p {
+  color: var(--gray-700); font-size: 1rem; margin-bottom: 1rem;
+  max-width: 760px;
+}
+
+/* Status items */
+.status-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1.2rem; margin: 1.5rem 0;
+}
+@media (max-width: 600px) { .status-grid { grid-template-columns: 1fr; } }
+.status-item {
+  background: var(--white); border: 1.5px solid var(--gray-200);
+  border-radius: 14px; padding: 1.5rem;
+}
+.status-item .label {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 0.4rem;
+}
+.status-item .label.done { color: var(--green); }
+.status-item .label.progress { color: var(--amber); }
+.status-item .label.pending { color: var(--gray-500); }
+.status-item .value {
+  font-size: 1rem; font-weight: 600; color: var(--gray-900);
+}
+.status-item .detail {
+  font-size: 0.85rem; color: var(--gray-500); margin-top: 0.3rem;
+}
+
+/* Questions */
+.question-card {
+  background: var(--gray-50); border: 1.5px solid var(--gray-200);
+  border-radius: 16px; padding: 2.2rem; margin-bottom: 1.5rem;
+}
+.question-number {
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 700;
+  color: var(--blue); letter-spacing: 0.06em; margin-bottom: 0.8rem;
+}
+.question-card h3 {
+  font-size: 1.2rem; font-weight: 700;
+  margin-bottom: 0.8rem; line-height: 1.3;
+}
+.question-card .context {
+  color: var(--gray-500); font-size: 0.95rem; line-height: 1.7;
+}
+.question-card .the-question {
+  margin-top: 1rem; padding-top: 1rem;
+  border-top: 1px solid var(--gray-200);
+  color: var(--blue); font-weight: 600;
+  font-size: 1.05rem; font-style: italic;
+}
+
+/* Links */
+.links-section {
+  background: var(--blue-soft); border-radius: 16px;
+  padding: 2.2rem; margin-top: 3rem;
+}
+.links-section h3 {
+  font-size: 1.1rem; font-weight: 700; margin-bottom: 1.2rem;
+}
+.link-row {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.7rem 0; border-bottom: 1px solid rgba(26,144,255,0.15);
+}
+.link-row:last-child { border-bottom: none; }
+.link-label {
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 700;
+  color: var(--blue); min-width: 140px;
+}
+.link-row a {
+  color: var(--gray-700); font-size: 0.92rem;
+  text-decoration: none; font-weight: 500;
+}
+.link-row a:hover { color: var(--blue); text-decoration: underline; }
+
+/* Footer */
+.footer-note {
+  margin-top: 4rem; padding-top: 2rem;
+  border-top: 1.5px solid var(--gray-200);
+  text-align: center; color: var(--gray-500); font-size: 0.88rem;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">gapply</div>
+    <h1>Estado Actual y Preguntas</h1>
+    <p>Documento preparado para la sesión de mentoría SECOT</p>
+    <div class="date-badge">Febrero 2026</div>
+  </div>
+
+  <!-- LO QUE TENGO HOY -->
+  <div class="section">
+    <div class="section-label">01 — Lo que tengo hoy</div>
+    <h2>Estado del proyecto</h2>
+
+    <div class="status-grid">
+      <div class="status-item">
+        <div class="label done">✓ Completado</div>
+        <div class="value">Producto V1 en producción</div>
+        <div class="detail">DTS CEO30: 30 preguntas, 6 dimensiones, chat IA, avatar, resultados con obstáculos. Funcional y desplegado.</div>
+      </div>
+      <div class="status-item">
+        <div class="label done">✓ Completado</div>
+        <div class="value">Metodología documentada</div>
+        <div class="detail">Framework propio DTS + TM Forum DMM v5.0.1 + MIT CISR. Triple validación con genealogía intelectual completa.</div>
+      </div>
+      <div class="status-item">
+        <div class="label done">✓ Completado</div>
+        <div class="value">Arquitectura técnica</div>
+        <div class="detail">Next.js + Supabase + OpenAI + HeyGen. Base de datos con 129 criterios TM Forum verificados. Desplegado en Vercel.</div>
+      </div>
+      <div class="status-item">
+        <div class="label done">✓ Completado</div>
+        <div class="value">Red de validación</div>
+        <div class="detail">Alfred Karlsson (TM Forum), programa MIT CDO 2025-26, mentoría SECOT con Miguel.</div>
+      </div>
+      <div class="status-item">
+        <div class="label progress">◐ En progreso</div>
+        <div class="value">Modelo de precios</div>
+        <div class="detail">Estructura freemium definida (Lite gratis / Pro / Enterprise). Falta calcular costes reales para fijar precios.</div>
+      </div>
+      <div class="status-item">
+        <div class="label progress">◐ En progreso</div>
+        <div class="value">Plan de negocio</div>
+        <div class="detail">Documento completo con 15 secciones. Incluye metodología, mercado, proyecciones y roadmap técnico.</div>
+      </div>
+      <div class="status-item">
+        <div class="label pending">○ Pendiente</div>
+        <div class="value">Primeros clientes reales</div>
+        <div class="detail">V1 funciona pero todavía no ha sido probado con CEOs de PyME fuera del entorno de desarrollo.</div>
+      </div>
+      <div class="status-item">
+        <div class="label pending">○ Pendiente</div>
+        <div class="value">V2 — Programas de acción</div>
+        <div class="detail">Diseño conceptual completo. Necesita desarrollo. Es la primera fase que monetiza.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LO QUE NECESITO VALIDAR -->
+  <div class="section">
+    <div class="section-label">02 — Lo que necesito validar</div>
+    <h2>Decisiones abiertas</h2>
+    <p>Estas son las tres decisiones estratégicas donde el feedback de SECOT puede tener más impacto en los próximos 90 días.</p>
+  </div>
+
+  <!-- PREGUNTA 1 -->
+  <div class="question-card">
+    <div class="question-number">Pregunta 01</div>
+    <h3>¿Cómo pongo el diagnóstico gratuito delante de los primeros 100 CEOs?</h3>
+    <div class="context">
+      Tengo un producto que da valor real en 5 minutos (diagnóstico + obstáculos + primer paso). Es gratuito. Pero hoy no tengo canal de adquisición definido. Las opciones que barajo: LinkedIn orgánico/ads, asociaciones empresariales, cámaras de comercio, la propia red SECOT, eventos de PyMEs, partnerships con asesorías/gestorías.
+    </div>
+    <div class="the-question">¿Cuál es la forma más rápida y barata de llegar a CEOs de PyME que no me conocen? ¿Qué canal priorizaría Miguel?</div>
+  </div>
+
+  <!-- PREGUNTA 2 -->
+  <div class="question-card">
+    <div class="question-number">Pregunta 02</div>
+    <h3>¿Debería buscar primeros usuarios gratuitos o avanzar el producto de pago?</h3>
+    <div class="context">
+      Soy founder solo. Mi tiempo es limitado. Tengo dos opciones para los próximos 3 meses: (A) salir a buscar 50 usuarios gratuitos de V1 para validar product-market fit, aprender del uso real y generar casos de estudio, o (B) desarrollar V2 (programas de acción) para tener algo que monetizar cuanto antes. La opción A me da aprendizaje pero no ingresos. La opción B me da producto pero sin saber si alguien lo quiere.
+    </div>
+    <div class="the-question">¿Qué priorizaría un mentor de negocio: validar con usuarios gratuitos o construir lo que genera ingresos?</div>
+  </div>
+
+  <!-- PREGUNTA 3 -->
+  <div class="question-card">
+    <div class="question-number">Pregunta 03</div>
+    <h3>¿Cómo fijar precio si mis costes son casi cero?</h3>
+    <div class="context">
+      El coste marginal por cliente es prácticamente nulo (API de IA ~€0.01 por diagnóstico, hosting en Vercel casi gratis). Esto significa que el pricing debe basarse en valor percibido, no en coste. El problema: los CEOs de PyME están acostumbrados a pagar €0 por herramientas digitales genéricas o €30.000+ por consultoría Big4. No hay referencia intermedia. Necesito encontrar el punto donde el precio sea lo suficientemente bajo para que prueben, pero lo suficientemente alto para que lo tomen en serio.
+    </div>
+    <div class="the-question">¿Cómo se fija precio cuando el coste es casi cero y no hay referencia directa en el mercado? ¿Valor percibido? ¿Anclaje a la consultoría?</div>
+  </div>
+
+  <!-- ENLACES -->
+  <div class="links-section">
+    <h3>Material de referencia</h3>
+    <div class="link-row">
+      <span class="link-label">MVP LIVE</span>
+      <a href="https://dts-prototype.vercel.app" target="_blank">dts-prototype.vercel.app →</a>
+    </div>
+    <div class="link-row">
+      <span class="link-label">PLAN WEB</span>
+      <a href="#">Enlace a la web del plan de negocio →</a>
+    </div>
+    <div class="link-row">
+      <span class="link-label">PLAN PDF</span>
+      <a href="#">Gapply_Plan_Negocio_SECOT.pdf →</a>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    David Arias — CEO & Founder, Gapply<br>
+    david@gapply.io · MIT CDO 2025-26<br>
+    Preparado para SECOT — Programa de Mentoría
+  </div>
+
+</div>
+</body>
+</html>
