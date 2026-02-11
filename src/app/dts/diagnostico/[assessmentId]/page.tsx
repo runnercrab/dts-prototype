@@ -213,24 +213,24 @@ export default function DiagnosticoPage() {
                 <div key={dim.code} className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                   <button
                     onClick={() => goTo(dim.startIndex)}
-                    className={`flex items-center gap-2 md:gap-3 px-3 md:px-5 py-3 md:py-3.5 rounded-2xl transition-all flex-1 min-w-0 ${isActive ? "bg-[#e8f4ff] shadow-sm" : isComplete ? "bg-emerald-50 hover:bg-emerald-100" : "bg-[#f7f9fb] hover:bg-slate-100"}`}
-                    style={isActive ? { outline: `2px solid ${GAPPLY_BLUE}`, outlineOffset: '-2px' } : {}}
+                    className={`flex items-center gap-2 md:gap-3 px-3 md:px-5 py-3 md:py-3.5 rounded-2xl transition-all flex-1 min-w-0 ${isActive ? "bg-[#e8f4ff] shadow-sm" : isComplete ? "bg-blue-50 hover:bg-blue-100" : "bg-[#f7f9fb] hover:bg-slate-100"}`}
+                    style={isActive ? { outline: `2px solid ${GAPPLY_BLUE}`, outlineOffset: '-2px' } : isComplete ? { outline: `2px solid ${GAPPLY_BLUE}`, outlineOffset: '-2px' } : {}}
                   >
                     {isComplete ? (
-                      <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-emerald-600 text-[17px] md:text-[18px] font-bold">✓</span>
+                      <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white" style={{ border: `2.5px solid ${GAPPLY_BLUE}` }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GAPPLY_BLUE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                       </div>
                     ) : (
                       <Image src={dim.icon} alt={dim.name} width={26} height={26} className={`flex-shrink-0 ${isActive ? "opacity-100" : "opacity-40"}`} />
                     )}
                     <div className="min-w-0 flex-1 hidden sm:block">
-                      <div className={`text-[14px] md:text-[15px] font-semibold truncate ${isActive ? "text-slate-900" : isComplete ? "text-emerald-700" : "text-slate-500"}`}>{dim.name}</div>
-                      <div className={`text-[12px] md:text-[13px] font-bold font-[family-name:var(--font-space-mono)] ${isActive ? "text-slate-600" : isComplete ? "text-emerald-500" : "text-slate-400"}`}>{dim.answered}/{dim.total}</div>
+                      <div className={`text-[14px] md:text-[15px] font-semibold truncate ${isActive ? "text-slate-900" : isComplete ? "text-blue-700" : "text-slate-500"}`}>{dim.name}</div>
+                      <div className={`text-[12px] md:text-[13px] font-bold font-[family-name:var(--font-space-mono)] ${isActive ? "text-slate-600" : isComplete ? "text-blue-500" : "text-slate-400"}`}>{dim.answered}/{dim.total}</div>
                     </div>
                     <span className="sm:hidden text-[13px] font-bold text-slate-500">{dim.answered}/{dim.total}</span>
                   </button>
                   {idx < dimensions.length - 1 && (
-                    <div className={`w-4 md:w-6 h-[3px] rounded-full flex-shrink-0 ${isComplete ? "bg-emerald-300" : "bg-slate-200"}`} />
+                    <div className={`w-4 md:w-6 h-[3px] rounded-full flex-shrink-0 ${isComplete ? "bg-blue-300" : "bg-slate-200"}`} />
                   )}
                 </div>
               );
@@ -304,8 +304,8 @@ export default function DiagnosticoPage() {
                           </div>
                           <p className={`flex-1 text-[16px] md:text-[18px] leading-relaxed pt-0.5 ${asIsLevel === i + 1 ? "text-slate-900 font-medium" : "text-slate-800"}`}>{level}</p>
                           {asIsLevel === i + 1 && (
-                            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1" style={{ backgroundColor: GAPPLY_BLUE }}>
-                              <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M3 7L6 10L11 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 bg-white" style={{ border: `2.5px solid ${GAPPLY_BLUE}` }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GAPPLY_BLUE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                             </div>
                           )}
                         </div>

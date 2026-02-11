@@ -65,18 +65,26 @@ export default function DtsSidebar({ currentPhase, assessmentId }: Props) {
                 >
                   {/* Step indicator */}
                   <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center text-[13px] font-bold shrink-0 ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0 ${
                       isActive
-                        ? "text-white"
+                        ? "bg-white text-blue-500"
                         : isPast
-                          ? "bg-emerald-100 text-emerald-600"
-                          : "bg-slate-100 text-slate-400"
+                          ? "bg-white text-blue-500"
+                          : "bg-slate-50 text-slate-400"
                     }`}
-                    style={isActive ? { backgroundColor: GAPPLY_BLUE } : {}}
+                    style={
+                      isActive
+                        ? { border: `2.5px solid ${GAPPLY_BLUE}` }
+                        : isPast
+                          ? { border: `2.5px solid ${GAPPLY_BLUE}` }
+                          : { border: '2px solid #dde3eb' }
+                    }
                   >
-                    {isPast ? "✓" : phase.n + 1}
+                    {isPast ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GAPPLY_BLUE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                    ) : phase.n + 1}
                   </div>
-                  {phase.label}
+                  {isActive ? `→ ${phase.label}` : phase.label}
                 </Link>
               );
             })}

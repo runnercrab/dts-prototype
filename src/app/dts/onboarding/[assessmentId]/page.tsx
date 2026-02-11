@@ -151,7 +151,7 @@ export default function OnboardingPage() {
                           border: sector === s ? '1.5px solid #1a90ff' : '1.5px solid #dde3eb',
                         }}
                       >
-                        {sector === s && <span className="mr-2" style={{ color: GAPPLY_BLUE }}>✓</span>}
+                        {sector === s && <span className="mr-1 inline-flex w-5 h-5 items-center justify-center rounded-full" style={{ border: `2px solid ${GAPPLY_BLUE}` }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={GAPPLY_BLUE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>}
                         {s}
                       </button>
                     ))}
@@ -175,7 +175,7 @@ export default function OnboardingPage() {
                           border: size === s.value ? '1.5px solid #1a90ff' : '1.5px solid #dde3eb',
                         }}
                       >
-                        {size === s.value && <span className="mr-2" style={{ color: GAPPLY_BLUE }}>✓</span>}
+                        {size === s.value && <span className="mr-1 inline-flex w-5 h-5 items-center justify-center rounded-full" style={{ border: `2px solid ${GAPPLY_BLUE}` }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={GAPPLY_BLUE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>}
                         {s.label}
                       </button>
                     ))}
@@ -199,7 +199,7 @@ export default function OnboardingPage() {
                           border: role === r ? '1.5px solid #1a90ff' : '1.5px solid #dde3eb',
                         }}
                       >
-                        {role === r && <span className="mr-2" style={{ color: GAPPLY_BLUE }}>✓</span>}
+                        {role === r && <span className="mr-1 inline-flex w-5 h-5 items-center justify-center rounded-full" style={{ border: `2px solid ${GAPPLY_BLUE}` }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={GAPPLY_BLUE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>}
                         {r}
                       </button>
                     ))}
