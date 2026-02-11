@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import AvatarPane from "@/components/AvatarPane";
-import AssistantChat from "@/components/AssistantChat";
 
 const GAPPLY_BLUE = "#1a90ff";
 
@@ -9,19 +8,16 @@ export default function FloatingAvatar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-8 right-8 z-50 hidden md:flex flex-col items-end gap-3">
 
-      {/* ── Panel del avatar + chat ── */}
+      {/* ── Panel del avatar ── */}
       {open && (
-        <div
-          className="w-[420px] md:w-[480px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
-          style={{ maxHeight: 'calc(100vh - 120px)' }}
-        >
+        <div className="w-[340px] md:w-[400px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              <span className="text-[15px] font-semibold text-slate-700">Asistente Gapply</span>
+              <span className="text-[14px] font-semibold text-slate-700">Asistente Gapply</span>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -34,13 +30,8 @@ export default function FloatingAvatar() {
           </div>
 
           {/* Avatar */}
-          <div className="shrink-0">
+          <div className="p-0">
             <AvatarPane />
-          </div>
-
-          {/* Chat — scrollable */}
-          <div className="flex-1 min-h-[200px] overflow-y-auto border-t border-slate-100">
-            <AssistantChat />
           </div>
         </div>
       )}
