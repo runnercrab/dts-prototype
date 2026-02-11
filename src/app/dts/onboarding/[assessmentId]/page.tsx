@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import DtsSidebar from "@/components/dts/DtsSidebar";
+import FloatingAvatar from "@/components/dts/FloatingAvatar";
 
 const GAPPLY_BLUE = "#1a90ff";
 
@@ -86,7 +87,7 @@ export default function OnboardingPage() {
 
         {/* MAIN */}
         <main className="flex-1 flex items-center justify-center px-5 md:px-10 py-12 md:py-16">
-          <div className="max-w-xl w-full">
+          <div className="max-w-5xl w-full">
 
             {/* ── STEP 0: WELCOME ── */}
             {step === 0 && (
@@ -235,20 +236,10 @@ export default function OnboardingPage() {
             )}
           </div>
         </main>
-
-        {/* FLOATING AVATAR */}
-        <div className="fixed bottom-8 right-8 z-50">
-          <button
-            className="w-[60px] h-[60px] rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: GAPPLY_BLUE, boxShadow: '0 4px 14px rgba(26,144,255,0.3)' }}
-          >
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white" />
-          </button>
-        </div>
       </div>
+
+      {/* FLOATING AVATAR */}
+      <FloatingAvatar />
     </div>
   );
 }
