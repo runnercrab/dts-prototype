@@ -185,26 +185,26 @@ export default function DiagnosticoPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-slate-400 text-lg">Cargando diagnóstico...</div>
+      <div className="min-h-screen bg-[#f7f9fb] flex items-center justify-center">
+        <div className="text-slate-600 text-lg font-medium">Cargando diagnóstico...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-[#f7f9fb] flex">
       <DtsSidebar currentPhase={2} assessmentId={assessmentId} />
 
-      <div className="ml-0 md:ml-[220px] flex-1 flex flex-col min-h-screen">
+      <div className="ml-0 md:ml-[220px] flex-1 flex flex-col min-h-screen overflow-x-hidden">
 
-        <div className="bg-white px-6 md:px-8 py-3 flex items-center justify-between">
-          <span className="text-[13px] text-slate-400">Gapply · Diagnóstico</span>
-          <span className="text-[12px] font-mono text-slate-300">{assessmentId.slice(0, 8)}</span>
+        <div className="bg-white px-6 md:px-8 py-3.5 flex items-center justify-between" style={{ borderBottom: '1.5px solid #dde3eb' }}>
+          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Diagnóstico</span></span>
+          <span className="text-[12px] font-[family-name:var(--font-space-mono)] text-slate-400">{assessmentId.slice(0, 8)}</span>
         </div>
         <div className="h-[3px] w-full flex-shrink-0" style={{ backgroundColor: GAPPLY_BLUE }} />
 
         {/* DIMENSION PROGRESS BAR */}
-        <div className="bg-white border-b border-slate-200 px-4 md:px-8 py-4 md:py-5">
+        <div className="bg-white px-4 md:px-8 py-5 md:py-6" style={{ borderBottom: '1.5px solid #dde3eb' }}>
           <div className="flex items-center justify-between gap-2 md:gap-3 overflow-x-auto">
             {dimensions.map((dim, idx) => {
               const isActive = dim.code === currentDim && !showCompletion;
@@ -213,21 +213,21 @@ export default function DiagnosticoPage() {
                 <div key={dim.code} className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                   <button
                     onClick={() => goTo(dim.startIndex)}
-                    className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-2xl transition-all flex-1 min-w-0 ${isActive ? "bg-blue-50 shadow-sm" : isComplete ? "bg-emerald-50 hover:bg-emerald-100" : "bg-slate-50 hover:bg-slate-100"}`}
+                    className={`flex items-center gap-2 md:gap-3 px-3 md:px-5 py-3 md:py-3.5 rounded-2xl transition-all flex-1 min-w-0 ${isActive ? "bg-[#e8f4ff] shadow-sm" : isComplete ? "bg-emerald-50 hover:bg-emerald-100" : "bg-[#f7f9fb] hover:bg-slate-100"}`}
                     style={isActive ? { outline: `2px solid ${GAPPLY_BLUE}`, outlineOffset: '-2px' } : {}}
                   >
                     {isComplete ? (
-                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-emerald-600 text-[16px] md:text-[18px] font-bold">✓</span>
+                      <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-emerald-600 text-[17px] md:text-[18px] font-bold">✓</span>
                       </div>
                     ) : (
-                      <Image src={dim.icon} alt={dim.name} width={24} height={24} className={`flex-shrink-0 ${isActive ? "opacity-100" : "opacity-40"}`} />
+                      <Image src={dim.icon} alt={dim.name} width={26} height={26} className={`flex-shrink-0 ${isActive ? "opacity-100" : "opacity-40"}`} />
                     )}
                     <div className="min-w-0 flex-1 hidden sm:block">
-                      <div className={`text-[13px] md:text-[14px] font-semibold truncate ${isActive ? "text-slate-800" : isComplete ? "text-emerald-700" : "text-slate-400"}`}>{dim.name}</div>
-                      <div className={`text-[11px] md:text-[12px] font-bold ${isActive ? "text-slate-500" : isComplete ? "text-emerald-500" : "text-slate-300"}`}>{dim.answered}/{dim.total}</div>
+                      <div className={`text-[14px] md:text-[15px] font-semibold truncate ${isActive ? "text-slate-900" : isComplete ? "text-emerald-700" : "text-slate-500"}`}>{dim.name}</div>
+                      <div className={`text-[12px] md:text-[13px] font-bold font-[family-name:var(--font-space-mono)] ${isActive ? "text-slate-600" : isComplete ? "text-emerald-500" : "text-slate-400"}`}>{dim.answered}/{dim.total}</div>
                     </div>
-                    <span className="sm:hidden text-[12px] font-bold text-slate-400">{dim.answered}/{dim.total}</span>
+                    <span className="sm:hidden text-[13px] font-bold text-slate-500">{dim.answered}/{dim.total}</span>
                   </button>
                   {idx < dimensions.length - 1 && (
                     <div className={`w-4 md:w-6 h-[3px] rounded-full flex-shrink-0 ${isComplete ? "bg-emerald-300" : "bg-slate-200"}`} />
@@ -239,42 +239,42 @@ export default function DiagnosticoPage() {
         </div>
 
         {/* MAIN CONTENT */}
-        <main className="flex-1 flex items-start justify-center px-5 md:px-10 py-8 md:py-12">
+        <main className="flex-1 flex items-start justify-center px-5 md:px-10 py-10 md:py-14">
           <div className="w-full max-w-4xl">
 
             {showCompletion ? (
-              <div className="flex flex-col items-center justify-center text-center py-16 md:py-20">
-                <div className="w-24 h-24 rounded-full bg-emerald-50 flex items-center justify-center mb-8">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+              <div className="flex flex-col items-center justify-center text-center py-20 md:py-24">
+                <div className="w-28 h-28 rounded-full bg-emerald-50 flex items-center justify-center mb-10">
+                  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                 </div>
-                <h1 className="text-[30px] md:text-[36px] font-bold text-slate-900 mb-4">Diagnóstico completado</h1>
-                <p className="text-[16px] md:text-[18px] text-slate-600 mb-3 max-w-lg leading-relaxed">Has evaluado las {questions.length} áreas clave de tu empresa.</p>
-                <p className="text-[15px] md:text-[16px] text-slate-500 mb-12 max-w-md">Tu informe incluye tu nivel de madurez digital, los obstáculos que te están frenando y el primer paso concreto para avanzar.</p>
-                <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="px-10 py-4 rounded-xl text-white text-[17px] font-semibold shadow-lg hover:shadow-xl transition-all" style={{ backgroundColor: GAPPLY_BLUE }}>Ver mis resultados →</button>
+                <h1 className="text-[32px] md:text-[40px] font-extrabold text-slate-900 mb-5 tracking-tight">Diagnóstico completado</h1>
+                <p className="text-[17px] md:text-[19px] text-slate-700 mb-4 max-w-lg leading-relaxed">Has evaluado las {questions.length} áreas clave de tu empresa.</p>
+                <p className="text-[16px] md:text-[17px] text-slate-600 mb-14 max-w-md">Tu informe incluye tu nivel de madurez digital, los obstáculos que te están frenando y el primer paso concreto para avanzar.</p>
+                <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all" style={{ backgroundColor: GAPPLY_BLUE }}>Ver mis resultados →</button>
               </div>
 
             ) : showDimIntro && currentDimInfo ? (
-              <div className="flex flex-col items-center justify-center text-center py-16 md:py-20">
-                <div className="w-24 h-24 md:w-28 md:h-28 rounded-3xl flex items-center justify-center mb-8 bg-slate-100 shadow-lg">
-                  <Image src={currentDimInfo.icon} alt={currentDimInfo.name} width={56} height={56} className="md:w-[64px] md:h-[64px]" />
+              <div className="flex flex-col items-center justify-center text-center py-20 md:py-24">
+                <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl flex items-center justify-center mb-10 bg-slate-100 shadow-lg">
+                  <Image src={currentDimInfo.icon} alt={currentDimInfo.name} width={60} height={60} className="md:w-[68px] md:h-[68px]" />
                 </div>
-                <div className="text-[14px] md:text-[16px] font-extrabold uppercase tracking-[0.15em] mb-4" style={{ color: GAPPLY_BLUE }}>{currentDimInfo.name}</div>
-                <h1 className="text-[26px] md:text-[32px] font-bold text-slate-800 leading-snug mb-5 max-w-xl">{currentDimInfo.context}</h1>
-                <p className="text-[16px] md:text-[18px] text-slate-600 mb-12 max-w-md leading-relaxed">5 preguntas · Elige la opción que mejor describe tu situación <strong>HOY</strong></p>
-                <button onClick={() => setShowDimIntro(false)} className="px-10 py-4 rounded-xl text-white text-[17px] font-semibold shadow-lg hover:shadow-xl transition-all" style={{ backgroundColor: GAPPLY_BLUE }}>Empezar →</button>
+                <div className="text-[15px] md:text-[17px] font-extrabold uppercase tracking-[0.15em] mb-5 font-[family-name:var(--font-space-mono)]" style={{ color: GAPPLY_BLUE }}>{currentDimInfo.name}</div>
+                <h1 className="text-[26px] md:text-[34px] font-extrabold text-slate-900 leading-snug mb-6 max-w-xl px-2 tracking-tight">{currentDimInfo.context}</h1>
+                <p className="text-[16px] md:text-[19px] text-slate-700 mb-14 max-w-md leading-relaxed px-2">5 preguntas · Elige la opción que mejor describe tu situación <strong>HOY</strong></p>
+                <button onClick={() => setShowDimIntro(false)} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all" style={{ backgroundColor: GAPPLY_BLUE }}>Empezar →</button>
               </div>
 
             ) : current ? (
               <div>
                 <div className="mb-10">
-                  <div className="flex items-center gap-4 mb-4">
-                    <span className="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl text-[14px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
-                      <Image src={DIM_ICON[currentDim] || "/icons/target.png"} alt="" width={22} height={22} className="opacity-60" />
+                  <div className="flex items-center gap-4 mb-5">
+                    <span className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-[14px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 font-[family-name:var(--font-space-mono)]">
+                      <Image src={DIM_ICON[currentDim] || "/icons/target.png"} alt="" width={24} height={24} className="opacity-60" />
                       {current.dimension_name}
                     </span>
-                    <span className="text-[16px] md:text-[17px] text-slate-700 font-semibold">Pregunta {questionInDim} de {dimTotal}</span>
+                    <span className="text-[16px] md:text-[18px] text-slate-800 font-semibold">Pregunta {questionInDim} de {dimTotal}</span>
                     {savedFlash && (
-                      <span className="inline-flex items-center gap-1.5 text-[14px] text-emerald-600 font-semibold animate-pulse">
+                      <span className="inline-flex items-center gap-1.5 text-[15px] text-emerald-600 font-semibold animate-pulse">
                         <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M3 7L6 10L11 4" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         Guardado
                       </span>
@@ -282,26 +282,29 @@ export default function DiagnosticoPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {Array.from({ length: dimTotal }).map((_, i) => (
-                      <div key={i} className="h-[6px] flex-1 rounded-full transition-all duration-500" style={{ backgroundColor: i < questionInDim - 1 ? GAPPLY_BLUE : i === questionInDim - 1 ? (asIsLevel ? GAPPLY_BLUE : GAPPLY_BLUE + "40") : "#e2e8f0" }} />
+                      <div key={i} className="h-[6px] flex-1 rounded-full transition-all duration-500" style={{ backgroundColor: i < questionInDim - 1 ? GAPPLY_BLUE : i === questionInDim - 1 ? (asIsLevel ? GAPPLY_BLUE : GAPPLY_BLUE + "40") : "#dde3eb" }} />
                     ))}
                   </div>
                 </div>
 
-                <h1 className="text-[24px] md:text-[28px] font-bold text-slate-900 leading-snug mb-8">{current.question}</h1>
-                <p className="text-[13px] font-semibold text-slate-400 uppercase tracking-widest mb-4">Opciones</p>
+                <h1 className="text-[24px] md:text-[30px] font-extrabold text-slate-900 leading-snug mb-10 tracking-tight">{current.question}</h1>
+                <p className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-5 font-[family-name:var(--font-space-mono)]">Opciones</p>
 
-                <div className="space-y-3 mb-14">
+                <div className="space-y-3.5 mb-16">
                   {current.levels.map((level, i) =>
                     level ? (
                       <button key={i} onClick={() => handleSelect(i + 1)} disabled={saving}
-                        className={`w-full text-left rounded-2xl border-2 transition-all duration-200 group ${asIsLevel === i + 1 ? "border-blue-300 bg-blue-50 shadow-md" : "border-slate-150 bg-white hover:border-slate-300 hover:shadow-sm"}`}>
-                        <div className="flex items-start gap-4 md:gap-5 px-5 md:px-6 py-4 md:py-5">
-                          <div className={`flex-shrink-0 w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center text-[15px] md:text-[16px] font-bold mt-0.5 transition-colors ${asIsLevel === i + 1 ? "text-white" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"}`} style={asIsLevel === i + 1 ? { backgroundColor: GAPPLY_BLUE } : {}}>
+                        className={`w-full text-left rounded-2xl transition-all duration-200 group ${asIsLevel === i + 1 ? "bg-[#e8f4ff] shadow-md" : "bg-white hover:shadow-sm"}`}
+                        style={{
+                          border: asIsLevel === i + 1 ? '2px solid #1a90ff' : '1.5px solid #dde3eb',
+                        }}>
+                        <div className="flex items-start gap-4 md:gap-5 px-5 md:px-7 py-5 md:py-6">
+                          <div className={`flex-shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center text-[15px] md:text-[17px] font-bold mt-0.5 transition-colors ${asIsLevel === i + 1 ? "text-white" : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"}`} style={asIsLevel === i + 1 ? { backgroundColor: GAPPLY_BLUE } : {}}>
                             {i + 1}
                           </div>
-                          <p className={`flex-1 text-[15px] md:text-[17px] leading-relaxed pt-1 ${asIsLevel === i + 1 ? "text-slate-800 font-medium" : "text-slate-700"}`}>{level}</p>
+                          <p className={`flex-1 text-[16px] md:text-[18px] leading-relaxed pt-0.5 ${asIsLevel === i + 1 ? "text-slate-900 font-medium" : "text-slate-800"}`}>{level}</p>
                           {asIsLevel === i + 1 && (
-                            <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-1.5" style={{ backgroundColor: GAPPLY_BLUE }}>
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1" style={{ backgroundColor: GAPPLY_BLUE }}>
                               <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M3 7L6 10L11 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             </div>
                           )}
@@ -311,15 +314,17 @@ export default function DiagnosticoPage() {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <button onClick={handlePrev} disabled={currentIndex === 0} className="px-5 md:px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-600 text-[14px] md:text-[15px] font-semibold hover:bg-slate-50 hover:border-slate-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">← Anterior</button>
-                  <div className="text-[14px] md:text-[16px] text-slate-600 font-semibold">{totalAnswered} de {questions.length} respondidas</div>
-                  <div className="flex items-center gap-3">
-                    <button onClick={handleNext} disabled={!asIsLevel} className="px-5 md:px-6 py-3 rounded-xl text-white text-[14px] md:text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-md hover:shadow-lg" style={{ backgroundColor: GAPPLY_BLUE }}>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+                    <button onClick={handlePrev} disabled={currentIndex === 0} className="px-6 md:px-7 py-3.5 rounded-2xl text-slate-700 text-[15px] md:text-[16px] font-semibold hover:bg-slate-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" style={{ border: '1.5px solid #dde3eb' }}>← Anterior</button>
+                    <div className="text-[15px] md:text-[17px] text-slate-700 font-semibold font-[family-name:var(--font-space-mono)]">{totalAnswered} de {questions.length} <span className="text-slate-500 font-normal font-[family-name:var(--font-dm-sans)]">respondidas</span></div>
+                  </div>
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <button onClick={handleNext} disabled={!asIsLevel} className="flex-1 sm:flex-none px-6 md:px-7 py-3.5 rounded-2xl text-white text-[15px] md:text-[16px] font-bold transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-md hover:shadow-lg" style={{ backgroundColor: GAPPLY_BLUE }}>
                       {currentIndex === questions.length - 1 ? "Finalizar" : "Siguiente →"}
                     </button>
                     {totalAnswered === questions.length && (
-                      <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="px-5 md:px-6 py-3 rounded-xl bg-emerald-600 text-white text-[14px] md:text-[15px] font-semibold hover:bg-emerald-700 transition-colors shadow-md hover:shadow-lg">Ver resultados →</button>
+                      <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="flex-1 sm:flex-none px-6 md:px-7 py-3.5 rounded-2xl bg-emerald-600 text-white text-[15px] md:text-[16px] font-bold hover:bg-emerald-700 transition-colors shadow-md hover:shadow-lg">Ver resultados →</button>
                     )}
                   </div>
                 </div>
@@ -329,10 +334,10 @@ export default function DiagnosticoPage() {
         </main>
       </div>
 
-      {/* ═══ FLOATING — continue later + avatar ═══ */}
-      <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
+      {/* ═══ FLOATING — continue later ═══ */}
+      <div className="fixed bottom-8 right-8 z-50 hidden md:flex flex-col items-end gap-3">
         {!showCompletion && totalAnswered > 0 && totalAnswered < questions.length && (
-          <button onClick={handleCopyLink} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-[13px] font-medium shadow-md hover:shadow-lg hover:border-slate-300 transition-all">
+          <button onClick={handleCopyLink} className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-slate-700 text-[14px] font-semibold shadow-md hover:shadow-lg transition-all" style={{ border: '1.5px solid #dde3eb' }}>
             {linkCopied ? (
               <><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7L6 10L11 4" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg><span className="text-emerald-600">Enlace copiado</span></>
             ) : (

@@ -1,112 +1,98 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
 
 const GAPPLY_BLUE = "#1a90ff";
 
-interface DtsSidebarProps {
+const PHASES = [
+  { n: 0, label: "Inicio",       path: "/dts" },
+  { n: 1, label: "Onboarding",   path: "/dts/onboarding" },
+  { n: 2, label: "Diagnóstico",  path: "/dts/diagnostico" },
+  { n: 3, label: "Resultados",   path: "/dts/resultados" },
+];
+
+interface Props {
   currentPhase: number;
   assessmentId?: string;
 }
 
-const PHASES = [
-  { num: 0, label: "Inicio" },
-  { num: 1, label: "Onboarding" },
-  { num: 2, label: "Diagnóstico" },
-  { num: 3, label: "Resultado" },
-  { num: 4, label: "Programas" },
-  { num: 5, label: "Ejecución" },
-];
+export default function DtsSidebar({ currentPhase, assessmentId }: Props) {
+  const pathname = usePathname();
 
-function getPhaseHref(num: number, assessmentId?: string): string | null {
-  if (!assessmentId) {
-    if (num === 0) return "/dts";
-    return null;
+  function getHref(phase: typeof PHASES[number]) {
+    if (phase.n === 0) return "/dts";
+    if (!assessmentId) return "#";
+    return `${phase.path}/${assessmentId}`;
   }
-  switch (num) {
-    case 0: return "/dts";
-    case 1: return `/dts/onboarding/${assessmentId}`;
-    case 2: return `/dts/diagnostico/${assessmentId}`;
-    case 3: return `/dts/resultados/${assessmentId}`;
-    default: return null;
-  }
-}
 
-export default function DtsSidebar({ currentPhase, assessmentId }: DtsSidebarProps) {
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-white border-r border-slate-200 flex flex-col z-30 hidden md:flex">
-      {/* LOGO */}
-      <div className="px-4 py-5 border-b border-slate-100 flex items-center justify-center">
-        <Link href="/dts">
-          <img src="/gapply-logo.png" alt="Gapply" className="w-[160px] h-auto" />
-        </Link>
-      </div>
+    <>
+      {/* ── DESKTOP SIDEBAR ── */}
+      <aside className="hidden md:flex flex-col fixed top-0 left-0 h-screen w-[220px] bg-white z-40" style={{ borderRight: '1.5px solid #dde3eb' }}>
 
-      {/* PHASES */}
-      <nav className="flex-1 px-3 py-5 overflow-y-auto">
-        {PHASES.map((phase) => {
-          const isActive = phase.num === currentPhase;
-          const isCompleted = phase.num < currentPhase;
-          const isFuture = phase.num > currentPhase;
-          const isFarFuture = phase.num >= 4;
-          const href = getPhaseHref(phase.num, assessmentId);
-          const isClickable = href && !isActive;
-
-          const content = (
-            <>
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                style={{
-                  backgroundColor: isActive ? '#e8f4ff' : isCompleted ? '#e8f4ff' : isFarFuture ? '#f8fafc' : '#f1f5f9',
-                  border: isActive ? `2.5px solid ${GAPPLY_BLUE}` : isCompleted ? `2.5px solid ${GAPPLY_BLUE}` : isFarFuture ? '2px solid #e2e8f0' : '2px solid #cbd5e1',
-                }}
-              >
-                {isCompleted ? (
-                  <svg className="w-4 h-4" style={{ color: GAPPLY_BLUE }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <span className={`text-[13px] font-bold`} style={{ color: isActive ? GAPPLY_BLUE : isFarFuture ? '#cbd5e1' : '#94a3b8' }}>
-                    {phase.num}
-                  </span>
-                )}
-              </div>
-              <span
-                className={`text-[14px] ${
-                  isActive ? "font-bold" : isCompleted ? "font-semibold" : isFarFuture ? "text-slate-300" : "text-slate-400"
-                }`}
-                style={isActive ? { color: GAPPLY_BLUE } : isCompleted ? { color: '#475569' } : {}}
-              >
-                {isActive ? "→ " : ""}{phase.label}
-              </span>
-            </>
-          );
-
-          const className = `flex items-center gap-3 px-3 py-3 rounded-lg mb-1.5 transition-colors ${
-            isActive
-              ? "bg-blue-50 border-2 border-blue-200"
-              : isCompleted
-              ? "bg-slate-50 hover:bg-blue-50/50 cursor-pointer"
-              : ""
-          }`;
-
-          return isClickable ? (
-            <Link key={phase.num} href={href} className={className}>{content}</Link>
-          ) : (
-            <div key={phase.num} className={className}>{content}</div>
-          );
-        })}
-      </nav>
-
-      {/* USER */}
-      <div className="px-4 py-4 border-t border-slate-100 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: GAPPLY_BLUE }}>
-          <span className="text-white text-[13px] font-bold">N</span>
+        {/* Logo */}
+        <div className="px-5 py-5 flex items-center justify-center" style={{ borderBottom: '1.5px solid #dde3eb' }}>
+          <Image src="/gapply-logo.png" alt="Gapply" width={120} height={40} className="object-contain" />
         </div>
-        <div>
-          <div className="text-[13px] font-semibold text-slate-700">David A.</div>
-          <div className="text-[11px] text-slate-400">CEO</div>
+
+        {/* Navigation */}
+        <nav className="flex-1 py-5 px-3">
+          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em] px-3 mb-3 font-[family-name:var(--font-space-mono)]">
+            Fases
+          </div>
+          <div className="space-y-1">
+            {PHASES.map((phase) => {
+              const isActive = phase.n === currentPhase;
+              const isPast = phase.n < currentPhase;
+              const isFuture = phase.n > currentPhase;
+              const href = getHref(phase);
+              const isDisabled = isFuture || (!assessmentId && phase.n > 0);
+
+              return (
+                <Link
+                  key={phase.n}
+                  href={isDisabled ? "#" : href}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-all ${
+                    isActive
+                      ? "bg-[#e8f4ff] text-slate-900 font-semibold"
+                      : isPast
+                        ? "text-slate-700 hover:bg-slate-50"
+                        : "text-slate-400 cursor-not-allowed"
+                  }`}
+                  style={isActive ? { border: `1.5px solid ${GAPPLY_BLUE}40` } : {}}
+                  onClick={(e) => isDisabled && e.preventDefault()}
+                >
+                  {/* Step indicator */}
+                  <div
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center text-[13px] font-bold shrink-0 ${
+                      isActive
+                        ? "text-white"
+                        : isPast
+                          ? "bg-emerald-100 text-emerald-600"
+                          : "bg-slate-100 text-slate-400"
+                    }`}
+                    style={isActive ? { backgroundColor: GAPPLY_BLUE } : {}}
+                  >
+                    {isPast ? "✓" : phase.n + 1}
+                  </div>
+                  {phase.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* Footer */}
+        <div className="px-5 py-4" style={{ borderTop: '1.5px solid #dde3eb' }}>
+          <div className="text-[12px] text-slate-400 font-medium font-[family-name:var(--font-space-mono)]">
+            CEO30 · v1.0
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+
+      {/* ── MOBILE TOP BAR (inside header, handled by pages) ── */}
+      {/* Mobile navigation is handled via the dimension progress bar */}
+    </>
   );
 }

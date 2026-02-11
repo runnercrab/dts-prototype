@@ -40,7 +40,7 @@ export default function OnboardingPage() {
   const params = useParams();
   const assessmentId = params.assessmentId as string;
 
-  const [step, setStep] = useState(0); // 0=welcome, 1=form, 2=transition
+  const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
 
   const [companyName, setCompanyName] = useState("");
@@ -61,9 +61,7 @@ export default function OnboardingPage() {
           onboardingData: { companyName: companyName || null, sector, companySize: size, role },
         }),
       });
-    } catch (e) {
-      // Non-blocking
-    }
+    } catch (e) {}
     setStep(2);
     setSaving(false);
   }
@@ -73,39 +71,39 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-[#f7f9fb] flex">
       <DtsSidebar currentPhase={1} assessmentId={assessmentId} />
 
       <div className="ml-0 md:ml-[220px] flex-1 flex flex-col min-h-screen">
 
         {/* HEADER */}
-        <div className="bg-white px-6 md:px-8 py-3 flex items-center justify-between">
-          <span className="text-[13px] text-slate-400">Gapply · Onboarding</span>
-          <span className="text-[12px] font-mono text-slate-300">{assessmentId.slice(0, 8)}</span>
+        <div className="bg-white px-6 md:px-8 py-3.5 flex items-center justify-between" style={{ borderBottom: '1.5px solid #dde3eb' }}>
+          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Onboarding</span></span>
+          <span className="text-[12px] font-[family-name:var(--font-space-mono)] text-slate-400">{assessmentId.slice(0, 8)}</span>
         </div>
         <div className="h-[3px] w-full flex-shrink-0" style={{ backgroundColor: GAPPLY_BLUE }} />
 
         {/* MAIN */}
-        <main className="flex-1 flex items-center justify-center px-5 md:px-10 py-12 md:py-16">
+        <main className="flex-1 flex items-center justify-center px-5 md:px-10 py-14 md:py-20">
           <div className="max-w-5xl w-full">
 
             {/* ── STEP 0: WELCOME ── */}
             {step === 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-8 md:p-10 text-center">
-                <div className="w-20 h-20 rounded-2xl mx-auto mb-8 flex items-center justify-center" style={{ backgroundColor: '#e8f4ff' }}>
-                  <svg className="w-10 h-10" style={{ color: GAPPLY_BLUE }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <div className="bg-white rounded-2xl p-10 md:p-14 text-center" style={{ border: '1.5px solid #dde3eb' }}>
+                <div className="w-24 h-24 rounded-2xl mx-auto mb-10 flex items-center justify-center" style={{ backgroundColor: '#e8f4ff' }}>
+                  <svg className="w-12 h-12" style={{ color: GAPPLY_BLUE }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
                 </div>
-                <h1 className="text-[28px] md:text-[32px] font-bold text-slate-900 leading-tight mb-4">
+                <h1 className="text-[30px] md:text-[36px] font-extrabold text-slate-900 leading-tight mb-5 tracking-tight">
                   Empezamos por lo básico
                 </h1>
-                <p className="text-[16px] md:text-[18px] text-slate-600 leading-relaxed mb-10">
+                <p className="text-[17px] md:text-[19px] text-slate-700 leading-relaxed mb-12">
                   Esto no es un test técnico ni una auditoría. Son unas preguntas iniciales para entender tu contexto.
                 </p>
                 <button
                   onClick={() => setStep(1)}
-                  className="px-10 py-4 rounded-xl text-white text-[17px] font-semibold shadow-lg hover:shadow-xl transition-all"
+                  className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all"
                   style={{ backgroundColor: GAPPLY_BLUE }}
                 >
                   Empezar →
@@ -115,37 +113,43 @@ export default function OnboardingPage() {
 
             {/* ── STEP 1: FORM ── */}
             {step === 1 && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-8 md:p-10">
-                <h2 className="text-[24px] md:text-[28px] font-bold text-slate-900 mb-2">Contexto de tu empresa</h2>
-                <p className="text-[15px] text-slate-500 mb-10">Esto nos ayuda a personalizar tu diagnóstico</p>
+              <div className="bg-white rounded-2xl p-8 md:p-12" style={{ border: '1.5px solid #dde3eb' }}>
+                <h2 className="text-[26px] md:text-[30px] font-extrabold text-slate-900 mb-2 tracking-tight">Contexto de tu empresa</h2>
+                <p className="text-[16px] text-slate-600 mb-10">Esto nos ayuda a personalizar tu diagnóstico</p>
 
                 {/* Company name (optional) */}
-                <div className="mb-7">
-                  <label className="text-[13px] font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
-                    Nombre de tu empresa <span className="text-slate-300 normal-case font-normal">(opcional)</span>
+                <div className="mb-8">
+                  <label className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2.5 block font-[family-name:var(--font-space-mono)]">
+                    Nombre de tu empresa <span className="text-slate-400 normal-case font-normal">(opcional)</span>
                   </label>
                   <input
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="Ej: Acme Digital"
-                    className="w-full px-5 py-3.5 rounded-xl border-2 border-slate-200 text-[16px] text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-blue-300 transition-colors"
+                    className="w-full px-5 py-4 rounded-2xl text-[17px] text-slate-800 placeholder:text-slate-400 focus:outline-none transition-colors"
+                    style={{ border: '1.5px solid #dde3eb' }}
+                    onFocus={(e) => e.target.style.borderColor = '#1a90ff'}
+                    onBlur={(e) => e.target.style.borderColor = '#dde3eb'}
                   />
                 </div>
 
                 {/* Sector */}
-                <div className="mb-7">
-                  <label className="text-[13px] font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Sector *</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="mb-8">
+                  <label className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2.5 block font-[family-name:var(--font-space-mono)]">Sector *</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {SECTORS.map((s) => (
                       <button
                         key={s}
                         onClick={() => setSector(s)}
-                        className={`text-left px-4 py-3 rounded-xl border-2 text-[15px] transition-all ${
+                        className={`text-left px-5 py-3.5 rounded-2xl text-[16px] transition-all ${
                           sector === s
-                            ? "border-blue-300 bg-blue-50 font-medium text-slate-800"
-                            : "border-slate-150 bg-white text-slate-600 hover:border-slate-300"
+                            ? "bg-[#e8f4ff] font-semibold text-slate-900"
+                            : "bg-white text-slate-700 hover:bg-slate-50"
                         }`}
+                        style={{
+                          border: sector === s ? '1.5px solid #1a90ff' : '1.5px solid #dde3eb',
+                        }}
                       >
                         {sector === s && <span className="mr-2" style={{ color: GAPPLY_BLUE }}>✓</span>}
                         {s}
@@ -155,18 +159,21 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* Company size */}
-                <div className="mb-7">
-                  <label className="text-[13px] font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Tamaño de empresa *</label>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="mb-8">
+                  <label className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2.5 block font-[family-name:var(--font-space-mono)]">Tamaño de empresa *</label>
+                  <div className="grid grid-cols-2 gap-2.5">
                     {SIZES.map((s) => (
                       <button
                         key={s.value}
                         onClick={() => setSize(s.value)}
-                        className={`text-left px-4 py-3 rounded-xl border-2 text-[15px] transition-all ${
+                        className={`text-left px-5 py-3.5 rounded-2xl text-[16px] transition-all ${
                           size === s.value
-                            ? "border-blue-300 bg-blue-50 font-medium text-slate-800"
-                            : "border-slate-150 bg-white text-slate-600 hover:border-slate-300"
+                            ? "bg-[#e8f4ff] font-semibold text-slate-900"
+                            : "bg-white text-slate-700 hover:bg-slate-50"
                         }`}
+                        style={{
+                          border: size === s.value ? '1.5px solid #1a90ff' : '1.5px solid #dde3eb',
+                        }}
                       >
                         {size === s.value && <span className="mr-2" style={{ color: GAPPLY_BLUE }}>✓</span>}
                         {s.label}
@@ -176,18 +183,21 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* Role */}
-                <div className="mb-10">
-                  <label className="text-[13px] font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Tu rol *</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="mb-12">
+                  <label className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2.5 block font-[family-name:var(--font-space-mono)]">Tu rol *</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {ROLES.map((r) => (
                       <button
                         key={r}
                         onClick={() => setRole(r)}
-                        className={`text-left px-4 py-3 rounded-xl border-2 text-[15px] transition-all ${
+                        className={`text-left px-5 py-3.5 rounded-2xl text-[16px] transition-all ${
                           role === r
-                            ? "border-blue-300 bg-blue-50 font-medium text-slate-800"
-                            : "border-slate-150 bg-white text-slate-600 hover:border-slate-300"
+                            ? "bg-[#e8f4ff] font-semibold text-slate-900"
+                            : "bg-white text-slate-700 hover:bg-slate-50"
                         }`}
+                        style={{
+                          border: role === r ? '1.5px solid #1a90ff' : '1.5px solid #dde3eb',
+                        }}
                       >
                         {role === r && <span className="mr-2" style={{ color: GAPPLY_BLUE }}>✓</span>}
                         {r}
@@ -200,7 +210,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={handleFinishOnboarding}
                   disabled={!canProceed || saving}
-                  className="w-full py-4 rounded-xl text-white text-[17px] font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ backgroundColor: GAPPLY_BLUE }}
                 >
                   {saving ? "Guardando..." : "Continuar al diagnóstico →"}
@@ -210,24 +220,24 @@ export default function OnboardingPage() {
 
             {/* ── STEP 2: TRANSITION ── */}
             {step === 2 && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-8 md:p-10 text-center">
-                <div className="w-20 h-20 rounded-full mx-auto mb-8 bg-emerald-50 flex items-center justify-center">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <div className="bg-white rounded-2xl p-10 md:p-14 text-center" style={{ border: '1.5px solid #dde3eb' }}>
+                <div className="w-24 h-24 rounded-full mx-auto mb-10 bg-emerald-50 flex items-center justify-center">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 6L9 17l-5-5" />
                   </svg>
                 </div>
-                <h1 className="text-[28px] md:text-[32px] font-bold text-slate-900 leading-tight mb-4">
+                <h1 className="text-[30px] md:text-[36px] font-extrabold text-slate-900 leading-tight mb-5 tracking-tight">
                   Contexto guardado
                 </h1>
-                <p className="text-[16px] md:text-[18px] text-slate-600 leading-relaxed mb-4">
+                <p className="text-[17px] md:text-[19px] text-slate-700 leading-relaxed mb-4">
                   Ahora viene el diagnóstico: <strong>30 preguntas</strong> agrupadas en 6 dimensiones.
                 </p>
-                <p className="text-[15px] text-slate-500 mb-10">
+                <p className="text-[16px] text-slate-600 mb-12">
                   Para cada pregunta, elige la opción que mejor describe tu situación <strong>hoy</strong>. No hay respuestas correctas.
                 </p>
                 <button
                   onClick={goToDiagnostic}
-                  className="px-10 py-4 rounded-xl text-white text-[17px] font-semibold shadow-lg hover:shadow-xl transition-all"
+                  className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all"
                   style={{ backgroundColor: GAPPLY_BLUE }}
                 >
                   Empezar diagnóstico →
@@ -238,7 +248,6 @@ export default function OnboardingPage() {
         </main>
       </div>
 
-      {/* FLOATING AVATAR */}
       <FloatingAvatar />
     </div>
   );
