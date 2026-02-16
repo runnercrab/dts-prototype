@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import DtsSidebar from "@/components/dts/DtsSidebar";
 import ClosingCTA from "@/components/dts/ClosingCTA";
+import UpgradePathSection from "@/components/dts/UpgradePathSection";
 import FloatingAvatar from "@/components/dts/FloatingAvatar";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -357,6 +358,16 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
               })}
             </div>
           </section>
+
+          {/* UPGRADE PATH — solo para usuarios free */}
+          {frenos.length > 0 && (
+            <div className="mb-10 md:ml-[68px]">
+              <UpgradePathSection
+                numObstaculos={frenos.length}
+                dimensionesAfectadas={[...new Set(frenos.map((f: any) => f.dimension_name_es))]}
+              />
+            </div>
+          )}
 
           <ClosingCTA assessmentId={assessmentId} score={g.score_0_100} />
 
