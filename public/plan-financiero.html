@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapply — Plan Económico-Financiero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+--blue:#1a90ff;--blue-dk:#0a6fd4;--blue-lt:#e8f4ff;--blue-sub:#f0f8ff;
+--tx:#1a1a2e;--tx2:#5a6078;--txm:#8b8fa8;
+--bg:#fff;--bg2:#fafbfd;--bd:#e2e6ef;
+--grn:#10b981;--grn-bg:#ecfdf5;--org:#f59e0b;--org-bg:#fffbeb;
+--red:#ef4444;--red-bg:#fef2f2;
+--r:18px;--rs:12px;
+--sh:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.03);
+--shl:0 4px 20px rgba(26,144,255,.08),0 1px 4px rgba(0,0,0,.04);
+--e:.25s cubic-bezier(.4,0,.2,1)
+}
+html{scroll-behavior:smooth;font-size:17px}
+body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--tx);background:var(--bg);line-height:1.7;-webkit-font-smoothing:antialiased}
+
+/* === SIDEBAR NAV (Supabase-style) === */
+nav{position:fixed;top:0;left:0;bottom:0;z-index:100;width:280px;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-right:1.5px solid var(--bd);padding:0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.n-head{padding:1.25rem 1.5rem;border-bottom:1.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.n-logo{font-weight:700;font-size:1.35rem;color:var(--blue);text-decoration:none;letter-spacing:-.5px}
+.n-scroll{flex:1;overflow-y:auto;padding:1rem 0 2rem;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
+.n-scroll::-webkit-scrollbar{width:4px}.n-scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:4px}
+.n-section{margin-bottom:.15rem}
+.n-item{display:flex;align-items:center;gap:.5rem;text-decoration:none;color:var(--tx2);font-size:.84rem;font-weight:500;padding:.5rem 1.5rem;transition:var(--e);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+.n-item:hover{color:var(--blue);background:var(--blue-sub)}
+.n-num{font-family:'Space Mono',monospace;font-size:.68rem;color:var(--txm);min-width:1.6rem}
+.n-arrow{margin-left:auto;font-size:.6rem;color:var(--txm);transition:transform .2s ease}
+.n-section.open .n-arrow{transform:rotate(90deg)}
+.n-sub{display:none;padding:0 0 .25rem}
+.n-section.open .n-sub{display:block}
+.n-sub a{display:block;text-decoration:none;color:var(--tx2);font-size:.78rem;font-weight:400;padding:.35rem 1.5rem .35rem 3.2rem;transition:var(--e);position:relative}
+.n-sub a::before{content:'';position:absolute;left:2.1rem;top:50%;width:7px;height:1.5px;background:var(--bd)}
+.n-sub a:hover{color:var(--blue);background:var(--blue-sub)}
+.n-foot{padding:1rem 1.25rem;border-top:1.5px solid var(--bd);flex-shrink:0;display:flex;flex-direction:column;gap:.5rem}
+.n-foot a{display:block;text-decoration:none;font-size:.82rem;font-weight:500;padding:.5rem 1rem;border-radius:8px;text-align:center;transition:var(--e)}
+.n-cta{background:var(--blue)!important;color:#fff!important;font-weight:600!important;border-radius:10px!important}
+.n-cta:hover{background:var(--blue-dk)!important}
+.n-cta-out{color:var(--blue)!important;border:1.5px solid var(--blue)!important;border-radius:10px!important}
+.n-cta-out:hover{background:var(--blue-sub)!important}
+body{margin-left:280px}
+.hero{padding-top:0!important}
+.n-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:200;background:var(--bg);border:1.5px solid var(--bd);border-radius:10px;padding:.5rem .75rem;cursor:pointer;font-size:1.2rem;box-shadow:var(--sh)}
+.n-close{display:none;position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--tx2);padding:.25rem}
+.n-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
+.n-overlay.show{display:block}
+@media(max-width:960px){nav{transform:translateX(-100%);transition:transform .3s ease;width:300px}nav.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.1)}.n-toggle{display:block}.n-close{display:block}body{margin-left:0}}
+
+.ct{max-width:1080px;margin:0 auto;padding:0 2rem}
+section{padding:5rem 0}
+section:nth-child(even){background:var(--bg2)}
+.lb{font-family:'Space Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--blue);letter-spacing:.02em;margin-bottom:.75rem}
+h2{font-size:2rem;font-weight:700;line-height:1.25;letter-spacing:-.02em;margin-bottom:1.5rem;max-width:720px;color:var(--tx)}
+h3{font-size:1.2rem;font-weight:700;letter-spacing:-.01em;margin-bottom:.75rem;color:var(--tx)}
+h4{font-size:1.15rem;font-weight:600;letter-spacing:-.01em;margin-bottom:.5rem}
+p{margin-bottom:1rem;color:var(--tx2);max-width:680px}
+p.w{max-width:100%}
+strong{color:var(--tx);font-weight:600}
+@media(max-width:768px){h2{font-size:1.8rem}.ct{padding:0 1.25rem}}
+
+.hero{min-height:100vh;display:flex;align-items:center;background:linear-gradient(170deg,#fff 0%,var(--blue-sub) 50%,#fff 100%);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-30%;right:-20%;width:700px;height:700px;background:radial-gradient(circle,rgba(26,144,255,.06) 0%,transparent 70%);border-radius:50%}
+.hero-badge{display:inline-block;font-family:'Space Mono',monospace;font-size:.78rem;color:var(--grn);background:var(--grn-bg);border:1.5px solid #bbf7d0;padding:.35rem 1rem;border-radius:100px;margin-bottom:2rem}
+.hero h1{font-size:3.8rem;font-weight:700;line-height:1.08;letter-spacing:-.01em;margin-bottom:.5rem;max-width:700px}
+.hero .sub{font-size:1.3rem;font-weight:400;color:var(--tx2);margin-bottom:2rem;letter-spacing:-.01em;max-width:620px;line-height:1.55}
+.hero p{font-size:1.1rem;line-height:1.65;max-width:580px;margin-bottom:2.5rem}
+.hero-meta{display:flex;flex-wrap:wrap;gap:2rem;font-size:.88rem;color:var(--tx2)}
+.hero-meta strong{color:var(--tx)}
+@media(max-width:768px){.hero h1{font-size:2.4rem}.hero .sub{font-size:1.05rem}}
+
+.card{background:var(--bg);border:1.5px solid var(--bd);border-radius:var(--r);padding:2rem;transition:var(--e)}
+.card:hover{border-color:var(--blue);box-shadow:var(--shl)}
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem;margin-top:2rem}
+
+.sr{display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-top:2.5rem}
+@media(max-width:700px){.sr{grid-template-columns:repeat(2,1fr)}}
+.sc{text-align:center;padding:2rem 1.5rem;background:var(--bg);border:1.5px solid var(--bd);border-radius:var(--r);transition:var(--e)}
+.sc:hover{border-color:var(--blue);box-shadow:var(--shl)}
+.sv{font-size:2.8rem;font-weight:700;color:var(--blue);letter-spacing:-.03em;line-height:1.1}
+.sl{font-size:.88rem;color:var(--tx2);margin-top:.5rem}
+.sc.ok{border-color:var(--grn);background:var(--grn-bg)}.sc.ok .sv{color:var(--grn)}
+.sc.warn{border-color:var(--org);background:var(--org-bg)}.sc.warn .sv{color:var(--org)}
+
+.tw{overflow-x:auto;margin:2rem 0;border:1.5px solid var(--bd);border-radius:var(--r);background:var(--bg)}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+thead th{text-align:left;font-weight:600;color:var(--tx);padding:1rem 1.25rem;background:var(--bg2);border-bottom:1.5px solid var(--bd);font-size:.85rem}
+tbody td{padding:.85rem 1.25rem;border-bottom:1px solid var(--bd);color:var(--tx2);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--blue-sub)}
+td:first-child{color:var(--tx);font-weight:500}
+th.num,td.num{text-align:right;font-family:'Space Mono',monospace}
+tr.total td{font-weight:700;color:var(--tx);background:var(--blue-lt);border-top:2px solid var(--blue)}
+.neg{color:var(--red)!important}.pos{color:var(--grn)!important}
+
+.qt{border-left:4px solid var(--blue);padding:1.5rem 2rem;margin:2rem 0;background:var(--blue-sub);border-radius:0 var(--rs) var(--rs) 0;font-size:1.1rem;font-weight:500;color:var(--tx);line-height:1.6}
+.hl{background:var(--blue-lt);border:1.5px solid #bfdbfe;border-radius:var(--r);padding:2rem;margin:2rem 0}
+.hl p{max-width:100%;margin-bottom:0}
+.hl.ok{background:var(--grn-bg);border-color:#bbf7d0}
+.hl.warn{background:var(--org-bg);border-color:#fde68a}
+.hl.red{background:var(--red-bg);border-color:#fca5a5}
+
+.formula{background:#1a1a2e;color:#e8f4ff;padding:1.75rem 2rem;border-radius:var(--r);font-family:'Space Mono',monospace;font-size:.82rem;line-height:2;margin:2rem 0;overflow-x:auto;white-space:pre}
+.formula .cm{color:var(--txm)}
+.formula .rs{color:var(--grn);font-weight:700}
+.formula .op{color:var(--blue)}
+
+.chain{display:flex;gap:.5rem;flex-wrap:wrap;margin:2rem 0;justify-content:center;align-items:center}
+.chain-s{background:var(--blue);color:#fff;font-size:.75rem;font-weight:700;padding:.5rem 1.1rem;border-radius:100px;white-space:nowrap;letter-spacing:.02em}
+.chain-a{color:var(--blue);font-size:1.2rem;font-weight:700}
+
+.step{margin-bottom:2rem;padding:2.5rem;background:var(--bg);border:1.5px solid var(--bd);border-radius:var(--r);position:relative;transition:var(--e)}
+.step:hover{border-color:var(--blue);box-shadow:var(--shl)}
+.step::before{content:attr(data-tag);position:absolute;top:-14px;left:24px;background:var(--blue);color:#fff;font-family:'Space Mono',monospace;font-size:.72rem;font-weight:700;padding:.3rem .9rem;border-radius:100px;letter-spacing:.05em}
+.step .q{font-weight:700;color:var(--tx);margin-bottom:.5rem;font-size:1.05rem}
+.step .a{color:var(--tx2);padding-left:1.25rem;border-left:3px solid var(--blue-lt);margin:.75rem 0}
+.step .a p{margin-bottom:.5rem}
+
+.verdict{text-align:center;padding:3rem 2rem;background:linear-gradient(135deg,var(--grn-bg),#fff);border:2px solid var(--grn);border-radius:var(--r);margin:2.5rem 0}
+.verdict h3{color:var(--grn);font-size:1.5rem;margin-bottom:.5rem}
+.verdict p{color:var(--tx2);margin:0 auto;max-width:100%}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:2rem 0}
+@media(max-width:768px){.two{grid-template-columns:1fr}}
+
+footer{padding:3rem 2rem;border-top:1.5px solid var(--bd);text-align:center}
+.f-logo{font-weight:700;font-size:1.2rem;color:var(--blue);margin-bottom:.75rem}
+footer a{color:var(--blue);text-decoration:none}footer a:hover{text-decoration:underline}
+footer p{font-size:.85rem;color:var(--txm);max-width:100%;text-align:center;margin:.3rem auto}
+.tb{color:var(--blue)}
+</style>
+</head>
+<body>
+
+<!-- MOBILE TOGGLE -->
+<button class="n-toggle" onclick="document.querySelector('nav').classList.add('open');document.querySelector('.n-overlay').classList.add('show')">☰</button>
+<div class="n-overlay" onclick="document.querySelector('nav').classList.remove('open');this.classList.remove('show')"></div>
+
+<!-- SIDEBAR NAV -->
+<nav>
+  <div class="n-head">
+    <a href="#" class="n-logo">gapply</a>
+    <button class="n-close" onclick="document.querySelector('nav').classList.remove('open');document.querySelector('.n-overlay').classList.remove('show')">✕</button>
+  </div>
+  <div class="n-scroll">
+    <div class="n-section">
+      <div class="n-item" onclick="this.parentElement.classList.toggle('open')"><span class="n-num"></span> Filosofía <span class="n-arrow">▶</span></div>
+      <div class="n-sub"><a href="#filosofia">Por qué es diferente</a><a href="#filosofia">Las 6 decisiones clave</a></div>
+    </div>
+    <div class="n-section"><a href="#cadena" class="n-item"><span class="n-num"></span> La cadena (7 hojas)</a></div>
+    <div class="n-section">
+      <div class="n-item" onclick="this.parentElement.classList.toggle('open')"><span class="n-num">1</span> Inversión Inicial <span class="n-arrow">▶</span></div>
+      <div class="n-sub"><a href="#inversion">1.1 Constitución</a><a href="#inversion">1.2 Amortización</a></div>
+    </div>
+    <div class="n-section"><a href="#financiacion" class="n-item"><span class="n-num">2</span> Financiación</a></div>
+    <div class="n-section">
+      <div class="n-item" onclick="this.parentElement.classList.toggle('open')"><span class="n-num">3</span> Ingresos <span class="n-arrow">▶</span></div>
+      <div class="n-sub"><a href="#ingresos">3.1 De dónde salen</a><a href="#ingresos">3.2 Año a año</a></div>
+    </div>
+    <div class="n-section">
+      <div class="n-item" onclick="this.parentElement.classList.toggle('open')"><span class="n-num">4</span> Gastos <span class="n-arrow">▶</span></div>
+      <div class="n-sub"><a href="#gastos">4.1 Año 1</a><a href="#gastos">4.2 Equipo Y1</a><a href="#gastos">4.3 Servicios Y1</a><a href="#gastos">4.4 Equipo Y2-Y3</a><a href="#gastos">4.5 Resumen 3 años</a></div>
+    </div>
+    <div class="n-section">
+      <div class="n-item" onclick="this.parentElement.classList.toggle('open')"><span class="n-num">5</span> Pérdidas y Ganancias <span class="n-arrow">▶</span></div>
+      <div class="n-sub"><a href="#pyg">¿Gano o pierdo?</a><a href="#pyg">5.1 Flujo de caja</a></div>
+    </div>
+    <div class="n-section"><a href="#tesoreria" class="n-item"><span class="n-num">6</span> Tesorería</a></div>
+    <div class="n-section"><a href="#balance" class="n-item"><span class="n-num">7</span> Balance</a></div>
+    <div class="n-section">
+      <div class="n-item" onclick="this.parentElement.classList.toggle('open')"><span class="n-num"></span> Tres Escenarios <span class="n-arrow">▶</span></div>
+      <div class="n-sub"><a href="#escenarios">Variables clave</a><a href="#escenarios">Resultados</a></div>
+    </div>
+    <div class="n-section"><a href="#glosario" class="n-item"><span class="n-num"></span> Glosario Financiero</a></div>
+    <div class="n-section"><a href="#preguntas" class="n-item"><span class="n-num"></span> Stress Test (24 Q)</a></div>
+  </div>
+  <div class="n-foot">
+    <a href="plan.html" class="n-cta-out">Plan de Negocio</a>
+    <a href="https://dts-prototype.vercel.app/dts" class="n-cta">Ver MVP →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="ct">
+    <div class="hero-badge">V1 en producción</div>
+    <h1>Plan Económico-Financiero</h1>
+    <div class="sub">Los números de Gapply pensados para escalar, no solo para sobrevivir. Cada decisión explicada.</div>
+    <p>Este plan no busca el número más bonito sino el más creíble. Invertimos en equipo y producto desde el principio porque un SaaS sin producto terminado y sin gente que venda no crece.</p>
+    <div class="hero-meta">
+      <div><strong>Inversión:</strong> 2.679 €</div>
+      <div><strong>Financiación total:</strong> 65.000 €</div>
+      <div><strong>Rentable desde:</strong> Año 2</div>
+      <div><strong>ENISA:</strong> 50.000 € (sin equity)</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- FILOSOFÍA -->
+<section id="filosofia">
+  <div class="ct">
+    <div class="lb">Filosofía</div>
+    <h2>Por qué este plan es diferente al anterior</h2>
+    <p class="w">El plan anterior estaba hecho para pedir un préstamo: demostraba que Gapply puede sobrevivir con lo mínimo. Y lo puede. Pero sobrevivir no es escalar. Este plan responde a otra pregunta: <strong>¿qué necesita Gapply para crecer de verdad?</strong></p>
+
+    <div class="cg">
+      <div class="card">
+        <h4 class="tb">Antes: plan de supervivencia</h4>
+        <p class="w" style="font-size:.92rem;margin:0">Solo David + un freelance de marketing. Ingresos de 56K a 1.3M en un año (23×). Suena bien en un Excel, pero ¿quién construye V2? ¿Quién vende? ¿Quién atiende a 400 clientes? Con 2 personas no es posible.</p>
+      </div>
+      <div class="card" style="border-color:var(--blue)">
+        <h4 class="tb">Ahora: plan de crecimiento</h4>
+        <p class="w" style="font-size:.92rem;margin:0">Pedimos ENISA (50K sin ceder equity). Primero validamos el método con un consultor senior, luego marketing, luego developer. Ingresos conservadores pero creíbles. Un inversor o un banco prefiere un plan realista a uno fantástico.</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:2.5rem">Las 6 decisiones clave</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Decisión</th><th>Qué cambia</th><th>Por qué</th></tr></thead>
+        <tbody>
+          <tr><td>Pedir ENISA (50.000 €)</td><td>De 15K a 65K de arranque</td><td>Compra 12-15 meses de runway en vez de 3-4. Sin ceder equity ni avales personales.</td></tr>
+          <tr style="background:var(--blue-sub)"><td><strong>Consultor senior en mes 2</strong></td><td>Método validado antes de construir</td><td>3.500 € por 10 días. Valida los 18 programas y las fórmulas de esfuerzo. La inversión con mayor ROI del plan — si el método falla, todo falla.</td></tr>
+          <tr><td>Marketing desde mes 2</td><td>Funnel activo 11 meses</td><td>Necesitamos volumen de registros ANTES de que V2 esté completo.</td></tr>
+          <tr><td>Developer desde mes 4</td><td>V2 lista en Q3-Q4 2026</td><td>Construye V2 con los programas YA validados por el consultor. Sin validar primero, es construir a ciegas.</td></tr>
+          <tr><td>Ingresos conservadores</td><td>45K→480K→1.8M (no 56K→1.3M→5.4M)</td><td>Crecimiento de 10× en 3 años en vez de 100×. Sigue siendo excelente, pero creíble.</td></tr>
+          <tr><td>Gastar más para crecer</td><td>98K en Y1 (no 61K)</td><td>Invertir 37K más en equipo y validación genera 480K de ingresos en Y2.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<!-- LA CADENA -->
+<section id="cadena">
+  <div class="ct">
+    <div class="lb">La cadena</div>
+    <h2>Las 7 hojas se leen en orden</h2>
+    <p>Cada hoja alimenta a la siguiente. Es una cadena donde todo está conectado:</p>
+    <div class="chain">
+      <div class="chain-s">1. Inversión</div><div class="chain-a">→</div>
+      <div class="chain-s">2. Financiación</div><div class="chain-a">→</div>
+      <div class="chain-s">3. Ingresos</div><div class="chain-a">→</div>
+      <div class="chain-s">4. Gastos</div><div class="chain-a">→</div>
+      <div class="chain-s">5. P&G</div><div class="chain-a">→</div>
+      <div class="chain-s">6. Tesorería</div><div class="chain-a">→</div>
+      <div class="chain-s">7. Balance</div>
+    </div>
+    <div class="qt">
+      <strong>¿Cuánto necesito?</strong> → <strong>¿De dónde lo saco?</strong> → <strong>¿Cuánto ingreso?</strong> → <strong>¿Cuánto gasto?</strong> → <strong>¿Gano o pierdo?</strong> → <strong>¿Tengo dinero en el banco?</strong> → <strong>Foto final</strong>
+    </div>
+  </div>
+</section>
+
+
+<!-- 1. INVERSIÓN -->
+<section id="inversion">
+  <div class="ct">
+    <div class="lb">1 — Inversión Inicial</div>
+    <h2>¿Cuánto necesito para arrancar?</h2>
+    <p>Lo que hay que comprar o pagar ANTES de empezar a funcionar. En nuestro caso, muy poco.</p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Concepto</th><th class="num">Importe</th><th>Explicación</th></tr></thead>
+        <tbody>
+          <tr><td>iMac M4 24" 16GB</td><td class="num">1.499 €</td><td>Ya adquirido. Herramienta de trabajo principal.</td></tr>
+          <tr><td>Dominio + email profesional</td><td class="num">30 €</td><td>gapply.io + correo corporativo</td></tr>
+          <tr><td>Licencias software</td><td class="num">200 €</td><td>Cursor, GitHub Pro, Vercel</td></tr>
+          <tr class="total"><td>Total inversión material</td><td class="num">1.729 €</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>1.1. Gastos de constitución</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Concepto</th><th class="num">Importe</th></tr></thead>
+        <tbody>
+          <tr><td>Constitución S.L. (notaría + registro)</td><td class="num">600 €</td></tr>
+          <tr><td>Registro marca OEPM</td><td class="num">150 €</td></tr>
+          <tr><td>Alta autónomos / gestoría</td><td class="num">200 €</td></tr>
+          <tr class="total"><td>Total para arrancar</td><td class="num">2.679 €</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="hl ok">
+      <p><strong>¿Por qué tan poco?</strong> Porque el fundador ha desarrollado toda la plataforma él mismo: arquitectura, frontend, backend, base de datos, IA e integraciones. Coste real de desarrollo: 0 €. Esto es una ventaja competitiva en sí misma — demuestra capacidad técnica y eficiencia.</p>
+    </div>
+
+    <h3>1.2. ¿Qué es la amortización?</h3>
+    <p class="w">El iMac de 1.499 € no "se gasta" el día que lo compras. Se va desgastando a lo largo de 4 años. Así que cada año cuentas 375 € como gasto, aunque el dinero ya salió de tu cuenta. Esto es un gasto <strong>contable</strong> (aparece en el P&G) pero <strong>no sale dinero</strong> del banco (no aparece en Tesorería). Total amortización anual de toda la inversión: <strong>605 €/año</strong>.</p>
+  </div>
+</section>
+
+
+<!-- 2. FINANCIACIÓN -->
+<section id="financiacion">
+  <div class="ct">
+    <div class="lb">2 — Fuentes de Financiación</div>
+    <h2>¿De dónde sale el dinero para crecer?</h2>
+    <p class="w">Un SaaS necesita construir producto y generar demanda antes de cobrar. Eso requiere dinero. La pregunta no es si gastar, sino <strong>de dónde sacarlo sin perder control de la empresa</strong>.</p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Fuente</th><th class="num">Importe</th><th>Explicación</th></tr></thead>
+        <tbody>
+          <tr><td>Capital social</td><td class="num">3.000 €</td><td>Mínimo legal para constituir una S.L.</td></tr>
+          <tr><td>Aportación personal del fundador</td><td class="num">12.000 €</td><td>Ahorros propios. Demuestra compromiso.</td></tr>
+          <tr><td>ENISA — Préstamo participativo</td><td class="num">50.000 €</td><td>Sin avales, sin equity, tipo ~4%, 5 años + 1 carencia.</td></tr>
+          <tr class="total"><td>Total financiación</td><td class="num">65.000 €</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="step" data-tag="DECISIÓN CLAVE">
+      <div class="q">¿Por qué ENISA y no un inversor?</div>
+      <div class="a"><p>ENISA es un organismo público que da préstamos a startups. La diferencia con un inversor:</p></div>
+      <div class="tw" style="margin:1rem 0">
+        <table>
+          <thead><tr><th></th><th>ENISA</th><th>Inversor ángel</th></tr></thead>
+          <tbody>
+            <tr><td>Cedes equity</td><td class="pos">No</td><td class="neg">Sí (10-25%)</td></tr>
+            <tr><td>Avales personales</td><td class="pos">No</td><td class="pos">No</td></tr>
+            <tr><td>Tipo interés</td><td>~4% variable</td><td>No aplica (pero cedes empresa)</td></tr>
+            <tr><td>Devolución</td><td>5-7 años, 1-2 de carencia</td><td>Nunca (ya es suyo)</td></tr>
+            <tr><td>Velocidad</td><td>3-4 meses</td><td>1-6 meses</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="w" style="font-size:.92rem">Con ENISA mantenemos el 100% de la empresa. Si el negocio funciona, los 50K se devuelven con los beneficios de Año 2. Si más adelante queremos un inversor estratégico, negociamos desde una posición de fuerza (con producto, clientes y revenue), no de necesidad.</p>
+    </div>
+
+    <div class="formula">
+<span class="cm">// ¿Cuánto colchón tenemos?</span>
+Financiación total:      65.000 €
+Inversión inicial:       -2.679 €
+                        ─────────
+<span class="rs">Colchón disponible:    +62.321 €  ✅</span>
+
+<span class="cm">// Eso cubre 8 meses de gastos operativos</span>
+<span class="cm">// (98.000 / 12 = 8.167 €/mes)</span>
+<span class="cm">// Más que suficiente para llegar a revenue</span></div>
+
+    <div class="hl ok">
+      <p><strong>Resultado:</strong> 62.321 € de colchón. Suficiente para operar 8 meses sin ingresar un euro. Como los primeros ingresos llegan en el mes 4, tenemos un margen de seguridad amplio.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- 3. INGRESOS -->
+<section id="ingresos">
+  <div class="ct">
+    <div class="lb">3 — Presupuesto de Ingresos</div>
+    <h2>¿Cuánto entra cada año?</h2>
+    <p class="w">La lógica: llegan visitantes → algunos se registran gratis (CEO30) → un porcentaje paga → cada uno paga de media 267 €/mes. Los números están calculados para ser conservadores: si salen mejor, fantástico; si salen peor, el plan sigue funcionando.</p>
+
+    <div class="sr">
+      <div class="sc"><div class="sv">600</div><div class="sl">Registros gratuitos Y1</div></div>
+      <div class="sc"><div class="sv">8%</div><div class="sl">Conversión a pago</div></div>
+      <div class="sc"><div class="sv">267 €</div><div class="sl">Ingreso medio / cliente / mes</div></div>
+      <div class="sc"><div class="sv">4%</div><div class="sl">Churn mensual</div></div>
+    </div>
+
+    <div class="sr" style="grid-template-columns:repeat(3,1fr);margin-top:1.25rem">
+      <div class="sc warn"><div class="sv">45.000 €</div><div class="sl">Ingresos Año 1</div></div>
+      <div class="sc ok"><div class="sv">480.000 €</div><div class="sl">Ingresos Año 2</div></div>
+      <div class="sc ok"><div class="sv">1.800.000 €</div><div class="sl">Ingresos Año 3</div></div>
+    </div>
+
+    <h3 style="margin-top:3rem">3.1. ¿De dónde salen estos números?</h3>
+
+    <div class="step" data-tag="267 € / CLIENTE">
+      <div class="q">¿Por qué 267 € de ingreso medio?</div>
+      <div class="a"><p>Es la media ponderada de los tres planes según el reparto esperado:</p></div>
+      <div class="formula">
+65% eligen Pro      × 199 € = 129,35 €
+30% eligen Premium  × 399 € = 119,70 €
+ 5% eligen Enterprise × 799 € =  39,95 €
+                               ─────────
+               Media ponderada:  289,00 €
+          Menos comisión (2,9%):  -8,38 €
+                               ─────────
+<span class="rs">          Neto por cliente:    ~280 €</span>
+
+<span class="cm">// Usamos 267 € siendo conservadores</span>
+<span class="cm">// (al principio el mix está cargado hacia Pro)</span></div>
+      <p class="w" style="font-size:.92rem">El reparto 65/30/5 es estándar en SaaS B2B. La mayoría elige el plan intermedio-bajo. A medida que el producto madura y añade estándares, más clientes suben a Premium y Enterprise.</p>
+    </div>
+
+    <div class="step" data-tag="8% CONVERSIÓN">
+      <div class="q">¿Por qué 8% de conversión?</div>
+      <div class="a"><p>La media en SaaS B2B freemium está entre 2-15%. La media del sector: 5-7%.</p></div>
+      <p class="w" style="font-size:.92rem">Gapply convierte mejor que la media porque el usuario no prueba algo abstracto: <strong>recibe un diagnóstico real de su empresa</strong>. Cuando un CEO ve "tu estrategia digital está en nivel 2 de 5 y estos son tus 3 obstáculos principales", tiene una razón concreta para pagar y ver el plan de acción completo. El 8% es razonable. Si bajara al 5%, el plan sigue siendo viable con ajustes.</p>
+    </div>
+
+    <div class="step" data-tag="4% CHURN">
+      <div class="q">¿Por qué 4% de bajas cada mes?</div>
+      <div class="a"><p>El churn del 4% mensual es estándar B2B SaaS vendido a PyMEs (rango: 3-7%).</p></div>
+      <p class="w" style="font-size:.92rem">Significa que un cliente se queda de media 25 meses (~2 años). De cada 100 clientes, 4 cancelan al mes. Pero entran nuevos, así que el neto crece. V3 (dashboard y seguimiento) está diseñado para reducir el churn: si el CEO ve progreso real cada mes, no cancela.</p>
+    </div>
+
+    <div class="step" data-tag="600 REGISTROS">
+      <div class="q">¿De dónde salen 600 registros gratuitos en Año 1?</div>
+      <div class="a"><p>De la inversión en marketing. La cuenta:</p></div>
+      <div class="formula">
+<span class="cm">// Presupuesto de ads + contenido Y1: ~15.000 €</span>
+<span class="cm">// (marketing empieza en mes 2 → 11 meses activos)</span>
+
+Coste por registro en B2B SaaS: 15–40 €
+<span class="cm">// depende del canal: LinkedIn Ads (~35 €), Google Ads (~25 €),</span>
+<span class="cm">// SEO/contenido (~10 €), referidos (~5 €)</span>
+
+Con mix de canales → coste medio estimado: ~25 €/registro
+
+15.000 € ÷ 25 €/registro = <span class="rs">600 registros</span>
+
+<span class="cm">// Es el punto medio. Podría ser 400 (si LinkedIn sale caro)</span>
+<span class="cm">// o 900 (si el SEO y el boca a boca funcionan bien)</span>
+<span class="cm">// Por eso los tres escenarios usan 400 / 600 / 900</span></div>
+      <p class="w" style="font-size:.92rem">No es un número inventado — sale de dividir el presupuesto entre el coste medio por registro. Si el coste real sube a 40 € por registro, conseguimos ~375 (escenario pesimista). Si baja a 15 € (SEO + referidos funcionan), conseguimos ~1.000 (mejor que el optimista). Lo sabremos en el mes 3-4 cuando tengamos datos reales.</p>
+    </div>
+
+    <h3 style="margin-top:2.5rem">3.2. ¿Cómo se llega a esos ingresos año a año?</h3>
+
+    <div class="step" data-tag="AÑO 1 — 45.000 €">
+      <div class="q">Año 1: construir producto + primeros clientes</div>
+      <p class="w" style="font-size:.92rem">Los primeros clientes de pago llegan en el mes 4 (el marketing empieza en mes 2, los primeros registros convierten ~2 meses después). Al final de Y1 tenemos ~30 clientes activos de pago. El ingreso crece cada mes pero partimos de cero — es normal que Y1 sea modesto.</p>
+      <div class="formula">
+<span class="cm">// Evolución simplificada Y1</span>
+Mes 1-3:   0 clientes de pago  <span class="cm">// construyendo + primeros registros</span>
+Mes 4-6:   4→8→12 clientes     <span class="cm">// primeras conversiones</span>
+Mes 7-9:   15→18→21 clientes   <span class="cm">// funnel estabilizado</span>
+Mes 10-12: 24→27→30 clientes   <span class="cm">// V2 empieza a retener</span>
+                               ─────────
+<span class="rs">Revenue acumulado Y1:  ~45.000 €</span></div>
+    </div>
+
+    <div class="step" data-tag="AÑO 2 — 480.000 €">
+      <div class="q">Año 2: V2 live + equipo comercial + escala</div>
+      <p class="w" style="font-size:.92rem">V2 lanza en Q1 de Y2 con programas de acción y roadmaps. La conversión mejora al 10% porque el producto entrega más valor. Aumentamos registros a 150-200/mes con más presupuesto de ads y SEO. El equipo de ventas cierra deals. Al final de Y2: ~160 clientes activos. El ARPU sube a ~300 € porque más clientes eligen Premium con el multiestándar.</p>
+    </div>
+
+    <div class="step" data-tag="AÑO 3 — 1.800.000 €">
+      <div class="q">Año 3: multiestándar + expansión</div>
+      <p class="w" style="font-size:.92rem">Lanzamos estándares de IA, ciberseguridad y datos. Cada estándar adicional sube el ARPU (el cliente paga más porque recibe más). Al final de Y3: ~500 clientes activos con ARPU medio de ~330 €/mes. Es un crecimiento de 3.7× sobre Y2 — ambicioso pero alcanzable con un equipo de 8-10 personas.</p>
+    </div>
+
+    <div class="hl">
+      <p><strong>Nota de credibilidad:</strong> El plan anterior proyectaba 5.4M € en Año 3. Este proyecta 1.8M €. La diferencia es que 1.8M con 500 clientes y 10 personas es un objetivo realista, verificable y defendible ante cualquier inversor.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- 4. GASTOS -->
+<section id="gastos">
+  <div class="ct">
+    <div class="lb">4 — Presupuesto de Gastos</div>
+    <h2>¿Cuánto cuesta funcionar?</h2>
+    <p class="w">Aquí está la decisión más importante de este plan: <strong>gastar más al principio para crecer más rápido</strong>. En el plan anterior gastábamos 61K en Y1. Ahora gastamos 98K. Lo extra va a un consultor que valida el método, marketing que empieza pronto, y un developer que construye V2. En ese orden de prioridad.</p>
+
+    <h3>4.1. Año 1 — Inversión en equipo y producto</h3>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Categoría</th><th>Qué incluye</th><th class="num">Total Y1</th></tr></thead>
+        <tbody>
+          <tr><td>Personal (100% autónomos/freelance)</td><td>Fundador + consultor validación + marketing + developer</td><td class="num">72.350 €</td></tr>
+          <tr><td>Servicios Exteriores</td><td>Hosting, APIs IA, ads, gestoría, seguros, herramientas</td><td class="num">23.045 €</td></tr>
+          <tr><td>Gastos Financieros</td><td>Intereses ENISA (~4% sobre 50.000 €)</td><td class="num">2.000 €</td></tr>
+          <tr><td>Amortizaciones</td><td>Desgaste del equipo (gasto contable, no sale dinero)</td><td class="num">605 €</td></tr>
+          <tr class="total"><td colspan="2">Total gastos Año 1</td><td class="num">98.000 €</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.2. Equipo Año 1 — orden de prioridades</h3>
+    <p class="w">Todos autónomos/freelance. Pero el orden importa: primero validar el método, luego atraer clientes, luego construir. Sin método validado, no hay producto que vender. Sin marketing, nadie ve el producto. Sin developer, no hay V2 — pero V2 sin validar no sirve.</p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Persona</th><th>Desde</th><th class="num">€/mes</th><th class="num">Total Y1</th><th>Por qué</th></tr></thead>
+        <tbody>
+          <tr><td>David Arias — CEO</td><td>Enero</td><td class="num">1.500 €</td><td class="num">18.000 €</td><td>Producto, estrategia, ventas iniciales</td></tr>
+          <tr><td>Cuota autónomo</td><td>Enero</td><td class="num">80 €</td><td class="num">960 €</td><td>Tarifa plana primer año</td></tr>
+          <tr style="background:var(--blue-sub)"><td><strong>Consultor senior (ex-Big4)</strong></td><td>Febrero</td><td class="num">—</td><td class="num">3.500 €</td><td>Validar 18 programas V2 y fórmulas de esfuerzo. 8-10 días. Puntual.</td></tr>
+          <tr><td>Growth Marketing</td><td>Febrero</td><td class="num">2.490 €</td><td class="num">27.390 €</td><td>Funnel, SEO, ads, contenido.</td></tr>
+          <tr><td>Developer freelance</td><td>Abril</td><td class="num">2.500 €</td><td class="num">22.500 €</td><td>Construir V2 con los programas <strong>ya validados</strong> por el consultor.</td></tr>
+          <tr class="total"><td colspan="3">Total personal Y1</td><td class="num">72.350 €</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="hl">
+      <p><strong>¿Por qué un consultor antes que un developer?</strong> Porque el mayor riesgo de Gapply no es técnico — es metodológico. Las fórmulas de esfuerzo y los 18 programas de acción son lógicos pero teóricos. Un consultor con 15 años transformando empresas puede revisar todo en 10 días y decirnos: "esto tiene sentido, esto hay que cambiar." Eso cuesta 3.500 €. Construir V2 entera con programas incorrectos y luego tener que rehacer todo cuesta 10× más. <strong>La inversión con mayor ROI de todo el plan es la más barata.</strong></p>
+    </div>
+
+    <h3 style="margin-top:2.5rem">4.3. Servicios — desglose Y1</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Concepto</th><th class="num">€/mes</th><th class="num">Total Y1</th></tr></thead>
+        <tbody>
+          <tr><td>Hosting + APIs de IA (Vercel, OpenAI, Supabase)</td><td class="num">250 €</td><td class="num">3.000 €</td></tr>
+          <tr><td>Publicidad digital (Google Ads + LinkedIn)</td><td class="num">1.000 €</td><td class="num">12.000 €</td></tr>
+          <tr><td>Gestoría + asesoría fiscal</td><td class="num">150 €</td><td class="num">1.800 €</td></tr>
+          <tr><td>Herramientas dev (Cursor, GitHub, Figma)</td><td class="num">200 €</td><td class="num">2.400 €</td></tr>
+          <tr><td>Seguro RC profesional</td><td class="num">50 €</td><td class="num">600 €</td></tr>
+          <tr><td>Constitución SL + marca + varios</td><td class="num">—</td><td class="num">3.245 €</td></tr>
+          <tr class="total"><td colspan="2">Total servicios</td><td class="num">23.045 €</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:2.5rem">4.4. Evolución del equipo Y2 y Y3</h3>
+    <p class="w">A medida que el negocio crece, el equipo crece. Cada incorporación responde a un cuello de botella real.</p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Año 2 — Equipo de 6</th><th class="num">€/mes</th><th>Misión</th></tr></thead>
+        <tbody>
+          <tr><td>David CEO (subida)</td><td class="num">2.500 €</td><td>Producto, partnerships, fundraising</td></tr>
+          <tr><td>Senior Developer</td><td class="num">3.500 €</td><td>V3 (dashboard, KPIs, benchmarking)</td></tr>
+          <tr><td>Developer 2</td><td class="num">2.500 €</td><td>Multiestándar, integraciones</td></tr>
+          <tr><td>Growth Marketing Lead</td><td class="num">3.000 €</td><td>Escalar funnel, SEO, content</td></tr>
+          <tr><td>Sales / CS</td><td class="num">2.500 €</td><td>Cerrar deals, onboarding, retención</td></tr>
+          <tr class="total"><td>Total personal Y2</td><td class="num">~172.000 €/año</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Año 3 — Equipo de 9-10</th><th class="num">€/mes</th><th>Misión</th></tr></thead>
+        <tbody>
+          <tr><td>David CEO</td><td class="num">4.000 €</td><td>Estrategia, inversores, partnerships</td></tr>
+          <tr><td>2 Senior Developers</td><td class="num">4.000 € c/u</td><td>Plataforma core, nuevos estándares</td></tr>
+          <tr><td>Junior Developer</td><td class="num">2.500 €</td><td>QA, integraciones, soporte técnico</td></tr>
+          <tr><td>Growth Lead</td><td class="num">4.000 €</td><td>Marketing estratégico</td></tr>
+          <tr><td>Growth Exec</td><td class="num">2.500 €</td><td>Ejecución campañas, contenido</td></tr>
+          <tr><td>2 Sales</td><td class="num">3.000 € c/u</td><td>Ventas B2B, expansión cuentas</td></tr>
+          <tr><td>Customer Success</td><td class="num">2.500 €</td><td>Retención, onboarding, soporte</td></tr>
+          <tr class="total"><td>Total personal Y3</td><td class="num">~354.000 €/año</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:2.5rem">4.5. Resumen de gastos a 3 años</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Categoría</th><th class="num">Año 1</th><th class="num">Año 2</th><th class="num">Año 3</th></tr></thead>
+        <tbody>
+          <tr><td>Personal (fundador + equipo autónomo)</td><td class="num">72.350 €</td><td class="num">172.000 €</td><td class="num">354.000 €</td></tr>
+          <tr><td>Servicios exteriores</td><td class="num">23.045 €</td><td class="num">65.400 €</td><td class="num">133.400 €</td></tr>
+          <tr><td>Gastos financieros (ENISA)</td><td class="num">2.000 €</td><td class="num">2.000 €</td><td class="num">2.000 €</td></tr>
+          <tr><td>Amortizaciones</td><td class="num">605 €</td><td class="num">605 €</td><td class="num">605 €</td></tr>
+          <tr class="total"><td>Total</td><td class="num">98.000 €</td><td class="num">240.005 €</td><td class="num">490.005 €</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<!-- 5. P&G -->
+<section id="pyg">
+  <div class="ct">
+    <div class="lb">5 — Cuenta de Pérdidas y Ganancias</div>
+    <h2>¿Gano o pierdo?</h2>
+    <p>La resta más importante: Ingresos menos Gastos.</p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th></th><th class="num">Año 1</th><th class="num">Año 2</th><th class="num">Año 3</th></tr></thead>
+        <tbody>
+          <tr><td>Ingresos</td><td class="num">45.000 €</td><td class="num">480.000 €</td><td class="num">1.800.000 €</td></tr>
+          <tr><td>Gastos</td><td class="num">98.000 €</td><td class="num">240.005 €</td><td class="num">490.005 €</td></tr>
+          <tr><td>Resultado antes impuestos</td><td class="num neg">-53.000 €</td><td class="num pos">+239.995 €</td><td class="num pos">+1.309.995 €</td></tr>
+          <tr><td>Impuesto Sociedades (25%)</td><td class="num">0 €</td><td class="num">60.000 €</td><td class="num">327.499 €</td></tr>
+          <tr class="total"><td>Resultado Neto</td><td class="num neg">-53.000 €</td><td class="num pos">+179.995 €</td><td class="num pos">+982.496 €</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="hl warn">
+      <p><strong>Año 1 con pérdidas: ¿es un problema?</strong> No. Es una decisión deliberada. Estamos invirtiendo 97K para construir un producto que genera 480K en Y2 y 1.8M en Y3. Es como plantar una semilla: cuesta dinero hoy pero da fruto mañana. Las pérdidas de Y1 están cubiertas al 100% por la financiación (ENISA + fondos propios) y se compensan con creces en Y2.</p>
+    </div>
+
+    <h3>5.1. ¿Qué es el flujo de caja?</h3>
+    <p class="w">El flujo de caja es el resultado neto <strong>más</strong> las amortizaciones. ¿Por qué? Porque las amortizaciones son un gasto contable pero no sale dinero real de tu cuenta — ya lo pagaste al comprar el equipo.</p>
+
+    <div class="formula">
+<span class="cm">// AÑO 1</span>
+Resultado Neto:   -53.000 €  <span class="cm">// pierdes esto "contablemente"</span>
+<span class="op">+</span> Amortizaciones:      +605 €  <span class="cm">// pero este gasto no sale del banco</span>
+                  ─────────
+<span class="rs">Flujo de Caja:    -52.395 €  // esto es lo que realmente "quemas"</span>
+
+<span class="cm">// AÑO 2</span>
+Resultado Neto:  +179.995 €
+<span class="op">+</span> Amortizaciones:      +605 €
+                  ─────────
+<span class="rs">Flujo de Caja:   +180.600 €  ✅ cash flow positivo</span></div>
+  </div>
+</section>
+
+
+<!-- 6. TESORERÍA -->
+<section id="tesoreria">
+  <div class="ct">
+    <div class="lb">6 — Tesorería</div>
+    <h2>¿Tengo dinero en el banco para pagar?</h2>
+    <p class="w">Tesorería = el dinero que tienes <strong>físicamente en la cuenta</strong> al final del año. Es la métrica más importante: puedes tener beneficios en el P&G y quedarte sin dinero para pagar nóminas (le pasa a muchas empresas). Aquí mostramos que eso no ocurre.</p>
+
+    <div class="formula">
+<span class="cm">// AÑO 1: ¿Cuánto queda en el banco?</span>
+
+<span class="cm">// Lo que ENTRA en la cuenta</span>
+Financiación:              65.000 €  <span class="cm">// 15K propios + 50K ENISA</span>
+Revenue cobrado:           45.000 €
+                          ─────────
+Total entradas:           110.000 €
+
+<span class="cm">// Lo que SALE de la cuenta</span>
+Inversión:                  2.679 €
+Gastos operativos:         96.395 €  <span class="cm">// (97K - 605 amort que no sale del banco)</span>
+                          ─────────
+Total salidas:             100.074 €
+
+<span class="rs">SALDO FINAL Y1 = 110.000 - 100.074 = +9.926 €  ✅</span></div>
+
+    <div class="sr" style="grid-template-columns:repeat(3,1fr)">
+      <div class="sc ok"><div class="sv">+9.926 €</div><div class="sl">Tesorería Año 1</div></div>
+      <div class="sc ok"><div class="sv">+190.526 €</div><div class="sl">Tesorería Año 2</div></div>
+      <div class="sc ok"><div class="sv">+1.163.022 €</div><div class="sl">Tesorería Año 3</div></div>
+    </div>
+
+    <div class="hl ok">
+      <p><strong>Tesorería POSITIVA los 3 años.</strong> Incluso invirtiendo fuerte en Y1, siempre hay dinero en el banco para pagar facturas, sueldos y proveedores. La clave es que la financiación ENISA nos da colchón suficiente para cubrir la inversión inicial mientras arrancamos el revenue.</p>
+    </div>
+
+    <div class="step" data-tag="NOTA ENISA">
+      <div class="q">¿Y la devolución de ENISA?</div>
+      <p class="w" style="font-size:.92rem">ENISA tiene 1 año de carencia (no pagas nada el primer año) y luego se devuelve en 5 años (~10.000 €/año). La primera cuota llegaría a mitad de Y2, cuando ya tenemos cash flow positivo de +180K. Los intereses (~2.000 €/año) sí se pagan desde el principio y están incluidos en gastos financieros.</p>
+    </div>
+
+    <div class="verdict">
+      <h3>✅ Siempre hay dinero en el banco</h3>
+      <p>El plan es financieramente viable. Incluso en el escenario conservador, nunca nos quedamos sin caja.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- 7. BALANCE -->
+<section id="balance">
+  <div class="ct">
+    <div class="lb">7 — Balance de Situación</div>
+    <h2>Foto de lo que tenemos y debemos</h2>
+    <p>Una foto de la empresa al final de cada año. Regla de oro: <strong>Activo = Pasivo. Siempre.</strong></p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th></th><th class="num">Año 1</th><th class="num">Año 2</th><th class="num">Año 3</th></tr></thead>
+        <tbody>
+          <tr><td colspan="4" style="background:var(--blue-lt);font-weight:700;color:var(--tx)">ACTIVO (lo que tienes)</td></tr>
+          <tr><td>Equipo (menos desgaste)</td><td class="num">2.074 €</td><td class="num">1.469 €</td><td class="num">864 €</td></tr>
+          <tr><td>Dinero en el banco</td><td class="num">9.926 €</td><td class="num">190.526 €</td><td class="num">1.163.022 €</td></tr>
+          <tr class="total"><td>Total Activo</td><td class="num">12.000 €</td><td class="num">191.995 €</td><td class="num">1.163.886 €</td></tr>
+          <tr><td colspan="4" style="background:var(--blue-lt);font-weight:700;color:var(--tx)">PASIVO (de dónde salió)</td></tr>
+          <tr><td>Capital + aportaciones</td><td class="num">15.000 €</td><td class="num">15.000 €</td><td class="num">15.000 €</td></tr>
+          <tr><td>Resultados acumulados</td><td class="num neg">-53.000 €</td><td class="num pos">+126.995 €</td><td class="num pos">+1.109.491 €</td></tr>
+          <tr><td>ENISA (deuda LP)</td><td class="num">50.000 €</td><td class="num">50.000 €</td><td class="num">39.395 €</td></tr>
+          <tr class="total"><td>Total Pasivo</td><td class="num">12.000 €</td><td class="num">191.995 €</td><td class="num">1.163.886 €</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sr" style="grid-template-columns:repeat(3,1fr)">
+      <div class="sc ok"><div class="sv">✅</div><div class="sl">Año 1 cuadra</div></div>
+      <div class="sc ok"><div class="sv">✅</div><div class="sl">Año 2 cuadra</div></div>
+      <div class="sc ok"><div class="sv">✅</div><div class="sl">Año 3 cuadra</div></div>
+    </div>
+
+    <div class="hl">
+      <p><strong>Lectura rápida:</strong> En Y1 la empresa "vale" 12.000 € en papel (aún en pérdidas). En Y2 ya vale 192.000 € con ENISA en balance. En Y3 vale 1.16M € con la deuda casi pagada. A partir de Y4, si devolvemos ENISA completamente, la empresa vale ~1.5M € en balance, 100% del fundador.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ESCENARIOS -->
+<section id="escenarios">
+  <div class="ct">
+    <div class="lb">Tres Escenarios</div>
+    <h2>¿Qué pasa si las cosas van peor — o mejor — de lo previsto?</h2>
+    <p class="w">El plan base usa hipótesis conservadoras. Pero un plan serio tiene que responder a "¿y si...?". Aquí mostramos qué cambia si las dos variables más sensibles (conversión y churn) se mueven hacia arriba o hacia abajo. Los costes se adaptan al ritmo de crecimiento.</p>
+
+    <h3>¿Qué cambia entre escenarios?</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Variable</th><th class="num">Pesimista</th><th class="num">Base</th><th class="num">Optimista</th></tr></thead>
+        <tbody>
+          <tr><td>Conversión gratuito → pago</td><td class="num neg">5%</td><td class="num">8%</td><td class="num pos">12%</td></tr>
+          <tr><td>Churn mensual</td><td class="num neg">6%</td><td class="num">4%</td><td class="num pos">3%</td></tr>
+          <tr><td>Registros Y1</td><td class="num">400</td><td class="num">600</td><td class="num">900</td></tr>
+          <tr><td>ARPU</td><td class="num">230 €</td><td class="num">267 €</td><td class="num">300 €</td></tr>
+          <tr><td>Clientes activos fin Y3</td><td class="num">~200</td><td class="num">~500</td><td class="num">~900</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="w" style="font-size:.92rem"><strong>Lo que NO cambia:</strong> la inversión inicial (2.679 €), la financiación (65K), el equipo mínimo de Y1 (CEO + dev + marketing), y la estructura de costes base. Lo que sí cambia es la velocidad a la que se incorpora equipo: en el pesimista se contrata más despacio, en el optimista más rápido.</p>
+
+    <h3 style="margin-top:2.5rem">Resultados por escenario</h3>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th></th><th class="num" colspan="3">🔴 Pesimista</th><th class="num" colspan="3">🔵 Base</th><th class="num" colspan="3">🟢 Optimista</th></tr>
+        <tr><th></th><th class="num">Y1</th><th class="num">Y2</th><th class="num">Y3</th><th class="num">Y1</th><th class="num">Y2</th><th class="num">Y3</th><th class="num">Y1</th><th class="num">Y2</th><th class="num">Y3</th></tr></thead>
+        <tbody>
+          <tr><td>Ingresos</td><td class="num">25K</td><td class="num">250K</td><td class="num">800K</td><td class="num">45K</td><td class="num">480K</td><td class="num">1.8M</td><td class="num">70K</td><td class="num">750K</td><td class="num">3.0M</td></tr>
+          <tr><td>Gastos</td><td class="num">80K</td><td class="num">200K</td><td class="num">380K</td><td class="num">97K</td><td class="num">240K</td><td class="num">490K</td><td class="num">97K</td><td class="num">300K</td><td class="num">650K</td></tr>
+          <tr><td>Resultado neto</td><td class="num neg">-55K</td><td class="num pos">+38K</td><td class="num pos">+315K</td><td class="num neg">-52K</td><td class="num pos">+180K</td><td class="num pos">+982K</td><td class="num neg">-27K</td><td class="num pos">+337K</td><td class="num pos">+1.76M</td></tr>
+          <tr class="total"><td>Tesorería</td><td class="num">+8K</td><td class="num">+46K</td><td class="num">+361K</td><td class="num">+11K</td><td class="num">+192K</td><td class="num">+1.16M</td><td class="num">+36K</td><td class="num">+374K</td><td class="num">+2.13M</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PESIMISTA -->
+    <div class="step" data-tag="🔴 PESIMISTA" style="margin-top:2.5rem">
+      <div class="q">Conversión del 5%, churn del 6% — todo va más lento</div>
+      <div class="a"><p>La conversión no llega al 8%, las bajas son más altas, los registros crecen despacio. Se retrasan contrataciones para conservar caja.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>¿Qué pasa?</strong> Año 1 es más duro (solo 25K de revenue) pero ENISA cubre la diferencia. Año 2 es breakeven real — apenas 38K de beneficio. Año 3 llega a 800K de revenue y 315K de beneficio. <strong>Tesorería siempre positiva.</strong></p>
+      <div class="hl warn" style="margin:1rem 0 0">
+        <p><strong>Veredicto pesimista:</strong> Gapply sobrevive y es rentable en Y3, pero crece lento. 200 clientes en Y3, no 500. Necesitaríamos más tiempo para llegar a escala. ENISA es imprescindible en este escenario — sin ella, no hay runway suficiente.</p>
+      </div>
+    </div>
+
+    <!-- BASE -->
+    <div class="step" data-tag="🔵 BASE">
+      <div class="q">Conversión del 8%, churn del 4% — el plan actual</div>
+      <div class="a"><p>Las hipótesis que hemos usado en todo el plan financiero.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>¿Qué pasa?</strong> Año 1 pierde 52K (inversión deliberada). Año 2 genera 180K de beneficio. Año 3 genera 982K con 500 clientes. <strong>Tesorería siempre positiva. ENISA se devuelve con beneficios de Y2.</strong></p>
+      <div class="hl" style="margin:1rem 0 0">
+        <p><strong>Veredicto base:</strong> Negocio sólido, crecimiento de 10× en 3 años. Valoración estimada Y3: 9-18M € (5-10× ARR). El fundador mantiene el 100% del equity.</p>
+      </div>
+    </div>
+
+    <!-- OPTIMISTA -->
+    <div class="step" data-tag="🟢 OPTIMISTA">
+      <div class="q">Conversión del 12%, churn del 3% — el canal B2B2B funciona</div>
+      <div class="a"><p>El diagnóstico gratuito engancha más de lo esperado, las consultoras y cámaras de comercio distribuyen Gapply, la regulación (EU AI Act, NIS2) empuja a más empresas a evaluarse.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>¿Qué pasa?</strong> Año 1 ya casi no pierde (-27K). Año 2 genera 337K. Año 3 genera 1.76M con 900 clientes. Tesorería de 2.13M en Y3. Se contrata más rápido para absorber el crecimiento (equipo de 12-15 en Y3).</p>
+      <div class="hl ok" style="margin:1rem 0 0">
+        <p><strong>Veredicto optimista:</strong> Gapply se convierte en líder de categoría en España y empieza internacionalización en Y3 (no Y4). Valoración estimada Y3: 15-30M €. Posible ronda Serie A para acelerar expansión europea.</p>
+      </div>
+    </div>
+
+    <div class="qt" style="margin-top:2.5rem">
+      <strong>Conclusión de los escenarios:</strong> En los tres casos Gapply es viable y rentable. La diferencia es velocidad, no dirección. En el peor escenario, tardamos más pero llegamos. En el mejor, escalamos antes. El plan base está diseñado para funcionar incluso si las cosas van un 30% peor de lo previsto.
+    </div>
+  </div>
+</section>
+
+
+<!-- CONCLUSIÓN -->
+<section>
+  <div class="ct">
+    <div class="lb">Conclusión</div>
+    <h2>Un plan realista para un negocio escalable</h2>
+
+    <div class="cg" style="grid-template-columns:repeat(3,1fr)">
+      <div class="hl ok" style="margin:0">
+        <p><strong>Viabilidad económica</strong></p>
+        <p style="margin:.5rem 0 0">Y1 pierde 52K (inversión deliberada). Y2 gana 180K. Y3 gana 982K. ✅</p>
+      </div>
+      <div class="hl ok" style="margin:0">
+        <p><strong>Viabilidad financiera</strong></p>
+        <p style="margin:.5rem 0 0">Tesorería positiva los 3 años. Nunca falta dinero para pagar. ✅</p>
+      </div>
+      <div class="hl ok" style="margin:0">
+        <p><strong>Credibilidad</strong></p>
+        <p style="margin:.5rem 0 0">Crecimiento 10× en 3 años (no 100×). Cada número es defendible. ✅</p>
+      </div>
+    </div>
+
+    <div class="tw" style="margin-top:2.5rem">
+      <table>
+        <thead><tr><th>Métrica</th><th>Plan anterior</th><th>Este plan</th><th>Por qué es mejor</th></tr></thead>
+        <tbody>
+          <tr><td>Inversión propia</td><td class="num">15.000 €</td><td class="num">15.000 €</td><td>Igual. El fundador pone lo mismo.</td></tr>
+          <tr><td>Financiación total</td><td class="num">15.000 €</td><td class="num">65.000 €</td><td>50K ENISA sin ceder equity.</td></tr>
+          <tr><td>Equipo Y1</td><td>2 personas</td><td>4 personas + consultor</td><td>Validar método → marketing → developer. En ese orden.</td></tr>
+          <tr><td>Ingresos Y3</td><td class="num">5.387.279 €</td><td class="num">1.800.000 €</td><td>3× menos… pero creíble y defendible.</td></tr>
+          <tr><td>Beneficio Y3</td><td class="num">3.657.506 €</td><td class="num">982.496 €</td><td>Sigue siendo excelente. Margen del 55%.</td></tr>
+          <tr><td>Clientes activos Y3</td><td>~1.500</td><td>~500</td><td>Gestionable con un equipo de 10.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="verdict">
+      <h3>✅ El Plan es VIABLE y ESCALABLE</h3>
+      <p>Económicamente rentable desde Año 2. Financieramente sólido los 3 años.<br>100% equity del fundador. ENISA se devuelve con beneficios operativos.<br>Un plan que un banco, ENISA o un inversor pueden creer.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- GLOSARIO -->
+<section id="glosario">
+  <div class="ct">
+    <div class="lb">Glosario Financiero</div>
+    <h2>Los 12 términos que te van a preguntar — explicados sin humo</h2>
+    <p class="w">Si un business angel te pregunta por el EBITDA y no sabes qué es, pierdes credibilidad en 3 segundos. Aquí tienes cada término explicado como se lo explicarías a un amigo, con el número real de Gapply al lado.</p>
+
+    <div class="step" data-tag="💰">
+      <div class="q">1. MRR / ARR — Monthly/Annual Recurring Revenue</div>
+      <div class="a"><p><strong>Qué es:</strong> el dinero que te entra cada mes (MRR) o cada año (ARR) de las suscripciones. Es lo que ya tienes "asegurado" mientras los clientes no cancelen.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply:</strong> Si tienes 30 clientes pagando 267 €/mes de media → MRR = 8.010 € → ARR = 96.120 €. En Año 3 con 500 clientes: MRR = 133.500 € → ARR = 1.602.000 €.</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Un inversor no mira cuánto vendiste el mes pasado — mira tu ARR. Es el número que define la valoración de un SaaS. Si tu ARR es 1.8M y te valoran a 10× ARR, la empresa "vale" 18M.</p>
+    </div>
+
+    <div class="step" data-tag="📊">
+      <div class="q">2. EBITDA — Earnings Before Interest, Taxes, Depreciation and Amortization</div>
+      <div class="a"><p><strong>Qué es:</strong> cuánto dinero gana la empresa con su actividad normal, sin contar intereses del banco, impuestos, ni cosas contables como la amortización. Es "el beneficio limpio de operar".</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Cómo se calcula:</strong> Ingresos − Gastos operativos (sin contar intereses ENISA, impuestos ni amortización del iMac).</p>
+      <p class="w" style="font-size:.92rem"><strong>Gapply Y1:</strong> 45.000 − (72.350 + 23.045) = <strong>-50.395 €</strong> (negativo — normal en Y1, estamos invirtiendo).<br>
+      <strong>Gapply Y2:</strong> 480.000 − 240.005 + 2.000 + 605 = <strong>+242.600 €</strong> (margen EBITDA del 50%).<br>
+      <strong>Gapply Y3:</strong> 1.800.000 − 490.005 + 2.000 + 605 = <strong>+1.312.600 €</strong> (margen EBITDA del 73%).</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Es la métrica favorita de los inversores porque muestra si el negocio gana dinero de verdad con su operación, sin maquillaje contable. Un EBITDA del 73% en Y3 es brutal para un SaaS — la media del sector está en 20-30%.</p>
+    </div>
+
+    <div class="step" data-tag="🔥">
+      <div class="q">3. Burn Rate — la velocidad a la que quemas dinero</div>
+      <div class="a"><p><strong>Qué es:</strong> cuánto dinero gastas al mes más de lo que ingresas. Si ingresas 2.000 € y gastas 8.000 €, tu burn rate es 6.000 €/mes.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply Y1:</strong> Gastos ~8.167 €/mes. Ingresos empiezan en mes 4 (~1.500 €/mes) y crecen. El burn rate empieza en -8.167 € y va bajando cada mes hasta que se cruzan las líneas.</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Le dice al inversor cuánto tiempo puedes sobrevivir sin ingresos. Cuanto más bajo tu burn, más runway tienes.</p>
+    </div>
+
+    <div class="step" data-tag="🛫">
+      <div class="q">4. Runway — cuántos meses puedes sobrevivir</div>
+      <div class="a"><p><strong>Qué es:</strong> el dinero que tienes en el banco dividido por tu burn rate mensual. Es literalmente "cuántos meses de vida te quedan".</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply:</strong> Arrancas con 65.000 € (15K propios + 50K ENISA). Gastos mensuales: ~8.167 €. Sin ingresos: 65.000 ÷ 8.167 = <strong>8 meses de runway</strong>. Como los ingresos empiezan en mes 4, en la práctica tienes runway hasta mes 12+.</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Si tu runway es menor a 6 meses, un inversor se asusta. 8 meses sin ingresos (y más con ingresos) es cómodo para una seed.</p>
+    </div>
+
+    <div class="step" data-tag="⚖️">
+      <div class="q">5. Break-even — cuándo dejas de perder dinero</div>
+      <div class="a"><p><strong>Qué es:</strong> el punto donde ingresos = gastos. Ni ganas ni pierdes. A partir de ahí, todo lo que entra es beneficio.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply:</strong> Break-even mensual = cuando ingreses ~8.167 €/mes = ~31 clientes pagando 267 €/mes. Eso debería ocurrir entre mes 10 y mes 14 (finales de Y1 o principios de Y2). Break-even anual = <strong>Año 2</strong> (480K ingresos > 240K gastos).</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Un inversor quiere saber cuándo deja de poner dinero. "Break-even en Y2" es muy bueno para un SaaS — muchos tardan 3-5 años.</p>
+    </div>
+
+    <div class="step" data-tag="💵">
+      <div class="q">6. Cash Flow vs. Beneficio — no son lo mismo</div>
+      <div class="a"><p><strong>Qué es:</strong> el beneficio es un cálculo contable (ingresos − gastos en papel). El cash flow es el dinero real que entra y sale del banco. Puedes tener beneficio contable y no tener dinero en el banco (si los clientes no pagan) o al revés.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply Y1:</strong> Resultado contable = -53.000 €. Cash flow = -52.395 € (casi igual, porque la amortización del iMac es gasto contable pero no sale dinero del banco). La diferencia (605 €) es la amortización.</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Empresas mueren con beneficios en papel pero sin dinero en el banco. En Gapply no hay ese riesgo porque los clientes pagan por suscripción mensual (cobro inmediato), no a 90 días como en consultoría.</p>
+    </div>
+
+    <div class="step" data-tag="📈">
+      <div class="q">7. Margen Bruto — cuánto te queda de cada euro vendido</div>
+      <div class="a"><p><strong>Qué es:</strong> ingresos menos el coste directo de entregar el servicio. En una panadería: si vendes un pan a 3 € y la harina cuesta 1 €, tu margen bruto es 67%.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply:</strong> El coste directo de cada diagnóstico son las APIs de IA (~0,50 €/diagnóstico) y el hosting (~0,10 €). Si cobras 267 €/mes, tu margen bruto es >99%. Es la magia del software: el coste de servir un cliente más es prácticamente cero.</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Los inversores aman los SaaS precisamente por esto. Un margen bruto del 99% significa que casi todo lo que cobras es beneficio antes de pagar al equipo.</p>
+    </div>
+
+    <div class="step" data-tag="💰">
+      <div class="q">8. LTV / CAC — la pregunta que SIEMPRE hacen</div>
+      <div class="a"><p><strong>Qué es:</strong> cuánto vale un cliente en total (LTV) dividido por cuánto cuesta conseguirlo (CAC). Si te cuesta 400 € conseguir un cliente y ese cliente te deja 6.675 € antes de irse, el ratio es 16,7×.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Cómo se calcula el LTV:</strong> ARPU (267 €/mes) × vida media del cliente (1 ÷ churn = 1 ÷ 0,04 = 25 meses) = <strong>6.675 €</strong>.</p>
+      <p class="w" style="font-size:.92rem"><strong>Cómo se calcula el CAC:</strong> Todo lo que gastas en marketing y ventas en un periodo ÷ número de clientes nuevos en ese periodo. Estimación: ~25K en ads y marketing → ~60 clientes = <strong>~400 €</strong>.</p>
+      <p class="w" style="font-size:.92rem"><strong>Ratio:</strong> 6.675 ÷ 400 = <strong>16,7×</strong>. Mínimo que pide un inversor: 3×. Si tu CAC sube a 800 €: ratio = 8× (sigue siendo excelente). Si sube a 2.000 €: ratio = 3,3× (justo en el límite — necesitas optimizar).</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Es LA métrica de un SaaS. Si LTV/CAC > 3×, cada euro que gastas en marketing genera más de 3 €. Es como una máquina: metes 1 € y salen 16 €. Los inversores quieren meterle más monedas a esa máquina.</p>
+    </div>
+
+    <div class="step" data-tag="📉">
+      <div class="q">9. Churn — los clientes que se van</div>
+      <div class="a"><p><strong>Qué es:</strong> el porcentaje de clientes que cancelan cada mes. Si tienes 100 clientes y se van 4, tu churn mensual es 4%.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply:</strong> Estimamos 4% mensual (media B2B SaaS para PyMEs: 3-7%). Eso significa que un cliente se queda de media 25 meses (~2 años). Si V3 (dashboard con seguimiento) funciona bien, el churn puede bajar al 3% (vida media = 33 meses).</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Un churn del 4% mensual significa que pierdes ~40% de clientes al año. Parece mucho, pero es normal en PyMEs — las empresas pequeñas cierran, cambian de prioridades, recortan costes. Lo importante es que el LTV/CAC siga por encima de 3×.</p>
+    </div>
+
+    <div class="step" data-tag="🏦">
+      <div class="q">10. Balance — foto de lo que tienes y debes</div>
+      <div class="a"><p><strong>Qué es:</strong> una foto del estado de la empresa en un momento concreto. Tiene dos lados que SIEMPRE cuadran: lo que tienes (activo = dinero + cosas) y de dónde salió (pasivo = tu dinero + deudas).</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply Y1:</strong> Activo = 2.074 € (iMac depreciado) + 9.926 € (banco) = 12.000 €. Pasivo = 15.000 € (tu capital) − 53.000 € (pérdidas) + 50.000 € (ENISA) = 12.000 €. Cuadra.</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Un inversor mira el balance para ver si la empresa tiene deuda, cuánto dinero tiene en el banco, y si los fondos propios son positivos o negativos. En Y1 los fondos propios son negativos (-38.000 €) — normal en una startup. En Y2 ya son positivos.</p>
+    </div>
+
+    <div class="step" data-tag="🎯">
+      <div class="q">11. Valoración — cuánto "vale" tu empresa</div>
+      <div class="a"><p><strong>Qué es:</strong> lo que alguien pagaría por comprar tu empresa. En SaaS se calcula como un múltiplo del ARR (ingresos anuales recurrentes). Si tu ARR es 1.8M y te valoran a 10× → la empresa "vale" 18M.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply Y3:</strong> ARR ~1.8M. Múltiplo para SaaS B2B con buen crecimiento: 5-10× ARR. Valoración estimada: <strong>9-18M €</strong>. Y tienes el 100% del equity.</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Si un ángel invierte 100K por un 5%, está diciendo que tu empresa vale 2M hoy. Si en Y3 vale 18M, su 5% vale 900K. Eso es un retorno de 9×. Eso es lo que buscan.</p>
+    </div>
+
+    <div class="step" data-tag="⏳">
+      <div class="q">12. Payback Period — cuándo recuperas lo que gastaste en un cliente</div>
+      <div class="a"><p><strong>Qué es:</strong> cuántos meses tarda un cliente en "devolverte" lo que te costó conseguirlo. Si el CAC es 400 € y cobra 267 €/mes, el payback es 400 ÷ 267 = 1,5 meses.</p></div>
+      <p class="w" style="font-size:.92rem"><strong>Gapply:</strong> <strong>~1,5 meses</strong>. Esto es excepcional. La media en SaaS es 12-18 meses. Significa que en mes 2 cada cliente ya es rentable y durante 23 meses más te da beneficio puro.</p>
+      <p class="w" style="font-size:.92rem"><strong>Por qué importa:</strong> Si el payback es corto, puedes reinvertir rápido en conseguir más clientes. Es lo que permite crecer sin necesitar mucho capital.</p>
+    </div>
+
+    <div class="hl" style="margin-top:2rem">
+      <p class="w"><strong>Resumen para la reunión:</strong> Si un inversor te hace cualquiera de estas preguntas, no necesitas recitar números de memoria. Necesitas entender el concepto y saber dónde están tus números. Lleva el plan financiero abierto en el portátil. Decir "déjame enseñártelo" es más potente que recitar de memoria — demuestra que tienes los números y que los entiendes.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- PREGUNTAS INVERSOR -->
+<section id="preguntas">
+  <div class="ct">
+    <div class="lb">Stress Test</div>
+    <h2>Las 24 preguntas que te harán en una ronda — y las respuestas</h2>
+    <p class="w">Estas son las preguntas típicas de un inversor, un comité ENISA o un socio potencial. Algunas son para verificar que los números cuadran. Otras son para pillarte. Las últimas 7 son preguntas financieras de balance y caja — las que hacen los business angels que saben de números.</p>
+
+    <div class="step" data-tag="TRACCIÓN">
+      <div class="q">1. ¿Cuántos clientes de pago tenéis?</div>
+      <div class="a"><p>Cero a día de hoy. El producto está en producción desde noviembre 2024, pero aún no hemos activado el cobro. El plan de 90 días está diseñado exactamente para esto: 5 betas en las semanas 1-4, 2 clientes de pago en las semanas 5-8. Es nuestra prioridad número uno.</p></div>
+    </div>
+
+    <div class="step" data-tag="MERCADO">
+      <div class="q">2. ¿Por qué iban a pagar las PyMEs por esto? Ya existen consultores.</div>
+      <div class="a"><p>Existen consultores a 15.000-100.000 €. Una PyME de 50 empleados no va a gastar eso. Gapply ofrece la misma metodología (TM Forum, MIT CISR) por 199 €/mes. No compites con McKinsey — compites con "no hacer nada", que es lo que hacen hoy el 95% de las PyMEs.</p></div>
+    </div>
+
+    <div class="step" data-tag="NÚMEROS">
+      <div class="q">3. ¿Cómo justificas 480K de ingresos en Año 2 si en Año 1 solo haces 45K?</div>
+      <div class="a"><p>Año 1 son 6-7 meses reales de venta (el producto empieza a cobrar en mes 4). Año 2 son 12 meses completos, con V2 live (programas + roadmap), equipo de 6 personas, funnel validado y mayor presupuesto de ads. De 30 clientes activos a 160 — es un crecimiento de 5× con un equipo 3× mayor. Ambicioso pero alcanzable.</p></div>
+    </div>
+
+    <div class="step" data-tag="UNIT ECONOMICS">
+      <div class="q">4. ¿Cuál es vuestro LTV/CAC? ¿Da el ratio?</div>
+      <div class="a"><p>LTV: 267 €/mes × 25 meses (churn 4%) = 6.675 €. CAC estimado: ~400 € (basado en 25K de ads + marketing para ~60 clientes). Ratio LTV/CAC: ~16×. Por encima del estándar mínimo de 3×. Pero ojo: el CAC real no lo sabremos hasta validar el funnel. Si el CAC sube a 800 €, el ratio baja a 8× — sigue siendo excelente.</p></div>
+    </div>
+
+    <div class="step" data-tag="COMPETENCIA">
+      <div class="q">5. ¿Qué pasa si Vanta o Drata hacen lo mismo?</div>
+      <div class="a"><p>Vanta y Drata hacen compliance (pasar auditorías SOC2/ISO). Gapply hace transformación (evaluar madurez + plan de acción + seguimiento). Son categorías diferentes. Además, un competidor necesitaría replicar tres pilares a la vez: metodología validada (TM Forum + MIT), datos reales de empresas, y agentes IA especializados. Copiar uno es fácil. Los tres juntos, no.</p></div>
+    </div>
+
+    <div class="step" data-tag="EQUIPO">
+      <div class="q">6. Eres un solo fundador. ¿No es demasiado riesgo?</div>
+      <div class="a"><p>Sí, es el riesgo principal. Pero: el producto ya está construido, la documentación es exhaustiva, y el plan prioriza validación antes que desarrollo. El consultor senior entra en mes 2 para validar el método, el developer en mes 4 para construir V2 con programas ya corregidos, y en Y2 somos 6. Ser solo fundador es una debilidad temporal, no estructural.</p></div>
+    </div>
+
+    <div class="step" data-tag="TRAMPA">
+      <div class="q">7. ¿Y si nadie convierte de gratis a pago?</div>
+      <div class="a"><p>Es el escenario que más me preocupa. Por eso no invertimos en marketing masivo hasta validar: el plan de 90 días prueba con 5 empresas. Si 0 de 5 pagan, pivotamos el gancho antes de gastar. Si 2 de 5 pagan (40%), escalamos. Si 1 de 5 paga (20%), iteramos el onboarding y probamos otra vez. El coste de esta prueba: prácticamente cero.</p></div>
+    </div>
+
+    <div class="step" data-tag="FINANCIERO">
+      <div class="q">8. ¿Por qué ENISA y no un inversor?</div>
+      <div class="a"><p>Porque 50K es lo que necesitamos y ENISA no pide equity. Si un inversor entra ahora, pediría 15-25% por 50-100K — es carísimo cuando la empresa no tiene revenue. Mejor validar primero, generar 480K en Y2, y si entonces queremos un inversor estratégico, negociamos desde una posición de fuerza con datos reales, no desde la necesidad.</p></div>
+    </div>
+
+    <div class="step" data-tag="TRAMPA">
+      <div class="q">9. ¿Qué pasa si ENISA dice que no?</div>
+      <div class="a"><p>El plan funciona sin ENISA — más lento. Con solo los 15K propios, no contratamos developer hasta mes 7 (en vez de mes 4) y V2 se retrasa a Q4 en vez de Q3. Los ingresos de Y2 bajan a ~300K en vez de 480K. Es peor, pero viable. Alternativas: CDTI, Kit Digital, o un préstamo ICO Emprendedores (hasta 12,5M sin avales). Lo que NO cambia: el consultor de validación sigue siendo prioritario — 3.500 € caben en cualquier escenario.</p></div>
+    </div>
+
+    <div class="step" data-tag="ESCALABILIDAD">
+      <div class="q">10. ¿Cómo escaláis de 500 a 5.000 clientes?</div>
+      <div class="a"><p>La arquitectura plugin hace que cada nuevo estándar (IA, ciberseguridad, GDPR) sea configuración, no código nuevo. Más estándares = más razones para pagar = mayor ARPU = más clientes. A nivel operativo: self-service por diseño, la IA hace el trabajo del consultor. No necesitamos 10× más personas para 10× más clientes. Ese es el punto de un SaaS.</p></div>
+    </div>
+
+    <div class="step" data-tag="NÚMEROS">
+      <div class="q">11. ¿Por qué 4% de churn y no 7%? ¿No sois optimistas?</div>
+      <div class="a"><p>El 4% es la media B2B SaaS para SMEs (rango 3-7%). Si subiera al 7%, la vida media del cliente baja de 25 a 14 meses y el LTV cae a 3.738 €. Los ingresos de Y3 bajarían a ~1.2M en vez de 1.8M. Sigue siendo un negocio viable, pero con menos margen. V3 (dashboard con KPIs mensuales) está diseñado específicamente para reducir churn — si el CEO ve progreso, no cancela.</p></div>
+    </div>
+
+    <div class="step" data-tag="TRAMPA">
+      <div class="q">12. 1.8M en Año 3 suena bien, pero ¿no es un Excel fantasy?</div>
+      <div class="a"><p>500 clientes pagando 330 €/mes de media. ¿Es realista tener 500 clientes de un universo de 3 millones de PyMEs en España? Eso es el 0,017%. El plan anterior proyectaba 5.4M — eso sí era fantasía. 1.8M requiere un equipo de 10 personas haciendo bien su trabajo durante 3 años. Es ambicioso pero no irreal.</p></div>
+    </div>
+
+    <div class="step" data-tag="PRODUCTO">
+      <div class="q">13. ¿Qué pasa si la IA da respuestas malas y el cliente se queja?</div>
+      <div class="a"><p>La IA de Gapply no improvisa — está acotada por la metodología TM Forum (5 niveles predefinidos para cada criterio). Es como un GPS: puede equivocarse en la ruta, pero el mapa es correcto. Los primeros 100 diagnósticos se revisan manualmente. Y el usuario siempre puede ajustar la evaluación si no está de acuerdo con la IA.</p></div>
+    </div>
+
+    <div class="step" data-tag="VISIÓN">
+      <div class="q">14. ¿Cuál es el exit? ¿Cómo gano dinero yo como inversor?</div>
+      <div class="a"><p>Tres opciones: (1) Dividendos — con márgenes del 73% en Y3, la empresa genera caja masiva. (2) Venta a un player de compliance/consulting (Vanta, Deloitte, SAP) que quiera la capa de transformación digital. (3) Crecimiento continuado — con multiestándar y expansión internacional, Gapply puede llegar a 10M+ ARR en 5 años. Valoración de venta: 50-100M €.</p></div>
+    </div>
+
+    <div class="step" data-tag="PERSONAL">
+      <div class="q">15. ¿Por qué tú? ¿Qué te hace diferente de los otros 1.000 founders?</div>
+      <div class="a"><p>Porque ya lo he construido. No estoy pidiendo dinero para ver si puedo. La plataforma funciona, la base de datos tiene 129 criterios validados contra TM Forum, el scoring engine está implementado, y la IA conversa en español con CEOs. Lo hice solo, con 2.679 € y un iMac. Ahora necesito equipo y tiempo para vender lo que ya existe.</p></div>
+    </div>
+
+    <div class="step" data-tag="TRAMPA PROFUNDA">
+      <div class="q">16. ¿Cómo sabéis que vuestras recomendaciones funcionan si nunca habéis transformado una empresa?</div>
+      <div class="a"><p>Es nuestra pregunta más honesta. No lo sabemos aún. Y por eso no escalamos hasta probarlo.</p></div>
+      <p class="w" style="font-size:.92rem">El diagnóstico (CEO30) sí está validado — es TM Forum puro, un estándar usado por cientos de empresas globales. El riesgo está en V2: los programas de acción y las fórmulas de esfuerzo son lógicas pero teóricas. Ninguna empresa real las ha ejecutado a través de Gapply.</p>
+      <p class="w" style="font-size:.92rem">La mitigación: un consultor senior (ex-Big4, 15+ años) está presupuestado en mes 2 (3.500 €) para revisar los 18 programas y las fórmulas antes de que se escriba una línea de código de V2. Las 5 empresas beta validan si los CEOs entienden y ejecutan las recomendaciones. Los primeros 100 programas se revisan manualmente. Y si V2 falla completamente, Gapply sigue siendo una plataforma de diagnóstico valiosa — un CEO que sabe que está en nivel 2.1 de madurez ya tiene más claridad que el 99% de PyMEs.</p>
+      <p class="w" style="font-size:.92rem"><strong>La diferencia entre "el tratamiento no funciona" (ajustable) y "el diagnóstico es incorrecto" (catastrófico). Nuestro diagnóstico sí funciona.</strong></p>
+    </div>
+
+    <div class="step" data-tag="TRAMPA PROFUNDA">
+      <div class="q">17. No sois consultores. ¿Por qué un CEO debería fiar su transformación a un algoritmo?</div>
+      <div class="a"><p>No debería fiarla solo al algoritmo. Y no lo hace.</p></div>
+      <p class="w" style="font-size:.92rem">Gapply no reemplaza al consultor — reemplaza al <strong>no hacer nada</strong>. El 95% de las PyMEs no se transforman porque no pueden pagar 50K a McKinsey. La alternativa no es "Gapply vs. consultor". Es "Gapply vs. seguir a ciegas". Un diagnóstico con metodología TM Forum + un plan de acción revisable + seguimiento mensual es infinitamente mejor que no tener nada.</p>
+      <p class="w" style="font-size:.92rem">Y además: los niveles de confianza son visibles. El CEO sabe qué recomendaciones están validadas con datos y cuáles son exploratorias. La transparencia es parte del producto, no un bug.</p>
+    </div>
+
+    <div style="margin:3rem 0 2rem;padding:1.5rem 0;border-top:2px solid var(--bd)">
+      <h3>Preguntas financieras — las que hacen los ángeles que saben de números</h3>
+    </div>
+
+    <div class="step" data-tag="EBITDA">
+      <div class="q">18. ¿Cuál es vuestro EBITDA? ¿Y el margen?</div>
+      <div class="a"><p>Año 1: EBITDA negativo (-50K), es deliberado — estamos invirtiendo en equipo. Año 2: EBITDA de +243K, margen del 50%. Año 3: EBITDA de +1.3M, margen del 73%. El salto se produce porque los ingresos crecen 4× pero los costes solo 2× — eso es la magia de un SaaS.</p></div>
+    </div>
+
+    <div class="step" data-tag="CAJA">
+      <div class="q">19. ¿Cuál es vuestro burn rate y cuánto runway tenéis?</div>
+      <div class="a"><p>Burn rate al arranque: ~8.200 €/mes. Con 65K en caja, eso nos da 8 meses sin ingresar un euro. Pero los ingresos empiezan en mes 4, así que el runway real es de 12+ meses. La tesorería nunca baja de cero en todo el plan.</p></div>
+    </div>
+
+    <div class="step" data-tag="CAJA">
+      <div class="q">20. ¿Cuándo llegáis al break-even?</div>
+      <div class="a"><p>Break-even mensual: cuando tengamos ~31 clientes pagando 267 €/mes. Eso debería ocurrir entre mes 10 y 14. Break-even anual: Año 2 — ingresos de 480K vs gastos de 240K. Bastante rápido para un SaaS — muchos tardan 3-5 años.</p></div>
+    </div>
+
+    <div class="step" data-tag="TRAMPA">
+      <div class="q">21. Los fondos propios en Año 1 son negativos. ¿Eso no es un problema?</div>
+      <div class="a"><p>Es normal en una startup que invierte más de lo que ingresa en su primer año. Fondos propios Y1: capital (15K) − pérdidas (53K) = -38K. Pero la empresa tiene 50K de ENISA y 10K en el banco — no tiene problema de liquidez. En Año 2 los fondos propios ya son positivos (142K). Es exactamente como funciona cualquier startup: pierdes al principio para ganar después.</p></div>
+    </div>
+
+    <div class="step" data-tag="MARGEN">
+      <div class="q">22. ¿Cuál es vuestro margen bruto?</div>
+      <div class="a"><p>Superior al 99%. El coste directo de servir un cliente más es ~0,50 € en APIs de IA y ~0,10 € en hosting. Si cobra 267 €/mes, prácticamente todo es margen. Esa es la diferencia entre software y consultoría: un consultor tiene coste marginal alto (más clientes = más horas). Software tiene coste marginal casi cero.</p></div>
+    </div>
+
+    <div class="step" data-tag="UNIT ECONOMICS">
+      <div class="q">23. ¿Cuánto tardáis en recuperar el CAC?</div>
+      <div class="a"><p>Payback period: 1,5 meses. Si nos cuesta 400 € conseguir un cliente y cobra 267 €/mes, en menos de 2 meses ya hemos recuperado la inversión. La media en SaaS es 12-18 meses. Eso significa que podemos reinvertir rápido sin necesitar mucho capital para crecer.</p></div>
+    </div>
+
+    <div class="step" data-tag="TRAMPA">
+      <div class="q">24. ¿Y si los unit economics no dan en la realidad? El CAC es estimado.</div>
+      <div class="a"><p>Correcto — el CAC real no lo sabemos hasta que gastemos en marketing. Si el CAC sube a 800 €, el payback sube a 3 meses y el LTV/CAC baja a 8× — sigue siendo excelente. Si sube a 2.000 € (que sería muy alto para B2B SaaS), el LTV/CAC cae a 3,3× — justo en el límite. En ese escenario hay que optimizar el funnel antes de escalar, que es exactamente lo que hace el plan de 90 días: probar con poco antes de invertir fuerte.</p></div>
+    </div>
+
+    <div class="verdict">
+      <h3>✅ Si puedes responder a las 24 sin dudar, el plan es sólido</h3>
+      <p>Las preguntas 1, 7, 12, 16 y 17 son las de producto y tracción. Las preguntas 18-24 son las de números. Un business angel hará las dos categorías. Si puedes navegar ambas con honestidad y sin inventar, estás listo. Lleva el plan financiero abierto en el portátil — decir "déjame enseñártelo" es más potente que recitar de memoria.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- FOOTER -->
+<footer>
+  <div class="f-logo">gapply</div>
+  <p>Plan Económico-Financiero · Febrero 2026</p>
+  <p>David Arias — CEO & Founder · <a href="/cdn-cgi/l/email-protection" class="__
