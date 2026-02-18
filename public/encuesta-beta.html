@@ -183,11 +183,11 @@ footer a{color:var(--blue);text-decoration:none}
       <div><div class="block-title">Antes de empezar</div><div class="block-why">Para saber quién nos da feedback</div></div>
     </div>
     <div class="question" data-q="name" style="margin-bottom:1.5rem">
-      <label class="q-label">Tu nombre</label>
+      <div class="q-label">Tu nombre</div>
       <input type="text" id="ceoName" placeholder="Ej: María García" oninput="updateProgress()" style="width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:1rem 1.25rem;font-family:inherit;font-size:.95rem;color:var(--tx);transition:var(--e);background:var(--bg)">
     </div>
     <div class="question" data-q="company">
-      <label class="q-label">Tu empresa</label>
+      <div class="q-label">Tu empresa</div>
       <input type="text" id="ceoCompany" placeholder="Ej: Acme Solutions" oninput="updateProgress()" style="width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:1rem 1.25rem;font-family:inherit;font-size:.95rem;color:var(--tx);transition:var(--e);background:var(--bg)">
     </div>
   </div>
@@ -200,28 +200,28 @@ footer a{color:var(--blue);text-decoration:none}
     </div>
 
     <div class="question" data-q="1">
-      <label class="q-label"><span class="q-num">01</span> Después del diagnóstico, ¿podrías explicar en una frase qué te ha dicho sobre tu empresa?</label>
+      <div class="q-label"><span class="q-num">01</span> Después del diagnóstico, ¿podrías explicar en una frase qué te ha dicho sobre tu empresa?</div>
       <div class="q-hint">Escribe con tus palabras — no hay respuesta correcta</div>
       <textarea placeholder="Por ejemplo: Me ha dicho que mi estrategia digital está bien pero mis datos son un desastre..." oninput="updateProgress()"></textarea>
     </div>
 
     <div class="question" data-q="2">
-      <label class="q-label"><span class="q-num">02</span> ¿Hubo algún momento en que no entendieras qué se te estaba preguntando?</label>
+      <div class="q-label"><span class="q-num">02</span> ¿Hubo algún momento en que no entendieras qué se te estaba preguntando?</div>
       <div class="options">
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="no"><div class="opt-radio"></div><span class="opt-text">No, todo claro</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="alguna"><div class="opt-radio"></div><span class="opt-text">Alguna pregunta me costó, pero lo saqué</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="varias"><div class="opt-radio"></div><span class="opt-text">Varias preguntas no las entendí bien</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="muchas"><div class="opt-radio"></div><span class="opt-text">Me he perdido bastante</span></label>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="no"><div class="opt-radio"></div><span class="opt-text">No, todo claro</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="alguna"><div class="opt-radio"></div><span class="opt-text">Alguna pregunta me costó, pero lo saqué</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="varias"><div class="opt-radio"></div><span class="opt-text">Varias preguntas no las entendí bien</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="muchas"><div class="opt-radio"></div><span class="opt-text">Me he perdido bastante</span></div>
       </div>
     </div>
 
     <div class="question" data-q="3">
-      <label class="q-label"><span class="q-num">03</span> La puntuación final que te ha dado, ¿te ha parecido...?</label>
+      <div class="q-label"><span class="q-num">03</span> La puntuación final que te ha dado, ¿te ha parecido...?</div>
       <div class="options">
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="generosa"><div class="opt-radio"></div><span class="opt-text">Generosa — creo que mi empresa está peor de lo que dice</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="justa"><div class="opt-radio"></div><span class="opt-text">Justa — refleja bastante bien dónde estamos</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="dura"><div class="opt-radio"></div><span class="opt-text">Dura — creo que estamos mejor de lo que dice</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="nosé"><div class="opt-radio"></div><span class="opt-text">No sé — no tengo referencia para comparar</span></label>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="generosa"><div class="opt-radio"></div><span class="opt-text">Generosa — creo que mi empresa está peor de lo que dice</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="justa"><div class="opt-radio"></div><span class="opt-text">Justa — refleja bastante bien dónde estamos</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="dura"><div class="opt-radio"></div><span class="opt-text">Dura — creo que estamos mejor de lo que dice</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="nosé"><div class="opt-radio"></div><span class="opt-text">No sé — no tengo referencia para comparar</span></div>
       </div>
     </div>
   </div>
@@ -234,22 +234,22 @@ footer a{color:var(--blue);text-decoration:none}
     </div>
 
     <div class="question" data-q="4">
-      <label class="q-label"><span class="q-num">04</span> ¿Alguno de los resultados te ha sorprendido?</label>
+      <div class="q-label"><span class="q-num">04</span> ¿Alguno de los resultados te ha sorprendido?</div>
       <div class="options">
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="si-bien"><div class="opt-radio"></div><span class="opt-text">Sí, para bien — estamos mejor de lo que pensaba en algo</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="si-mal"><div class="opt-radio"></div><span class="opt-text">Sí, para mal — hay algo peor de lo que creía</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="ambos"><div class="opt-radio"></div><span class="opt-text">Las dos cosas — sorpresas buenas y malas</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="no"><div class="opt-radio"></div><span class="opt-text">No, ya sabía todo lo que me ha dicho</span></label>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="si-bien"><div class="opt-radio"></div><span class="opt-text">Sí, para bien — estamos mejor de lo que pensaba en algo</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="si-mal"><div class="opt-radio"></div><span class="opt-text">Sí, para mal — hay algo peor de lo que creía</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="ambos"><div class="opt-radio"></div><span class="opt-text">Las dos cosas — sorpresas buenas y malas</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="no"><div class="opt-radio"></div><span class="opt-text">No, ya sabía todo lo que me ha dicho</span></div>
       </div>
     </div>
 
     <div class="question" data-q="5">
-      <label class="q-label"><span class="q-num">05</span> ¿Has descubierto algo sobre tu empresa que no sabías?</label>
+      <div class="q-label"><span class="q-num">05</span> ¿Has descubierto algo sobre tu empresa que no sabías?</div>
       <textarea placeholder="Si sí, ¿qué? Si no, ¿por qué crees que no?" oninput="updateProgress()"></textarea>
     </div>
 
     <div class="question" data-q="6">
-      <label class="q-label"><span class="q-num">06</span> Del 1 al 10: ¿cuánto te preocupa lo que has visto en el diagnóstico?</label>
+      <div class="q-label"><span class="q-num">06</span> Del 1 al 10: ¿cuánto te preocupa lo que has visto en el diagnóstico?</div>
       <div class="q-hint">1 = nada, me da igual · 10 = me quita el sueño</div>
       <div class="nps">
         <div class="nps-btn low" onclick="selectNps(this, 'q6')">1</div>
@@ -267,11 +267,11 @@ footer a{color:var(--blue);text-decoration:none}
     </div>
 
     <div class="question" data-q="7">
-      <label class="q-label"><span class="q-num">07</span> ¿Vas a hacer algo diferente en tu empresa a partir de lo que has visto?</label>
+      <div class="q-label"><span class="q-num">07</span> ¿Vas a hacer algo diferente en tu empresa a partir de lo que has visto?</div>
       <div class="options">
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q7" value="ya"><div class="opt-radio"></div><span class="opt-text">Sí, ya tengo claro qué cambiar</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q7" value="quizas"><div class="opt-radio"></div><span class="opt-text">Puede, pero necesito más detalle sobre el cómo</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q7" value="no"><div class="opt-radio"></div><span class="opt-text">No, no creo que cambie nada por ahora</span></label>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q7" value="ya"><div class="opt-radio"></div><span class="opt-text">Sí, ya tengo claro qué cambiar</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q7" value="quizas"><div class="opt-radio"></div><span class="opt-text">Puede, pero necesito más detalle sobre el cómo</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q7" value="no"><div class="opt-radio"></div><span class="opt-text">No, no creo que cambie nada por ahora</span></div>
       </div>
     </div>
   </div>
@@ -284,38 +284,38 @@ footer a{color:var(--blue);text-decoration:none}
     </div>
 
     <div class="question" data-q="8">
-      <label class="q-label"><span class="q-num">08</span> Si esta herramienta te diera además un plan de acción paso a paso para mejorar lo que has visto, ¿cuánto pagarías al mes?</label>
+      <div class="q-label"><span class="q-num">08</span> Si esta herramienta te diera además un plan de acción paso a paso para mejorar lo que has visto, ¿cuánto pagarías al mes?</div>
       <div class="price-grid">
-        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="0"><div class="price-val">0 €</div><div class="price-lbl">No pagaría</div></label>
-        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="99"><div class="price-val">~99 €</div><div class="price-lbl">por mes</div></label>
-        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="199"><div class="price-val">~199 €</div><div class="price-lbl">por mes</div></label>
-        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="399"><div class="price-val">~399 €</div><div class="price-lbl">por mes</div></label>
-        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="mas"><div class="price-val">+399 €</div><div class="price-lbl">por mes</div></label>
+        <div class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="0"><div class="price-val">0 €</div><div class="price-lbl">No pagaría</div></div>
+        <div class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="99"><div class="price-val">~99 €</div><div class="price-lbl">por mes</div></div>
+        <div class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="199"><div class="price-val">~199 €</div><div class="price-lbl">por mes</div></div>
+        <div class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="399"><div class="price-val">~399 €</div><div class="price-lbl">por mes</div></div>
+        <div class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="mas"><div class="price-val">+399 €</div><div class="price-lbl">por mes</div></div>
       </div>
     </div>
 
     <div class="question" data-q="9">
-      <label class="q-label"><span class="q-num">09</span> ¿A quién se lo recomendarías?</label>
+      <div class="q-label"><span class="q-num">09</span> ¿A quién se lo recomendarías?</div>
       <div class="options">
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q9" value="nadie"><div class="opt-radio"></div><span class="opt-text">A nadie, la verdad</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q9" value="uno"><div class="opt-radio"></div><span class="opt-text">A un colega concreto que se me viene a la cabeza</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q9" value="varios"><div class="opt-radio"></div><span class="opt-text">A varios — conozco gente que lo necesita</span></label>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q9" value="nadie"><div class="opt-radio"></div><span class="opt-text">A nadie, la verdad</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q9" value="uno"><div class="opt-radio"></div><span class="opt-text">A un colega concreto que se me viene a la cabeza</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q9" value="varios"><div class="opt-radio"></div><span class="opt-text">A varios — conozco gente que lo necesita</span></div>
       </div>
     </div>
 
     <div class="question" data-q="10">
-      <label class="q-label"><span class="q-num">10</span> Si mañana desapareciera Gapply, ¿qué harías para resolver lo que te ha mostrado el diagnóstico?</label>
+      <div class="q-label"><span class="q-num">10</span> Si mañana desapareciera Gapply, ¿qué harías para resolver lo que te ha mostrado el diagnóstico?</div>
       <div class="q-hint">Esta es la pregunta más importante de toda la encuesta</div>
       <div class="options">
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="nada"><div class="opt-radio"></div><span class="opt-text">Nada — seguiría como hasta ahora</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="buscar"><div class="opt-radio"></div><span class="opt-text">Buscaría otra herramienta similar</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="consultor"><div class="opt-radio"></div><span class="opt-text">Contrataría un consultor</span></label>
-        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="interno"><div class="opt-radio"></div><span class="opt-text">Intentaría resolverlo internamente</span></label>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="nada"><div class="opt-radio"></div><span class="opt-text">Nada — seguiría como hasta ahora</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="buscar"><div class="opt-radio"></div><span class="opt-text">Buscaría otra herramienta similar</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="consultor"><div class="opt-radio"></div><span class="opt-text">Contrataría un consultor</span></div>
+        <div class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="interno"><div class="opt-radio"></div><span class="opt-text">Intentaría resolverlo internamente</span></div>
       </div>
     </div>
 
     <div class="question" data-q="11">
-      <label class="q-label"><span class="q-num">11</span> Del 0 al 10: ¿recomendarías Gapply a otro CEO?</label>
+      <div class="q-label"><span class="q-num">11</span> Del 0 al 10: ¿recomendarías Gapply a otro CEO?</div>
       <div class="q-hint">0 = nunca · 10 = seguro que sí</div>
       <div class="nps">
         <div class="nps-btn low" onclick="selectNps(this, 'q11')">0</div>
@@ -334,7 +334,7 @@ footer a{color:var(--blue);text-decoration:none}
     </div>
 
     <div class="question" data-q="12">
-      <label class="q-label"><span class="q-num">12</span> ¿Algo más que quieras decirnos? Lo bueno, lo malo, lo que falta.</label>
+      <div class="q-label"><span class="q-num">12</span> ¿Algo más que quieras decirnos? Lo bueno, lo malo, lo que falta.</div>
       <div class="q-hint">Aquí no hay pregunta correcta. Sé brutalmente honesto — es lo que más nos ayuda.</div>
       <textarea placeholder="Lo que más me ha gustado... Lo que menos... Lo que echo en falta... Lo que cambiaría..." oninput="updateProgress()" rows="5"></textarea>
     </div>
@@ -358,76 +358,74 @@ footer a{color:var(--blue);text-decoration:none}
 <footer>
   <div class="f-logo">gapply</div>
   <p>Programa Beta · 2026</p>
-  <p><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="630702150a0723040213130f1a4d0a0c">[email&#160;protected]</a></p>
+  <p>david@gapply.io</p>
 </footer>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-// Supabase
-const SUPABASE_URL = 'https://fgczfshqldxkyowbyuzq.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnY3pmc2hxbGR4a3lvd2J5dXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwMTU1MzMsImV4cCI6MjA3NzU5MTUzM30.nCxVjHv5A8vQawfpUK-SWFbUCTHiHghcYfZfgH7GTFs';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var SUPABASE_URL = 'https://fgczfshqldxkyowbyuzq.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnY3pmc2hxbGR4a3lvd2J5dXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwMTU1MzMsImV4cCI6MjA3NzU5MTUzM30.nCxVjHv5A8vQawfpUK-SWFbUCTHiHghcYfZfgH7GTFs';
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Select radio option
 function selectOpt(el) {
-  const group = el.closest('.options') || el.closest('.price-grid');
-  group.querySelectorAll('.opt, .price-opt').forEach(o => o.classList.remove('selected'));
+  if (window.event) { window.event.stopPropagation(); window.event.preventDefault(); }
+  var group = el.closest('.options') || el.closest('.price-grid');
+  var items = group.querySelectorAll('.opt, .price-opt');
+  for (var i = 0; i < items.length; i++) { items[i].classList.remove('selected'); }
   el.classList.add('selected');
   el.querySelector('input').checked = true;
   updateProgress();
 }
 
-// Select price option
 function selectPrice(el) {
+  if (window.event) { window.event.stopPropagation(); window.event.preventDefault(); }
   selectOpt(el);
 }
 
-// Select NPS/scale
 function selectNps(el, group) {
-  const container = el.parentElement;
-  container.querySelectorAll('.nps-btn, .scale-btn').forEach(b => b.classList.remove('selected'));
+  var container = el.parentElement;
+  var btns = container.querySelectorAll('.nps-btn');
+  for (var i = 0; i < btns.length; i++) { btns[i].classList.remove('selected'); }
   el.classList.add('selected');
-  el.dataset.group = group;
+  el.setAttribute('data-group', group);
   updateProgress();
 }
 
-// Update progress bar
 function updateProgress() {
-  const total = 12;
-  let answered = 0;
-  
-  document.querySelectorAll('textarea').forEach(t => {
-    if (t.value.trim().length > 5) answered++;
-  });
-  
-  ['q2','q3','q4','q7','q8','q9','q10'].forEach(name => {
-    if (document.querySelector('input[name="' + name + '"]:checked')) answered++;
-  });
-  
-  document.querySelectorAll('.nps').forEach(container => {
-    if (container.querySelector('.selected')) answered++;
-  });
-  
-  answered = Math.min(answered, total);
-  const pct = Math.round((answered / total) * 100);
+  var total = 12;
+  var answered = 0;
+  var tas = document.querySelectorAll('textarea');
+  for (var i = 0; i < tas.length; i++) { if (tas[i].value.trim().length > 5) answered++; }
+  var inputs = document.querySelectorAll('input[type="text"]');
+  for (var i = 0; i < inputs.length; i++) { if (inputs[i].value.trim().length > 1) answered++; }
+  var radios = ['q2','q3','q4','q7','q8','q9','q10'];
+  for (var i = 0; i < radios.length; i++) {
+    if (document.querySelector('input[name="' + radios[i] + '"]:checked')) answered++;
+  }
+  var npsGroups = document.querySelectorAll('.nps');
+  for (var i = 0; i < npsGroups.length; i++) {
+    if (npsGroups[i].querySelector('.selected')) answered++;
+  }
+  var total2 = 14;
+  answered = Math.min(answered, total2);
+  var pct = Math.round((answered / total2) * 100);
   document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressLabel').textContent = answered + ' de ' + total + ' preguntas';
+  document.getElementById('progressLabel').textContent = answered + ' de ' + total2 + ' preguntas';
   document.getElementById('progressPct').textContent = pct + '%';
 }
 
-// Submit to Supabase
 async function submitForm() {
   var btn = document.querySelector('.btn-submit');
   btn.textContent = 'Enviando...';
   btn.disabled = true;
-  
+
   var textareas = document.querySelectorAll('textarea');
-  
+
   function getRadio(name) {
     var el = document.querySelector('input[name="' + name + '"]:checked');
     return el ? el.value : null;
   }
-  
+
   function getNps(group) {
     var el = document.querySelector('.nps .selected[data-group="' + group + '"]');
     return el ? parseInt(el.textContent) : null;
@@ -453,9 +451,18 @@ async function submitForm() {
   try {
     var result = await sb.from('dts_survey_responses').insert([row]);
     if (result.error) throw result.error;
-    
+
     document.getElementById('formWrap').style.display = 'none';
     document.querySelector('.progress-bar').style.display = 'none';
     document.getElementById('thanks').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (err) {
+    console.error('Error:', err);
+    btn.textContent = 'Error al enviar';
+    btn.disabled = false;
+    setTimeout(function() { btn.textContent = 'Enviar feedback →'; }, 3000);
+  }
+}
+</script>
+</body>
+</html>
