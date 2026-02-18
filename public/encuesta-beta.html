@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapply — Encuesta Beta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+--blue:#1a90ff;--blue-dk:#0a6fd4;--blue-lt:#e8f4ff;--blue-sub:#f0f8ff;
+--tx:#1a1a2e;--tx2:#5a6078;--txm:#8b8fa8;
+--bg:#fff;--bg2:#fafbfd;--bd:#e2e6ef;
+--grn:#10b981;--grn-bg:#ecfdf5;--org:#f59e0b;--org-bg:#fffbeb;
+--red:#ef4444;--red-bg:#fef2f2;
+--r:18px;--rs:12px;
+--sh:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.03);
+--shl:0 4px 20px rgba(26,144,255,.08),0 1px 4px rgba(0,0,0,.04);
+--e:.25s cubic-bezier(.4,0,.2,1)
+}
+html{scroll-behavior:smooth;font-size:17px}
+body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--tx);background:var(--bg2);line-height:1.7;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* Header */
+.header{background:var(--bg);border-bottom:1.5px solid var(--bd);padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;backdrop-filter:blur(20px)}
+.logo{font-weight:700;font-size:1.35rem;color:var(--blue);text-decoration:none;letter-spacing:-.5px}
+.header-badge{font-family:'Space Mono',monospace;font-size:.72rem;color:var(--blue);background:var(--blue-lt);border:1.5px solid #bfdbfe;padding:.3rem .85rem;border-radius:100px;letter-spacing:.03em}
+
+/* Hero */
+.hero{background:linear-gradient(170deg,#fff 0%,var(--blue-sub) 50%,#fff 100%);padding:5rem 2rem 4rem;text-align:center}
+.hero h1{font-size:2.8rem;font-weight:700;line-height:1.1;letter-spacing:-.03em;max-width:700px;margin:0 auto 1rem}
+.hero p{font-size:1.15rem;color:var(--tx2);max-width:560px;margin:0 auto 2rem;line-height:1.6}
+.hero-meta{display:flex;justify-content:center;gap:2.5rem;flex-wrap:wrap}
+.hero-meta div{text-align:center}
+.hero-meta .num{font-family:'Space Mono',monospace;font-size:1.8rem;font-weight:700;color:var(--blue);display:block;line-height:1}
+.hero-meta .lbl{font-size:.82rem;color:var(--tx2);margin-top:.3rem}
+
+/* Progress */
+.progress-bar{max-width:720px;margin:0 auto;padding:2rem 2rem 0}
+.progress-track{height:6px;background:var(--bd);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--grn));border-radius:3px;transition:width .6s ease;width:0%}
+.progress-text{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.78rem;color:var(--txm)}
+
+/* Form container */
+.form-wrap{max-width:720px;margin:0 auto;padding:2rem}
+
+/* Blocks */
+.block{background:var(--bg);border:1.5px solid var(--bd);border-radius:var(--r);padding:2.5rem;margin-bottom:1.5rem;transition:var(--e);opacity:0;transform:translateY(20px);animation:fadeUp .5s ease forwards}
+.block:nth-child(2){animation-delay:.1s}
+.block:nth-child(3){animation-delay:.2s}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+.block:hover{border-color:var(--blue);box-shadow:var(--shl)}
+
+.block-header{display:flex;align-items:center;gap:1rem;margin-bottom:2rem;padding-bottom:1.25rem;border-bottom:1.5px solid var(--bd)}
+.block-num{font-family:'Space Mono',monospace;font-size:.7rem;font-weight:700;color:#fff;background:var(--blue);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.block-title{font-size:1.15rem;font-weight:700;color:var(--tx);letter-spacing:-.01em}
+.block-why{font-size:.82rem;color:var(--txm);margin-top:.15rem}
+
+/* Questions */
+.question{margin-bottom:2.25rem}
+.question:last-child{margin-bottom:0}
+.q-label{font-size:1rem;font-weight:600;color:var(--tx);margin-bottom:.75rem;display:block;line-height:1.4}
+.q-hint{font-size:.82rem;color:var(--txm);margin-bottom:.75rem;font-style:italic}
+.q-num{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--blue);margin-right:.4rem}
+
+/* Text inputs */
+textarea{width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:1rem 1.25rem;font-family:inherit;font-size:.95rem;color:var(--tx);resize:vertical;min-height:90px;transition:var(--e);background:var(--bg);line-height:1.6}
+textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,144,255,.1)}
+textarea::placeholder{color:var(--txm)}
+
+/* Radio/options */
+.options{display:flex;flex-direction:column;gap:.5rem}
+.opt{display:flex;align-items:center;gap:.75rem;padding:.85rem 1.25rem;border:1.5px solid var(--bd);border-radius:var(--rs);cursor:pointer;transition:var(--e);background:var(--bg)}
+.opt:hover{border-color:var(--blue);background:var(--blue-sub)}
+.opt.selected{border-color:var(--blue);background:var(--blue-lt);box-shadow:0 0 0 3px rgba(26,144,255,.08)}
+.opt input{display:none}
+.opt-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--bd);flex-shrink:0;transition:var(--e);display:flex;align-items:center;justify-content:center}
+.opt.selected .opt-radio{border-color:var(--blue);background:var(--blue)}
+.opt.selected .opt-radio::after{content:'';width:8px;height:8px;border-radius:50%;background:#fff}
+.opt-text{font-size:.95rem;color:var(--tx2)}
+.opt.selected .opt-text{color:var(--tx);font-weight:500}
+
+/* Scale */
+.scale{display:flex;gap:.5rem;flex-wrap:wrap}
+.scale-btn{width:56px;height:56px;border:1.5px solid var(--bd);border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--tx2);cursor:pointer;transition:var(--e);background:var(--bg)}
+.scale-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-sub)}
+.scale-btn.selected{border-color:var(--blue);background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(26,144,255,.3)}
+.scale-labels{display:flex;justify-content:space-between;width:100%;max-width:340px;margin-top:.3rem}
+.scale-labels span{font-size:.72rem;color:var(--txm)}
+
+/* Horizontal options */
+.options-h{display:flex;gap:.5rem;flex-wrap:wrap}
+.options-h .opt{flex:1;min-width:120px;justify-content:center;text-align:center}
+.options-h .opt-text{font-size:.85rem}
+
+/* Price options */
+.price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.5rem}
+.price-opt{display:flex;flex-direction:column;align-items:center;padding:1.25rem 1rem;border:1.5px solid var(--bd);border-radius:var(--rs);cursor:pointer;transition:var(--e);background:var(--bg);text-align:center}
+.price-opt:hover{border-color:var(--blue);background:var(--blue-sub)}
+.price-opt.selected{border-color:var(--blue);background:var(--blue-lt);box-shadow:0 0 0 3px rgba(26,144,255,.08)}
+.price-opt input{display:none}
+.price-val{font-family:'Space Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--tx);margin-bottom:.2rem}
+.price-opt.selected .price-val{color:var(--blue)}
+.price-lbl{font-size:.75rem;color:var(--txm)}
+
+/* NPS */
+.nps{display:flex;gap:.35rem;flex-wrap:wrap}
+.nps-btn{width:46px;height:46px;border:1.5px solid var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:.95rem;font-weight:700;color:var(--tx2);cursor:pointer;transition:var(--e);background:var(--bg)}
+.nps-btn:hover{border-color:var(--blue);background:var(--blue-sub)}
+.nps-btn.selected{color:#fff}
+.nps-btn.selected.low{border-color:var(--red);background:var(--red)}
+.nps-btn.selected.mid{border-color:var(--org);background:var(--org)}
+.nps-btn.selected.high{border-color:var(--grn);background:var(--grn)}
+.nps-labels{display:flex;justify-content:space-between;width:100%;max-width:530px;margin-top:.3rem}
+.nps-labels span{font-size:.72rem;color:var(--txm)}
+
+/* Submit */
+.submit-wrap{text-align:center;padding:2rem 0 4rem}
+.btn-submit{display:inline-flex;align-items:center;gap:.5rem;background:var(--blue);color:#fff;padding:1.1rem 3rem;border-radius:14px;border:none;font-family:inherit;font-size:1.1rem;font-weight:600;cursor:pointer;transition:var(--e);box-shadow:0 4px 16px rgba(26,144,255,.25)}
+.btn-submit:hover{background:var(--blue-dk);transform:translateY(-2px);box-shadow:0 6px 24px rgba(26,144,255,.35)}
+.btn-submit:active{transform:translateY(0)}
+
+/* Thank you */
+.thanks{display:none;text-align:center;padding:6rem 2rem;max-width:600px;margin:0 auto}
+.thanks-icon{font-size:4rem;margin-bottom:1.5rem}
+.thanks h2{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.02em}
+.thanks p{color:var(--tx2);font-size:1.05rem;line-height:1.65}
+
+/* Footer */
+footer{padding:2.5rem 2rem;border-top:1.5px solid var(--bd);text-align:center;background:var(--bg)}
+.f-logo{font-weight:700;font-size:1.1rem;color:var(--blue);margin-bottom:.5rem}
+footer p{font-size:.82rem;color:var(--txm);margin:.2rem 0}
+footer a{color:var(--blue);text-decoration:none}
+
+/* Mobile */
+@media(max-width:768px){
+  .hero h1{font-size:2rem}
+  .hero p{font-size:1rem}
+  .hero-meta{gap:1.5rem}
+  .hero-meta .num{font-size:1.4rem}
+  .block{padding:1.75rem}
+  .form-wrap{padding:1.25rem}
+  .scale-btn{width:46px;height:46px;font-size:.95rem}
+  .nps-btn{width:38px;height:38px;font-size:.82rem}
+  .price-grid{grid-template-columns:repeat(3,1fr)}
+  .options-h{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <a href="#" class="logo">gapply</a>
+  <span class="header-badge">Programa Beta · 2026</span>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Tu opinión vale más que mil métricas</h1>
+  <p>Has probado el diagnóstico de madurez digital de Gapply. Ahora necesitamos tu feedback honesto — es lo que decide el futuro del producto.</p>
+  <div class="hero-meta">
+    <div><span class="num">12</span><span class="lbl">preguntas</span></div>
+    <div><span class="num">4</span><span class="lbl">minutos</span></div>
+    <div><span class="num">100%</span><span class="lbl">anónimo</span></div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-bar">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-text"><span id="progressLabel">0 de 12 preguntas</span><span id="progressPct">0%</span></div>
+</div>
+
+<!-- FORM -->
+<div class="form-wrap" id="formWrap">
+
+  <!-- BLOQUE 1: ¿Lo entienden? -->
+  <div class="block">
+    <div class="block-header">
+      <div class="block-num">1</div>
+      <div><div class="block-title">¿Lo has entendido?</div><div class="block-why">Si no se entiende, da igual que sea bueno</div></div>
+    </div>
+
+    <div class="question" data-q="1">
+      <label class="q-label"><span class="q-num">01</span> Después del diagnóstico, ¿podrías explicar en una frase qué te ha dicho sobre tu empresa?</label>
+      <div class="q-hint">Escribe con tus palabras — no hay respuesta correcta</div>
+      <textarea placeholder="Por ejemplo: Me ha dicho que mi estrategia digital está bien pero mis datos son un desastre..." oninput="updateProgress()"></textarea>
+    </div>
+
+    <div class="question" data-q="2">
+      <label class="q-label"><span class="q-num">02</span> ¿Hubo algún momento en que no entendieras qué se te estaba preguntando?</label>
+      <div class="options">
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="no"><div class="opt-radio"></div><span class="opt-text">No, todo claro</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="alguna"><div class="opt-radio"></div><span class="opt-text">Alguna pregunta me costó, pero lo saqué</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="varias"><div class="opt-radio"></div><span class="opt-text">Varias preguntas no las entendí bien</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q2" value="muchas"><div class="opt-radio"></div><span class="opt-text">Me he perdido bastante</span></label>
+      </div>
+    </div>
+
+    <div class="question" data-q="3">
+      <label class="q-label"><span class="q-num">03</span> La puntuación final que te ha dado, ¿te ha parecido...?</label>
+      <div class="options">
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="generosa"><div class="opt-radio"></div><span class="opt-text">Generosa — creo que mi empresa está peor de lo que dice</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="justa"><div class="opt-radio"></div><span class="opt-text">Justa — refleja bastante bien dónde estamos</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="dura"><div class="opt-radio"></div><span class="opt-text">Dura — creo que estamos mejor de lo que dice</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q3" value="nosé"><div class="opt-radio"></div><span class="opt-text">No sé — no tengo referencia para comparar</span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOQUE 2: ¿Les importa? -->
+  <div class="block">
+    <div class="block-header">
+      <div class="block-num">2</div>
+      <div><div class="block-title">¿Te ha importado lo que has visto?</div><div class="block-why">Si lo entienden pero les da igual, no hay negocio</div></div>
+    </div>
+
+    <div class="question" data-q="4">
+      <label class="q-label"><span class="q-num">04</span> ¿Alguno de los resultados te ha sorprendido?</label>
+      <div class="options">
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="si-bien"><div class="opt-radio"></div><span class="opt-text">Sí, para bien — estamos mejor de lo que pensaba en algo</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="si-mal"><div class="opt-radio"></div><span class="opt-text">Sí, para mal — hay algo peor de lo que creía</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="ambos"><div class="opt-radio"></div><span class="opt-text">Las dos cosas — sorpresas buenas y malas</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q4" value="no"><div class="opt-radio"></div><span class="opt-text">No, ya sabía todo lo que me ha dicho</span></label>
+      </div>
+    </div>
+
+    <div class="question" data-q="5">
+      <label class="q-label"><span class="q-num">05</span> ¿Has descubierto algo sobre tu empresa que no sabías?</label>
+      <textarea placeholder="Si sí, ¿qué? Si no, ¿por qué crees que no?" oninput="updateProgress()"></textarea>
+    </div>
+
+    <div class="question" data-q="6">
+      <label class="q-label"><span class="q-num">06</span> Del 1 al 10: ¿cuánto te preocupa lo que has visto en el diagnóstico?</label>
+      <div class="q-hint">1 = nada, me da igual · 10 = me quita el sueño</div>
+      <div class="nps">
+        <div class="nps-btn low" onclick="selectNps(this, 'q6')">1</div>
+        <div class="nps-btn low" onclick="selectNps(this, 'q6')">2</div>
+        <div class="nps-btn low" onclick="selectNps(this, 'q6')">3</div>
+        <div class="nps-btn mid" onclick="selectNps(this, 'q6')">4</div>
+        <div class="nps-btn mid" onclick="selectNps(this, 'q6')">5</div>
+        <div class="nps-btn mid" onclick="selectNps(this, 'q6')">6</div>
+        <div class="nps-btn mid" onclick="selectNps(this, 'q6')">7</div>
+        <div class="nps-btn high" onclick="selectNps(this, 'q6')">8</div>
+        <div class="nps-btn high" onclick="selectNps(this, 'q6')">9</div>
+        <div class="nps-btn high" onclick="selectNps(this, 'q6')">10</div>
+      </div>
+      <div class="nps-labels"><span>Me da igual</span><span>Me preocupa mucho</span></div>
+    </div>
+
+    <div class="question" data-q="7">
+      <label class="q-label"><span class="q-num">07</span> ¿Vas a hacer algo diferente en tu empresa a partir de lo que has visto?</label>
+      <div class="options">
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q7" value="ya"><div class="opt-radio"></div><span class="opt-text">Sí, ya tengo claro qué cambiar</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q7" value="quizas"><div class="opt-radio"></div><span class="opt-text">Puede, pero necesito más detalle sobre el cómo</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q7" value="no"><div class="opt-radio"></div><span class="opt-text">No, no creo que cambie nada por ahora</span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOQUE 3: ¿Pagarían? -->
+  <div class="block">
+    <div class="block-header">
+      <div class="block-num">3</div>
+      <div><div class="block-title">¿Pagarías por esto?</div><div class="block-why">La única validación real</div></div>
+    </div>
+
+    <div class="question" data-q="8">
+      <label class="q-label"><span class="q-num">08</span> Si esta herramienta te diera además un plan de acción paso a paso para mejorar lo que has visto, ¿cuánto pagarías al mes?</label>
+      <div class="price-grid">
+        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="0"><div class="price-val">0 €</div><div class="price-lbl">No pagaría</div></label>
+        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="99"><div class="price-val">~99 €</div><div class="price-lbl">por mes</div></label>
+        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="199"><div class="price-val">~199 €</div><div class="price-lbl">por mes</div></label>
+        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="399"><div class="price-val">~399 €</div><div class="price-lbl">por mes</div></label>
+        <label class="price-opt" onclick="selectPrice(this)"><input type="radio" name="q8" value="mas"><div class="price-val">+399 €</div><div class="price-lbl">por mes</div></label>
+      </div>
+    </div>
+
+    <div class="question" data-q="9">
+      <label class="q-label"><span class="q-num">09</span> ¿A quién se lo recomendarías?</label>
+      <div class="options">
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q9" value="nadie"><div class="opt-radio"></div><span class="opt-text">A nadie, la verdad</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q9" value="uno"><div class="opt-radio"></div><span class="opt-text">A un colega concreto que se me viene a la cabeza</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q9" value="varios"><div class="opt-radio"></div><span class="opt-text">A varios — conozco gente que lo necesita</span></label>
+      </div>
+    </div>
+
+    <div class="question" data-q="10">
+      <label class="q-label"><span class="q-num">10</span> Si mañana desapareciera Gapply, ¿qué harías para resolver lo que te ha mostrado el diagnóstico?</label>
+      <div class="q-hint">Esta es la pregunta más importante de toda la encuesta</div>
+      <div class="options">
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="nada"><div class="opt-radio"></div><span class="opt-text">Nada — seguiría como hasta ahora</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="buscar"><div class="opt-radio"></div><span class="opt-text">Buscaría otra herramienta similar</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="consultor"><div class="opt-radio"></div><span class="opt-text">Contrataría un consultor</span></label>
+        <label class="opt" onclick="selectOpt(this)"><input type="radio" name="q10" value="interno"><div class="opt-radio"></div><span class="opt-text">Intentaría resolverlo internamente</span></label>
+      </div>
+    </div>
+
+    <div class="question" data-q="11">
+      <label class="q-label"><span class="q-num">11</span> Del 0 al 10: ¿recomendarías Gapply a otro CEO?</label>
+      <div class="q-hint">0 = nunca · 10 = seguro que sí</div>
+      <div class="nps">
+        <div class="nps-btn low" onclick="selectNps(this, 'q11')">0</div>
+        <div class="nps-btn low" onclick="selectNps(this, 'q11')">1</div>
+        <div class="nps-btn low" onclick="selectNps(this, 'q11')">2</div>
+        <div class="nps-btn low" onclick="selectNps(this, 'q11')">3</div>
+        <div class="nps-btn low" onclick="selectNps(this, 'q11')">4</div>
+        <div class="nps-btn mid" onclick="selectNps(this, 'q11')">5</div>
+        <div class="nps-btn mid" onclick="selectNps(this, 'q11')">6</div>
+        <div class="nps-btn mid" onclick="selectNps(this, 'q11')">7</div>
+        <div class="nps-btn high" onclick="selectNps(this, 'q11')">8</div>
+        <div class="nps-btn high" onclick="selectNps(this, 'q11')">9</div>
+        <div class="nps-btn high" onclick="selectNps(this, 'q11')">10</div>
+      </div>
+      <div class="nps-labels"><span>Nunca</span><span>Seguro que sí</span></div>
+    </div>
+
+    <div class="question" data-q="12">
+      <label class="q-label"><span class="q-num">12</span> ¿Algo más que quieras decirnos? Lo bueno, lo malo, lo que falta.</label>
+      <div class="q-hint">Aquí no hay pregunta correcta. Sé brutalmente honesto — es lo que más nos ayuda.</div>
+      <textarea placeholder="Lo que más me ha gustado... Lo que menos... Lo que echo en falta... Lo que cambiaría..." oninput="updateProgress()" rows="5"></textarea>
+    </div>
+  </div>
+
+  <!-- SUBMIT -->
+  <div class="submit-wrap">
+    <button class="btn-submit" onclick="submitForm()">Enviar feedback →</button>
+  </div>
+</div>
+
+<!-- THANK YOU -->
+<div class="thanks" id="thanks">
+  <div class="thanks-icon">🙏</div>
+  <h2>Gracias. En serio.</h2>
+  <p>Tu feedback va directo a mejorar Gapply. No a un informe que nadie lee — a cambios reales en el producto. Si has dicho que pagarías, te avisaremos cuando esté listo. Si has dicho que no, gracias por la honestidad — es exactamente lo que necesitamos.</p>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="f-logo">gapply</div>
+  <p>Programa Beta · 2026</p>
+  <p><a href="mailto:david@gapply.io">david@gapply.io</a></p>
+</footer>
+
+<script>
+// Select radio option
+function selectOpt(el) {
+  const group = el.closest('.options') || el.closest('.price-grid');
+  group.querySelectorAll('.opt, .price-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('input').checked = true;
+  updateProgress();
+}
+
+// Select price option
+function selectPrice(el) {
+  selectOpt(el);
+}
+
+// Select NPS/scale
+function selectNps(el, group) {
+  const container = el.parentElement;
+  container.querySelectorAll('.nps-btn, .scale-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  el.dataset.group = group;
+  updateProgress();
+}
+
+// Update progress bar
+function updateProgress() {
+  const total = 12;
+  let answered = 0;
+  
+  // Check textareas
+  document.querySelectorAll('textarea').forEach(t => {
+    if (t.value.trim().length > 5) answered++;
+  });
+  
+  // Check radio groups
+  ['q2','q3','q4','q7','q8','q9','q10'].forEach(name => {
+    if (document.querySelector(`input[name="${name}"]:checked`)) answered++;
+  });
+  
+  // Check NPS scales
+  document.querySelectorAll('.nps, .scale').forEach(container => {
+    if (container.querySelector('.selected')) answered++;
+  });
+  
+  // Cap at total
+  answered = Math.min(answered, total);
+  
+  const pct = Math.round((answered / total) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = answered + ' de ' + total + ' preguntas';
+  document.getElementById('progressPct').textContent = pct + '%';
+}
+
+// Submit
+function submitForm() {
+  // Collect all data
+  const data = {};
+  
+  document.querySelectorAll('textarea').forEach((t, i) => {
+    data['text_' + (i+1)] = t.value;
+  });
+  
+  ['q2','q3','q4','q7','q8','q9','q10'].forEach(name => {
+    const checked = document.querySelector(`input[name="${name}"]:checked`);
+    data[name] = checked ? checked.value : null;
+  });
+  
+  document.querySelectorAll('.nps .selected, .scale .selected').forEach(el => {
+    const group = el.dataset.group || 'scale';
+    data[group] = el.textContent;
+  });
+  
+  // Log (in production: send to Supabase or API)
+  console.log('Survey data:', JSON.stringify(data, null, 2));
+  
+  // Show thanks
+  document.getElementById('formWrap').style.display = 'none';
+  document.querySelector('.progress-bar').style.display = 'none';
+  document.getElementById('thanks').style.display = 'block';
+  
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
