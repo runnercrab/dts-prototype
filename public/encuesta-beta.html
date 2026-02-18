@@ -66,7 +66,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;color:var
 
 /* Text inputs */
 textarea{width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:1rem 1.25rem;font-family:inherit;font-size:.95rem;color:var(--tx);resize:vertical;min-height:90px;transition:var(--e);background:var(--bg);line-height:1.6}
-textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,144,255,.1)}
+textarea:focus,input[type="text"]:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,144,255,.1)}
 textarea::placeholder{color:var(--txm)}
 
 /* Radio/options */
@@ -175,6 +175,22 @@ footer a{color:var(--blue);text-decoration:none}
 
 <!-- FORM -->
 <div class="form-wrap" id="formWrap">
+
+  <!-- IDENTIFICACIÓN -->
+  <div class="block">
+    <div class="block-header">
+      <div class="block-num">→</div>
+      <div><div class="block-title">Antes de empezar</div><div class="block-why">Para saber quién nos da feedback</div></div>
+    </div>
+    <div class="question" data-q="name" style="margin-bottom:1.5rem">
+      <label class="q-label">Tu nombre</label>
+      <input type="text" id="ceoName" placeholder="Ej: María García" oninput="updateProgress()" style="width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:1rem 1.25rem;font-family:inherit;font-size:.95rem;color:var(--tx);transition:var(--e);background:var(--bg)">
+    </div>
+    <div class="question" data-q="company">
+      <label class="q-label">Tu empresa</label>
+      <input type="text" id="ceoCompany" placeholder="Ej: Acme Solutions" oninput="updateProgress()" style="width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:1rem 1.25rem;font-family:inherit;font-size:.95rem;color:var(--tx);transition:var(--e);background:var(--bg)">
+    </div>
+  </div>
 
   <!-- BLOQUE 1: ¿Lo entienden? -->
   <div class="block">
@@ -342,10 +358,10 @@ footer a{color:var(--blue);text-decoration:none}
 <footer>
   <div class="f-logo">gapply</div>
   <p>Programa Beta · 2026</p>
-  <p>david@gapply.io</p>
+  <p><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="630702150a0723040213130f1a4d0a0c">[email&#160;protected]</a></p>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 // Supabase
 const SUPABASE_URL = 'https://fgczfshqldxkyowbyuzq.supabase.co';
@@ -418,6 +434,8 @@ async function submitForm() {
   }
 
   var row = {
+    respondent_name: document.getElementById('ceoName').value || null,
+    respondent_company: document.getElementById('ceoCompany').value || null,
     q1_explicacion: textareas[0] ? textareas[0].value : null,
     q2_comprension: getRadio('q2'),
     q3_puntuacion: getRadio('q3'),
@@ -441,12 +459,3 @@ async function submitForm() {
     document.getElementById('thanks').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (err) {
-    console.error('Error:', err);
-    btn.textContent = 'Error — inténtalo de nuevo';
-    btn.disabled = false;
-    setTimeout(function() { btn.textContent = 'Enviar feedback →'; }, 3000);
-  }
-}
-</script>
-</body>
-</html>
