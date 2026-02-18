@@ -337,14 +337,21 @@ footer a{color:var(--blue);text-decoration:none}
   <p>Tu feedback va directo a mejorar Gapply. No a un informe que nadie lee — a cambios reales en el producto. Si has dicho que pagarías, te avisaremos cuando esté listo. Si has dicho que no, gracias por la honestidad — es exactamente lo que necesitamos.</p>
 </div>
 
+
 <!-- FOOTER -->
 <footer>
   <div class="f-logo">gapply</div>
   <p>Programa Beta · 2026</p>
-  <p><a href="mailto:david@gapply.io">david@gapply.io</a></p>
+  <p>david@gapply.io</p>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
+// Supabase
+const SUPABASE_URL = 'https://fgczfshqldxkyowbyuzq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnY3pmc2hxbGR4a3lvd2J5dXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwMTU1MzMsImV4cCI6MjA3NzU5MTUzM30.nCxVjHv5A8vQawfpUK-SWFbUCTHiHghcYfZfgH7GTFs';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // Select radio option
 function selectOpt(el) {
   const group = el.closest('.options') || el.closest('.price-grid');
@@ -373,59 +380,72 @@ function updateProgress() {
   const total = 12;
   let answered = 0;
   
-  // Check textareas
   document.querySelectorAll('textarea').forEach(t => {
     if (t.value.trim().length > 5) answered++;
   });
   
-  // Check radio groups
   ['q2','q3','q4','q7','q8','q9','q10'].forEach(name => {
-    if (document.querySelector(`input[name="${name}"]:checked`)) answered++;
+    if (document.querySelector('input[name="' + name + '"]:checked')) answered++;
   });
   
-  // Check NPS scales
-  document.querySelectorAll('.nps, .scale').forEach(container => {
+  document.querySelectorAll('.nps').forEach(container => {
     if (container.querySelector('.selected')) answered++;
   });
   
-  // Cap at total
   answered = Math.min(answered, total);
-  
   const pct = Math.round((answered / total) * 100);
   document.getElementById('progressFill').style.width = pct + '%';
   document.getElementById('progressLabel').textContent = answered + ' de ' + total + ' preguntas';
   document.getElementById('progressPct').textContent = pct + '%';
 }
 
-// Submit
-function submitForm() {
-  // Collect all data
-  const data = {};
+// Submit to Supabase
+async function submitForm() {
+  var btn = document.querySelector('.btn-submit');
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
   
-  document.querySelectorAll('textarea').forEach((t, i) => {
-    data['text_' + (i+1)] = t.value;
-  });
+  var textareas = document.querySelectorAll('textarea');
   
-  ['q2','q3','q4','q7','q8','q9','q10'].forEach(name => {
-    const checked = document.querySelector(`input[name="${name}"]:checked`);
-    data[name] = checked ? checked.value : null;
-  });
+  function getRadio(name) {
+    var el = document.querySelector('input[name="' + name + '"]:checked');
+    return el ? el.value : null;
+  }
   
-  document.querySelectorAll('.nps .selected, .scale .selected').forEach(el => {
-    const group = el.dataset.group || 'scale';
-    data[group] = el.textContent;
-  });
-  
-  // Log (in production: send to Supabase or API)
-  console.log('Survey data:', JSON.stringify(data, null, 2));
-  
-  // Show thanks
-  document.getElementById('formWrap').style.display = 'none';
-  document.querySelector('.progress-bar').style.display = 'none';
-  document.getElementById('thanks').style.display = 'block';
-  
-  // Scroll to top
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  function getNps(group) {
+    var el = document.querySelector('.nps .selected[data-group="' + group + '"]');
+    return el ? parseInt(el.textContent) : null;
+  }
+
+  var row = {
+    q1_explicacion: textareas[0] ? textareas[0].value : null,
+    q2_comprension: getRadio('q2'),
+    q3_puntuacion: getRadio('q3'),
+    q4_sorpresa: getRadio('q4'),
+    q5_descubrimiento: textareas[1] ? textareas[1].value : null,
+    q6_preocupacion: getNps('q6'),
+    q7_accion: getRadio('q7'),
+    q8_precio: getRadio('q8'),
+    q9_recomendacion: getRadio('q9'),
+    q10_desaparicion: getRadio('q10'),
+    q11_nps: getNps('q11'),
+    q12_comentario_libre: textareas[2] ? textareas[2].value : null
+  };
+
+  try {
+    var result = await sb.from('dts_survey_responses').insert([row]);
+    if (result.error) throw result.error;
+    
+    document.getElementById('formWrap').style.display = 'none';
+    document.querySelector('.progress-bar').style.display = 'none';
+    document.getElementById('thanks').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    console.error('Error:', err);
+    btn.textContent = 'Error — inténtalo de nuevo';
+    btn.disabled = false;
+    setTimeout(function() { btn.textContent = 'Enviar feedback →'; }, 3000);
+  }
 }
 </script>
 </body>
