@@ -141,28 +141,29 @@ export default function DtsHomePage() {
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-10 md:mb-12">
                 <h2 className="text-[28px] md:text-[34px] font-extrabold text-slate-900 mb-4 tracking-tight">Las 6 áreas que analizamos</h2>
-                <p className="text-[16px] md:text-[18px] text-slate-600">Determinan cómo decides y cómo creces.</p>
+                <p className="text-[16px] md:text-[18px] text-slate-600 leading-relaxed max-w-2xl mx-auto">La transformación digital no es solo tecnología. Es transformar cómo funciona tu empresa. Si una de estas áreas se queda atrás, frena a las demás.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
                 {[
-                  { icon: "/icons/target.png", name: "Estrategia", desc: "Si tienes foco real o todo compite." },
-                  { icon: "/icons/database.png", name: "Datos", desc: "Si decides con información o intuición." },
-                  { icon: "/icons/gears.png", name: "Operaciones", desc: "Si tu empresa escala con orden o con tensión." },
-                  { icon: "/icons/users.png", name: "Personas", desc: "Si está claro quién decide qué." },
-                  { icon: "/icons/chip.png", name: "Tecnología", desc: "Si tus sistemas ayudan o estorban." },
-                  { icon: "/icons/handshake.png", name: "Gobierno y control", desc: "Si detectas riesgos antes de que sean caros." },
+                  { icon: "/icons/target.png", name: "Estrategia", question: "¿Sabes hacia dónde vas?", desc: "Muchas empresas compran tecnología sin tener claro para qué. Un CRM que nadie usa. Una web nueva que no resuelve nada. Si intentas mejorar todo a la vez, no mejoras nada. Estrategia es elegir qué va primero." },
+                  { icon: "/icons/database.png", name: "Datos", question: "¿Decides con información o con intuición?", desc: "\"Me suena que este mes fue mejor.\" \"Creo que ese cliente nos da dinero.\" \"Supongo que vamos bien.\" Si tus decisiones empiezan con \"creo\", \"me suena\" o \"supongo\", estás decidiendo a ciegas. Datos es tener los números cuando los necesitas." },
+                  { icon: "/icons/gears.png", name: "Operaciones", question: "¿Qué pasa si alguien clave no viene mañana?", desc: "Si Paco se va de vacaciones y se para medio negocio, tienes un problema. Si los procesos importantes están en la cabeza de la gente en vez de documentados, no puedes ni delegar ni crecer. Operaciones es que las cosas funcionen sin depender de una persona." },
+                  { icon: "/icons/users.png", name: "Personas y decisiones", question: "¿Todo pasa por ti?", desc: "El cliente grande llama, te lo pasan a ti. Hay que aprobar un gasto, tú. Hay un problema con un pedido, tú. Si eres el cuello de botella de tu propia empresa, no puedes crecer. Personas es que tu equipo sepa qué puede decidir sin preguntarte." },
+                  { icon: "/icons/chip.png", name: "Tecnología", question: "¿Tus herramientas se hablan entre sí?", desc: "El ERP por un lado, el Excel de rutas por otro, los emails por otro. Cada sistema es una isla y acabas copiando datos a mano de uno a otro. Tecnología no es tener más herramientas. Es que las que tienes trabajen juntas." },
+                  { icon: "/icons/handshake.png", name: "Gobierno", question: "¿Alguien revisa si lo que decidisteis funciona?", desc: "Hace 3 meses decidisteis cambiar de proveedor. ¿Funcionó? ¿Alguien lo ha mirado? Si el único momento en que os sentáis a revisar cómo va el negocio es cuando algo explota, estáis pilotando a ciegas. Gobierno es pararse a mirar los indicadores antes de que sea tarde." },
                 ].map((d) => (
                   <div key={d.name} className="bg-white rounded-2xl p-8 md:p-10 transition-all hover:shadow-lg" style={{ border: '1.5px solid #dde3eb' }}>
-                    <div className="flex items-center gap-4 mb-4">
+                    <div className="flex items-center gap-4 mb-3">
                       <img src={d.icon} alt="" className="w-14 h-14 md:w-16 md:h-16 shrink-0 opacity-60" />
                       <h3 className="text-[20px] md:text-[22px] font-bold text-slate-900">{d.name}</h3>
                     </div>
-                    <p className="text-[17px] md:text-[18px] text-slate-700 leading-relaxed">{d.desc}</p>
+                    <p className="text-[15px] md:text-[16px] font-semibold mb-2" style={{ color: GAPPLY_BLUE }}>{d.question}</p>
+                    <p className="text-[16px] md:text-[17px] text-slate-700 leading-relaxed">{d.desc}</p>
                   </div>
                 ))}
               </div>
               <p className="text-[16px] md:text-[17px] text-slate-600 text-center mt-10">
-                Cuando estas áreas están alineadas, crecer deja de ser improvisar.
+                Las seis tienen que avanzar juntas. Cuando están alineadas, crecer deja de ser improvisar.
               </p>
             </div>
           </section>
