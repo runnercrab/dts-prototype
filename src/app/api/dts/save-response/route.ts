@@ -7,15 +7,20 @@ export async function POST(req: Request) {
   if (!url || !key) return NextResponse.json({ error: "Missing env" }, { status: 500 });
 
   const { assessmentId, criteriaCode, asIsLevel } = await req.json();
-  if (!assessmentId || !criteriaCode || !asIsLevel)
+
+  // asIsLevel puede ser null (= "no aplica") o 1-5
+  if (!assessmentId || !criteriaCode)
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+
+  if (asIsLevel !== null && asIsLevel !== undefined && (asIsLevel < 1 || asIsLevel > 5))
+    return NextResponse.json({ error: "asIsLevel must be null or 1-5" }, { status: 400 });
 
   const sb = createClient(url, key, { auth: { persistSession: false } });
 
   const { error } = await sb.rpc("dts_v1_upsert_response", {
     p_assessment_id: assessmentId,
     p_criteria_code: criteriaCode,
-    p_as_is_level: asIsLevel,
+    p_as_is_level: asIsLevel ?? null,
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

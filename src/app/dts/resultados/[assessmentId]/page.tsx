@@ -143,6 +143,13 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
   }
   const dimGroups = Object.entries(criteriaByDim).sort(([, a], [, b]) => a.avgLevel - b.avgLevel);
 
+  /* ═══ D1 + D2: contadores para "Tus respuestas" ═══ */
+  const totalCriteriaInPack = scores.by_dimension.reduce(
+    (sum: number, d: any) => sum + (d.criteria_total || 0), 0
+  );
+  const answeredWithScore = scores.by_criteria.length;
+  const naCount = totalCriteriaInPack - answeredWithScore;
+
   return (
     <div className="min-h-screen bg-[#f7f9fb] flex">
       <DtsSidebar currentPhase={3} />
@@ -194,6 +201,35 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
               </section>
             </div>
           </div>
+
+          {/* ═══════════════════════════════════════════════════════
+              D1 — RESUMEN DIRECTO: lo que Horacio necesitaba
+              "No lo tengo claro. Es algo vago." → ahora ve sus frenos
+              en una frase que puede repetir por teléfono.
+              ═══════════════════════════════════════════════════════ */}
+          {frenos.length > 0 && (
+            <div className="md:ml-[68px] mb-8">
+              <div className="rounded-2xl p-8 md:p-10" style={{ backgroundColor: '#f8fafc', border: '1.5px solid #dde3eb' }}>
+                <div className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-4 font-[family-name:var(--font-space-mono)]">
+                  Lo que hemos detectado
+                </div>
+                <p className="text-[18px] md:text-[22px] font-extrabold text-slate-900 leading-snug tracking-tight">
+                  Tu empresa tiene {frenos.length} obstáculo{frenos.length > 1 ? 's' : ''} principal{frenos.length > 1 ? 'es' : ''}:{' '}
+                  {frenos.map((f: any, i: number) => (
+                    <span key={i}>
+                      <span style={{ color: GAPPLY_BLUE }}>
+                        {f.message.headline_es.charAt(0).toLowerCase() + f.message.headline_es.slice(1)}
+                      </span>
+                      {i < frenos.length - 2 ? ', ' : i === frenos.length - 2 ? ' y ' : '.'}
+                    </span>
+                  ))}
+                </p>
+                <p className="text-[16px] md:text-[17px] text-slate-600 mt-4 leading-relaxed">
+                  Abajo tienes el detalle de cada uno y la acción recomendada para empezar.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* STEP 2 */}
           <div id="step2" className="flex gap-0">
@@ -308,7 +344,13 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h3 className="text-[22px] font-extrabold text-slate-900 tracking-tight">Tus respuestas</h3>
-                  <p className="text-[15px] text-slate-600 mt-1">{scores.by_criteria.length} preguntas en {dimGroups.length} dimensiones</p>
+                  {/* ═══ D2: mostrar cuántas son "no aplica" ═══ */}
+                  <p className="text-[15px] text-slate-600 mt-1">
+                    {answeredWithScore} preguntas evaluadas
+                    {naCount > 0 && (
+                      <span className="text-slate-400"> · {naCount} no aplican a tu empresa</span>
+                    )}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3 text-[12px] text-slate-500 font-[family-name:var(--font-space-mono)]">
                   <span>Nivel:</span>
