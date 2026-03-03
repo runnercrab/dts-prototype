@@ -6,10 +6,11 @@ import { usePathname } from "next/navigation";
 const GAPPLY_BLUE = "#1a90ff";
 
 const PHASES = [
-  { n: 0, label: "Inicio",       path: "/dts" },
-  { n: 1, label: "Onboarding",   path: "/dts/onboarding" },
-  { n: 2, label: "Diagnóstico",  path: "/dts/diagnostico" },
-  { n: 3, label: "Resultados",   path: "/dts/resultados" },
+  { n: 0, label: "Inicio",          path: "/dts" },
+  { n: 1, label: "Onboarding",      path: "/dts/onboarding" },
+  { n: 2, label: "Diagnóstico",     path: "/dts/diagnostico" },
+  { n: 3, label: "Resultados",      path: "/dts/resultados" },
+  { n: 4, label: "Plan de acción",  path: "/dts/roadmap" },
 ];
 
 interface Props {

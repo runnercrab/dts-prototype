@@ -24,5 +24,17 @@ export async function POST(req: Request) {
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // ✅ V2.2 fix: ensure to_be_level=5 and importance=1 for ranking RPC
+  // CEO30 only asks as_is_level; the RPC needs gap (to_be - as_is) > 0
+  if (asIsLevel !== null && asIsLevel !== undefined) {
+    await sb
+      .from("dts_responses")
+      .update({ to_be_level: 5, importance: 1 })
+      .eq("assessment_id", assessmentId)
+      .eq("criteria_code", criteriaCode)
+      .is("to_be_level", null);
+  }
+
   return NextResponse.json({ ok: true });
 }

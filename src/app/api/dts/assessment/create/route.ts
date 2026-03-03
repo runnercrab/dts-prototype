@@ -5,13 +5,14 @@ import { supabaseService } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// ✅ Default explícito para demo
-const DEFAULT_PACK = "tmf_mvp12_v2";
+// ✅ V2.2 — Pack por defecto: Gapply V2.2 (13 programas, 79 acciones)
+const DEFAULT_PACK = "gapply_v22";
 
 // ✅ Política de funnel: packs permitidos para crear desde Home (demo)
 const ALLOWED_CREATE_PACKS = new Set([
-  "tmf_mvp12_v2",
-  // añade aquí "tmf_full_v1" etc si procede
+  "gapply_v22",
+  "dts_ceo30_v1",    // legacy — Gedeth, Alsotel
+  "tmf_mvp12_v2",    // legacy — MVP12
 ]);
 
 function json(status: number, payload: any) {
