@@ -4,6 +4,19 @@ import { createClient } from "@supabase/supabase-js"
 import GapplyRoadmap from "./GapplyRoadmap"
 import { fetchRoadmapWithSummary, updateActionStatus, RoadmapData } from "@/lib/dts/roadmap-data"
 
+// V2.2: action codes that have structured templates (forms instead of checkboxes).
+// These match gapply_action_templates with template_type = 'structured'.
+const STRUCTURED_ACTION_CODES = new Set([
+  "PRG-CORE-01-A01",
+  "PRG-CORE-01-A02",
+  "PRG-CORE-01-A03",
+  "PRG-CORE-02-A01",
+  "PRG-CORE-02-A02",
+  "PRG-CORE-02-A03",
+  "PRG-CORE-03-A01",
+  "PRG-CORE-03-A02",
+])
+
 export default function RoadmapSection({ assessmentId }: { assessmentId: string }) {
   const supabase = useMemo(() => createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -12,6 +25,13 @@ export default function RoadmapSection({ assessmentId }: { assessmentId: string 
   const [data, setData] = useState<RoadmapData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // V2.2: demo token from URL params (e.g. ?demo_token=xxx)
+  const demoToken = useMemo(() => {
+    if (typeof window === "undefined") return null
+    const params = new URLSearchParams(window.location.search)
+    return params.get("demo_token")
+  }, [])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -33,14 +53,11 @@ export default function RoadmapSection({ assessmentId }: { assessmentId: string 
     return () => { cancelled = true }
   }, [assessmentId, loadData])
 
-  // V2.2 uses catalog-direct (no initiatives table), so status tracking
-  // is in-memory only for now. V1 persists to dts_v2_initiatives.
   const isV22 = data?.summary?.version === 'v2.2'
 
   const handleStatusChange = useCallback(
     async (id: string, s: "pending" | "completed") => {
       if (isV22) {
-        // V2.2: update in-memory only (no initiatives table)
         setData(prev => {
           if (!prev) return prev
           const updated = { ...prev, programs: prev.programs.map(p => ({
@@ -55,7 +72,6 @@ export default function RoadmapSection({ assessmentId }: { assessmentId: string 
           return updated
         })
       } else {
-        // V1: persist to initiatives table
         try { await updateActionStatus(supabase, id, s) } catch {}
       }
     }, [isV22, supabase]
@@ -85,6 +101,11 @@ export default function RoadmapSection({ assessmentId }: { assessmentId: string 
       starterActionsForced={data?.summary?.starter_actions_forced || 0}
       onStatusChange={handleStatusChange}
       loading={loading}
+      // V2.2: structured templates
+      supabase={supabase}
+      assessmentId={assessmentId}
+      demoToken={demoToken}
+      structuredActions={STRUCTURED_ACTION_CODES}
     />
   )
 }
