@@ -1,6 +1,12 @@
 /**
- * GAPPLY ROADMAP V2.2 — Data Layer
+ * GAPPLY ROADMAP V2.3 — Data Layer
  * LOCATION: src/lib/dts/roadmap-data.ts
+ *
+ * V2.3 CHANGES:
+ *   - Added gapply_v23 pack (11 programs, 85 actions, 32 criteria)
+ *   - Programs sorted by program_score only (no CORE/RING tier split)
+ *   - Filters out deactivated programs (display_order = 999)
+ *   - Falls back to V1 path for legacy assessments (dts_ceo30_v1, tmf_mvp12_v2)
  *
  * V2.2 CHANGES:
  *   - New path for gapply_v22 pack: reads directly from catalog + ranking RPC
@@ -8,7 +14,6 @@
  *   - Actions read from dts_action_catalog.program_code (direct FK)
  *   - Phases: M1→30d, M2→60d, M3→90d
  *   - New fields: band, dod, hours_min/typical/max, dolor_ceo, tier
- *   - Falls back to V1 path for legacy assessments (dts_ceo30_v1, tmf_mvp12_v2)
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
@@ -83,11 +88,11 @@ const MONTH_TO_PHASE: Record<string, string> = {
   'M3': '90d',
 }
 
-// ── V2.2 packs that use catalog-direct path ──
-const V22_PACKS = new Set(['gapply_v22'])
+// ── V2.2+ packs that use catalog-direct path ──
+const V22_PACKS = new Set(['gapply_v22', 'gapply_v23'])
 
 // ══════════════════════════════════════════════════════════════════
-// Main fetch — routes to V2.2 or V1 based on assessment pack
+// Main fetch — routes to V2.2+ or V1 based on assessment pack
 // ══════════════════════════════════════════════════════════════════
 
 export async function fetchRoadmapWithSummary(
@@ -115,7 +120,7 @@ export async function fetchRoadmapWithSummary(
 }
 
 // ══════════════════════════════════════════════════════════════════
-// V2.2 PATH — Catalog-direct (no initiatives table)
+// V2.2+ PATH — Catalog-direct (no initiatives table)
 // ══════════════════════════════════════════════════════════════════
 
 async function fetchRoadmapV22(
@@ -134,35 +139,39 @@ async function fetchRoadmapV22(
   const ranked = rankedRaw || []
 
   if (ranked.length === 0) {
-    return emptyRoadmap('v2.2')
+    return emptyRoadmap('v2.3')
   }
 
-  // 2. Get program IDs for V2.2 programs only
+  // 2. Get program IDs for V2.2+ programs only
   const v22Programs = ranked.filter((p: any) =>
     p.program_code?.startsWith('PRG-CORE') || p.program_code?.startsWith('PRG-RING')
   )
 
   if (v22Programs.length === 0) {
-    return emptyRoadmap('v2.2')
+    return emptyRoadmap('v2.3')
   }
 
-  // 3. Fetch program catalog details (dolor_ceo, why_matters, dimension, tier)
+  // 3. Fetch program catalog details — filter out deactivated programs (display_order = 999)
   const programCodes = v22Programs.map((p: any) => p.program_code)
   const { data: catalogDetails } = await supabase
     .from('dts_program_catalog')
-    .select('code, dolor_ceo, why_matters, scope, dimension_primary, tier')
+    .select('code, dolor_ceo, why_matters, expected_outcome, ejemplos, scope, dimension_primary, tier, display_order')
     .in('code', programCodes)
+    .neq('display_order', 999)
 
   const catalogByCode = new Map<string, any>()
   for (const d of (catalogDetails || [])) {
     catalogByCode.set(d.code, d)
   }
 
-  // 4. Fetch actions from catalog for all V2.2 program codes
+  // Only active program codes
+  const activeProgramCodes = Array.from(catalogByCode.keys())
+
+  // 4. Fetch actions from catalog for active program codes only
   const { data: actions, error: actErr } = await supabase
     .from('dts_action_catalog')
     .select('id, code, title, description, deliverable, dod, band, hours_min, hours_typical, hours_max, effort_hours, month, program_code')
-    .in('program_code', programCodes)
+    .in('program_code', activeProgramCodes)
     .eq('is_active', true)
     .order('program_code')
     .order('month')
@@ -172,7 +181,7 @@ async function fetchRoadmapV22(
     throw new Error(`Action fetch failed: ${actErr.message}`)
   }
 
-  // 4. Group actions by program_code
+  // 5. Group actions by program_code
   const actionsByProgram = new Map<string, any[]>()
   for (const a of (actions || [])) {
     const list = actionsByProgram.get(a.program_code) || []
@@ -180,65 +189,60 @@ async function fetchRoadmapV22(
     actionsByProgram.set(a.program_code, list)
   }
 
-  // 5. Build RoadmapProgram[] from ranked + catalog
-  const programs: RoadmapProgram[] = v22Programs.map((p: any, idx: number) => {
-    const progActions = actionsByProgram.get(p.program_code) || []
+  // 6. Build RoadmapProgram[] from ranked + catalog (only active programs)
+  const programs: RoadmapProgram[] = v22Programs
+    .filter((p: any) => catalogByCode.has(p.program_code))
+    .map((p: any, idx: number) => {
+      const progActions = actionsByProgram.get(p.program_code) || []
 
-    const grouped: RoadmapProgram['actions'] = {
-      '30d': [], '60d': [], '90d': [], backlog: [],
-    }
+      const grouped: RoadmapProgram['actions'] = {
+        '30d': [], '60d': [], '90d': [], backlog: [],
+      }
 
-    for (const a of progActions) {
-      const phase = MONTH_TO_PHASE[a.month] || 'backlog'
-      grouped[phase as keyof typeof grouped].push({
-        id: a.id,
-        code: a.code || '',
-        name: a.title || 'Accion sin nombre',
-        description: a.description || null,
-        deliverable: a.deliverable || null,
-        dod: a.dod || null,
-        band: a.band || null,
-        hours: a.hours_typical || a.effort_hours || 0,
-        hours_min: a.hours_min,
-        hours_typical: a.hours_typical,
-        hours_max: a.hours_max,
-        month: a.month,
-        status: 'pending',
-      })
-    }
+      for (const a of progActions) {
+        const phase = MONTH_TO_PHASE[a.month] || 'backlog'
+        grouped[phase as keyof typeof grouped].push({
+          id: a.id,
+          code: a.code || '',
+          name: a.title || 'Accion sin nombre',
+          description: a.description || null,
+          deliverable: a.deliverable || null,
+          dod: a.dod || null,
+          band: a.band || null,
+          hours: a.hours_typical || a.effort_hours || 0,
+          hours_min: a.hours_min,
+          hours_typical: a.hours_typical,
+          hours_max: a.hours_max,
+          month: a.month,
+          status: 'pending',
+        })
+      }
 
-    // Merge catalog details
-    const cat = catalogByCode.get(p.program_code) || {}
-    const tierNum = cat.tier || (p.program_code?.includes('CORE') ? 1 : 2)
+      const cat = catalogByCode.get(p.program_code) || {}
 
-    return {
-      id: p.program_id || p.id || `prog-${idx}`,
-      code: p.program_code,
-      name: p.name_ceo || p.title || cat.title || p.program_code,
-      dimension: p.dimension_primary || cat.dimension_primary || '',
-      tier: tierNum,
-      dolor_ceo: cat.dolor_ceo || p.dolor_ceo || p.description_ceo || null,
-      why_matters: cat.why_matters || p.why_matters || null,
-      weighted_need: p.weighted_need || 0,
-      program_score: p.program_score || 0,
-      priority_badge: p.priority_badge || null,
-      reasons: p.top_contributors
-        ? p.top_contributors.map((tc: any) => tc.criteria_label || tc.criteria_code)
-        : [],
-      hours_typical: p.hours_typical || null,
-      actions: grouped,
-    }
-  })
+      return {
+        id: p.program_id || p.id || `prog-${idx}`,
+        code: p.program_code,
+        name: p.name_ceo || p.title || cat.title || p.program_code,
+        dimension: p.dimension_primary || cat.dimension_primary || '',
+        tier: cat.display_order || 99,
+        dolor_ceo: cat.dolor_ceo || p.dolor_ceo || p.description_ceo || null,
+        why_matters: cat.why_matters || p.why_matters || null,
+        weighted_need: p.weighted_need || 0,
+        program_score: p.program_score || 0,
+        priority_badge: p.priority_badge || null,
+        reasons: p.top_contributors
+          ? p.top_contributors.map((tc: any) => tc.criteria_label || tc.criteria_code)
+          : [],
+        hours_typical: p.hours_typical || null,
+        actions: grouped,
+      }
+    })
 
-  // Sort: by program_score desc (RPC already ranks, but ensure order)
-  programs.sort((a, b) => {
-    // CORE before RING
-    if (a.tier !== b.tier) return (a.tier as number) - (b.tier as number)
-    // Then by weighted_need desc
-    return b.program_score - a.program_score
-  })
+  // Sort by program_score descending — motor decides priority, not CORE/RING
+  programs.sort((a, b) => b.program_score - a.program_score)
 
-  // 6. Calculate capacity
+  // 7. Calculate capacity
   const calcUsed = (phase: string) =>
     programs.reduce((sum, p) => {
       const phaseActions = p.actions[phase as keyof typeof p.actions] || []
@@ -248,9 +252,8 @@ async function fetchRoadmapV22(
   const used30 = calcUsed('30d')
   const used60 = calcUsed('60d')
   const used90 = calcUsed('90d')
-  const totalUsed = used30 + used60 + used90
 
-  // 7. Build summary
+  // 8. Build summary
   const totalActions = programs.reduce(
     (sum, p) => sum + p.actions['30d'].length + p.actions['60d'].length + p.actions['90d'].length + p.actions.backlog.length,
     0
@@ -273,7 +276,7 @@ async function fetchRoadmapV22(
     capacity_exceeded_by_starters: false,
     starter_actions_forced: 0,
     d5_dimensions: [],
-    version: 'v2.2',
+    version: 'v2.3',
   }
 
   return {

@@ -55,7 +55,7 @@ interface GapplyRoadmapProps {
   starterActionsForced?: number
   onStatusChange?: (id: string, s: "pending" | "completed") => void
   loading?: boolean
-  // V2.2
+  // V2.2+
   supabase?: SupabaseClient
   assessmentId?: string
   demoToken?: string | null
@@ -131,10 +131,10 @@ export default function GapplyRoadmap({
     }
   }, [programs, onStatusChange])
 
-  const core = useMemo(() => programsWithOverrides.filter(p => p.code?.includes("CORE")), [programsWithOverrides])
-  const ring = useMemo(() => programsWithOverrides.filter(p => p.code?.includes("RING")), [programsWithOverrides])
   const all = programsWithOverrides
-  const nProg = all.length, nAct = all.reduce((s, p) => s + totalActions(p), 0), nHrs = all.reduce((s, p) => s + totalHours(p), 0)
+  const nProg = all.length
+  const nAct = all.reduce((s, p) => s + totalActions(p), 0)
+  const nHrs = all.reduce((s, p) => s + totalHours(p), 0)
 
   if (loading) return (
     <div>{[1,2,3].map(i => (
@@ -158,7 +158,7 @@ export default function GapplyRoadmap({
       {/* Stats */}
       <div className="bg-white rounded-2xl mb-10 flex" style={{ border: "1.5px solid #dde3eb" }}>
         {[
-          { value: nProg, label: "Programas", sub: `${core.length} base + ${ring.length} expansión` },
+          { value: nProg, label: "Programas", sub: "ordenados por impacto" },
           { value: nAct, label: "Acciones", sub: "distribuidas en 3 meses" },
           { value: nHrs + "h", label: "Esfuerzo estimado", sub: "horas de trabajo totales" },
         ].map((s, i) => (
@@ -181,23 +181,31 @@ export default function GapplyRoadmap({
         </div>
       </div>
 
-      {/* BASE */}
-      <ProgramSection title="Programas base" subtitle="La base estructural. Resuelven los problemas que más limitan tu empresa hoy." badge="BASE" badgeStyle="primary" programs={core} rankOffset={0} {...sectionProps} />
-
-      {/* EXPANSIÓN */}
-      {ring.length > 0 && <ProgramSection title="Programas de expansión" subtitle="Amplían tu capacidad digital cuando la base esté cubierta." badge="EXPANSIÓN" badgeStyle="secondary" programs={ring} rankOffset={core.length} {...sectionProps} />}
+      {/* ALL PROGRAMS — Single list ordered by impact */}
+      <ProgramSection
+        title="Tus programas"
+        subtitle="Ordenados por el impacto que tienen en tu empresa según tu diagnóstico."
+        programs={all}
+        rankOffset={0}
+        {...sectionProps}
+      />
 
       {/* Legend */}
       <div className="mt-10 rounded-2xl p-7 md:p-10" style={{ backgroundColor: "#f7f9fb", border: "1.5px solid #dde3eb" }}>
         <div className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-5 font-[family-name:var(--font-space-mono)]">Cómo funciona</div>
         <div className="grid sm:grid-cols-3 gap-5">
           <div>
-            <span className="text-[13px] font-bold px-2.5 py-0.5 rounded-full font-[family-name:var(--font-space-mono)]" style={{ backgroundColor: "#e8f4ff", color: B }}>BASE</span>
-            <p className="text-[15px] md:text-[16px] text-slate-500 leading-relaxed mt-2">Programas que atacan tus debilidades estructurales. Son los que más impacto tienen.</p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[14px] font-extrabold text-white" style={{ backgroundColor: B }}>1</div>
+              <span className="text-[15px] md:text-[16px] font-semibold text-slate-700">Prioridad</span>
+            </div>
+            <p className="text-[15px] md:text-[16px] text-slate-500 leading-relaxed mt-2">Los programas están ordenados por impacto. Empieza por el #1 y avanza en orden.</p>
           </div>
           <div>
-            <span className="text-[13px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-[family-name:var(--font-space-mono)]">EXPANSIÓN</span>
-            <p className="text-[15px] md:text-[16px] text-slate-500 leading-relaxed mt-2">Amplían tu capacidad digital. Complementan a los base cuando la estructura esté sólida.</p>
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] font-bold uppercase tracking-wider font-[family-name:var(--font-space-mono)]" style={{ color: B }}>MES 1 · MES 2 · MES 3</span>
+            </div>
+            <p className="text-[15px] md:text-[16px] text-slate-500 leading-relaxed mt-2">Las acciones de cada programa están distribuidas en 3 meses.</p>
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -215,25 +223,19 @@ export default function GapplyRoadmap({
 }
 
 // ══════════════════════════════════════════════════════════
-// ProgramSection
+// ProgramSection — Single list, no base/expansion split
 // ══════════════════════════════════════════════════════════
 
-function ProgramSection({ title, subtitle, badge, badgeStyle, programs, openProgramId, onToggleOpen, onActionClick, rankOffset, openFormAction, supabase, assessmentId, demoToken, structuredActions, onFormSaved, onFormClose }: {
-  title: string; subtitle: string; badge: string; badgeStyle: "primary" | "secondary"
+function ProgramSection({ title, subtitle, programs, openProgramId, onToggleOpen, onActionClick, rankOffset, openFormAction, supabase, assessmentId, demoToken, structuredActions, onFormSaved, onFormClose }: {
+  title: string; subtitle: string
   programs: RoadmapProgram[]; openProgramId: string | null; onToggleOpen: (id: string | null) => void
   onActionClick: (a: RoadmapAction) => void; rankOffset: number; openFormAction: string | null
   supabase?: SupabaseClient; assessmentId?: string; demoToken?: string | null
   structuredActions?: Set<string>; onFormSaved: (code: string) => void; onFormClose: () => void
 }) {
-  const isPrimary = badgeStyle === "primary"
-
   return (
     <div className="mb-12">
-      <div className="flex items-center gap-4 mb-2">
-        <span className="text-[13px] font-bold px-3 py-1 rounded-full font-[family-name:var(--font-space-mono)]"
-          style={isPrimary ? { backgroundColor: "#e8f4ff", color: B } : { backgroundColor: "#f1f5f9", color: "#64748b" }}>{badge}</span>
-        <h2 className="text-[22px] md:text-[26px] font-extrabold text-slate-900 tracking-tight">{title}</h2>
-      </div>
+      <h2 className="text-[22px] md:text-[26px] font-extrabold text-slate-900 tracking-tight mb-2">{title}</h2>
       <p className="text-[16px] md:text-[18px] text-slate-500 mb-8 leading-relaxed">{subtitle}</p>
 
       <div className="flex flex-col gap-5">
@@ -252,7 +254,7 @@ function ProgramSection({ title, subtitle, badge, badgeStyle, programs, openProg
                 <div className="flex items-start gap-5 md:gap-6">
                   <div className="flex flex-col items-center flex-shrink-0 pt-0.5">
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center text-[20px] font-extrabold"
-                      style={isTop3 ? { backgroundColor: B, color: "white" } : isPrimary ? { backgroundColor: "#e8f4ff", color: B, border: `2px solid ${B}` } : { backgroundColor: "#f7f9fb", color: "#94a3b8", border: "1.5px solid #dde3eb" }}>
+                      style={isTop3 ? { backgroundColor: B, color: "white" } : { backgroundColor: "#f7f9fb", color: "#94a3b8", border: "1.5px solid #dde3eb" }}>
                       {rank}
                     </div>
                     {isTop3 && <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider font-[family-name:var(--font-space-mono)]" style={{ color: B }}>PRIORIDAD</span>}
