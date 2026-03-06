@@ -12,9 +12,15 @@ const SECTORS = [
   "Servicios Financieros",
   "Retail y E-commerce",
   "Industria y Manufactura",
+  "Construcción e Inmobiliario",
+  "Alimentación, Hostelería y Catering",
   "Servicios Profesionales",
-  "Salud",
-  "Educación",
+  "Salud y Bienestar",
+  "Educación y Formación",
+  "Transporte y Logística",
+  "Turismo y Ocio",
+  "Energía y Medio Ambiente",
+  "Medios y Comunicación",
   "Otro",
 ];
 
