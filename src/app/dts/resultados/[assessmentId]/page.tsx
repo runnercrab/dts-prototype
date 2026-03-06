@@ -4,8 +4,6 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import DtsSidebar from "@/components/dts/DtsSidebar";
-import ClosingCTA from "@/components/dts/ClosingCTA";
-import UpgradePathSection from "@/components/dts/UpgradePathSection";
 import FloatingAvatar from "@/components/dts/FloatingAvatar";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -154,8 +152,9 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
       <DtsSidebar currentPhase={3} />
 
       <div className="ml-0 md:ml-[220px] flex-1 flex flex-col min-h-screen overflow-x-hidden">
+        {/* BREADCRUMB — fix: "Resultado" → "Resultados" */}
         <div className="bg-white px-6 md:px-8 py-3.5 flex items-center justify-between" style={{ borderBottom: '1.5px solid #dde3eb' }}>
-          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Resultado</span></span>
+          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Resultados</span></span>
           <span className="text-[12px] font-[family-name:var(--font-space-mono)] text-slate-400">{assessmentId.slice(0, 8)}</span>
         </div>
         <div className="h-[3px] w-full flex-shrink-0" style={{ backgroundColor: GAPPLY_BLUE }} />
@@ -193,9 +192,7 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                     </div>
                   </div>
                   <div className="flex-1 min-w-0 text-center lg:text-left">
-                    {/* title-section: 24/30px */}
                     <h1 className="text-[24px] md:text-[30px] font-extrabold text-slate-900 leading-tight mb-5 tracking-tight">{foto.titulo_es}</h1>
-                    {/* body-md: 16/18px */}
                     <p className="text-[16px] md:text-[18px] text-slate-700 leading-relaxed">{foto.mensaje_es}</p>
                   </div>
                 </div>
@@ -210,7 +207,6 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                 <div className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-4 font-[family-name:var(--font-space-mono)]">
                   Lo que hemos detectado
                 </div>
-                {/* title-summary: 20/24px (was 18/22) */}
                 <p className="text-[20px] md:text-[24px] font-extrabold text-slate-900 leading-snug tracking-tight">
                   Tu empresa tiene {frenos.length} obstáculo{frenos.length > 1 ? 's' : ''} principal{frenos.length > 1 ? 'es' : ''}:{' '}
                   {frenos.map((f: any, i: number) => (
@@ -222,7 +218,6 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                     </span>
                   ))}
                 </p>
-                {/* body-md */}
                 <p className="text-[16px] md:text-[18px] text-slate-600 mt-4 leading-relaxed">
                   Abajo tienes el detalle de cada uno y la acción recomendada para empezar.
                 </p>
@@ -255,7 +250,6 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                       )}
                       <Image src={iconSrc} alt={d.dimension_name_es} width={48} height={48} className="flex-shrink-0 opacity-60" />
                       <div className="flex-1 min-w-0">
-                        {/* body-md */}
                         <div className="text-[16px] md:text-[18px] font-semibold text-slate-800 truncate">{d.dimension_name_es}</div>
                         <div className="text-[30px] font-extrabold leading-tight text-slate-900">{sc.toFixed(1)}</div>
                       </div>
@@ -283,9 +277,7 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                     </div>
                     <div className="flex-1">
                       <div className="text-[14px] md:text-[15px] uppercase tracking-widest font-bold mb-3 font-[family-name:var(--font-space-mono)]" style={{ color: GAPPLY_BLUE }}>Tu primer movimiento</div>
-                      {/* title-card: 22/26px (was 24/28) — slightly adjusted to fit card context */}
                       <div className="text-[22px] md:text-[26px] font-extrabold leading-snug mb-4 text-slate-900 tracking-tight">{pp.titulo_es}</div>
-                      {/* body-md */}
                       <div className="text-[16px] md:text-[18px] text-slate-700 leading-relaxed">Hemos analizado tus respuestas y este es el punto que más te limita ahora mismo.</div>
                     </div>
                   </div>
@@ -301,9 +293,7 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-3 font-[family-name:var(--font-space-mono)]">Plan de acción</div>
-                    {/* title-summary: 20/24px (was 19/22) */}
                     <div className="text-[20px] md:text-[24px] font-extrabold text-slate-900 tracking-tight mb-2">Hemos generado tu roadmap priorizado</div>
-                    {/* body-sm */}
                     <div className="text-[15px] md:text-[16px] text-slate-600 leading-relaxed">Programas ordenados por urgencia, acciones concretas mes a mes y seguimiento de progreso.</div>
                   </div>
                   <div className="ml-6 flex-shrink-0">
@@ -322,7 +312,6 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
           {frenos.length > 0 && (
             <section id="obstaculos" className="bg-white rounded-2xl p-8 md:p-12 mb-10 mt-4 md:ml-[68px]" style={{ border: '1.5px solid #dde3eb' }}>
               <div className="mb-10">
-                {/* title-card: 22/26px (was 22px flat) */}
                 <h3 className="text-[22px] md:text-[26px] font-extrabold text-slate-900 tracking-tight">{frenos.length} obstáculo{frenos.length > 1 ? "s" : ""} principal{frenos.length > 1 ? "es" : ""} detectado{frenos.length > 1 ? "s" : ""}</h3>
               </div>
               <div className="flex flex-col gap-8">
@@ -341,23 +330,17 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-[19px] font-bold text-red-600 bg-red-50" style={{ border: '2px solid #ef4444' }}>{f.rank}</div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-4 flex-wrap">
-                            {/* title-card: 22/26px (was 19/21) */}
                             <span className="text-[22px] md:text-[26px] font-extrabold text-slate-900 tracking-tight">{m.headline_es}</span>
                             <span className="text-[13px] font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-[family-name:var(--font-space-mono)]">{typeLabel}</span>
                           </div>
-                          {/* body-md */}
                           <p className="text-[16px] md:text-[18px] text-slate-700 leading-relaxed mb-7">{m.body_es}</p>
                           <div className="grid sm:grid-cols-2 gap-4">
                             <div className="bg-[#f7f9fb] rounded-2xl p-6">
-                              {/* label-section: 13px (was 12) */}
                               <div className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2 font-[family-name:var(--font-space-mono)]">Impacto</div>
-                              {/* body-md */}
                               <div className="text-[16px] md:text-[18px] text-slate-800 leading-relaxed">{m.impacto_es}</div>
                             </div>
                             <div className="rounded-2xl p-6" style={{ backgroundColor: '#e8f4ff' }}>
-                              {/* label-section: 13px (was 12) */}
                               <div className="text-[13px] font-bold uppercase tracking-widest mb-2 font-[family-name:var(--font-space-mono)]" style={{ color: GAPPLY_BLUE }}>Acción recomendada</div>
-                              {/* body-md */}
                               <div className="text-[16px] md:text-[18px] text-slate-800 leading-relaxed">{m.cta_es}</div>
                             </div>
                           </div>
@@ -376,7 +359,6 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
             <div className="px-8 md:px-10 py-8" style={{ borderBottom: '1.5px solid #eef2f6' }}>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  {/* title-card */}
                   <h3 className="text-[22px] md:text-[26px] font-extrabold text-slate-900 tracking-tight">Tus respuestas</h3>
                   <p className="text-[15px] md:text-[16px] text-slate-600 mt-1">
                     {answeredWithScore} preguntas evaluadas
@@ -410,7 +392,6 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                       <div className="flex items-center gap-4">
                         <span className="inline-flex w-11 h-11 items-center justify-center rounded-xl text-[16px] font-bold text-white" style={{ backgroundColor: GAPPLY_BLUE, opacity: Math.max(0.4, avg / 5) }}>{avg.toFixed(1)}</span>
                         <div>
-                          {/* body-md */}
                           <div className="text-[16px] md:text-[18px] font-semibold text-slate-900">{group.name}</div>
                           <div className="text-[14px] md:text-[15px] text-slate-500">{group.items.length} preguntas · {humanLevel(Math.round(avg))}</div>
                         </div>
@@ -434,24 +415,26 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
             </div>
           </section>
 
-          {/* UPGRADE PATH */}
-          {frenos.length > 0 && (
-            <div className="mb-10 md:ml-[68px]">
-              <UpgradePathSection
-                numObstaculos={frenos.length}
-                dimensionesAfectadas={[...new Set(frenos.map((f: any) => f.dimension_name_es))]}
-              />
-            </div>
-          )}
-
-          <ClosingCTA assessmentId={assessmentId} score={g.score_0_100} />
-
-          <div className="flex items-center justify-between pt-5 md:ml-[68px]">
-            <Link href={`/dts/diagnostico/${assessmentId}`} className="inline-flex items-center gap-2 px-6 md:px-7 py-3.5 rounded-2xl text-slate-700 text-[15px] md:text-[16px] font-semibold hover:bg-slate-50 transition-colors" style={{ border: '1.5px solid #dde3eb' }}>← Revisar diagnóstico</Link>
-            <Link href="/dts" className="text-[15px] text-slate-600 font-semibold hover:underline transition-colors" style={{ textDecorationColor: GAPPLY_BLUE }}>Volver al inicio</Link>
+          {/* Navegación inferior */}
+          <div className="flex items-center justify-between pt-10 mt-10 md:ml-[68px]" style={{ borderTop: '1.5px solid #dde3eb' }}>
+            <Link
+              href={`/dts/diagnostico/${assessmentId}`}
+              className="inline-flex items-center gap-2 px-6 md:px-7 py-3.5 rounded-2xl text-slate-700 text-[15px] md:text-[16px] font-semibold hover:bg-slate-50 transition-colors"
+              style={{ border: '1.5px solid #dde3eb' }}
+            >
+              ← Revisar diagnóstico
+            </Link>
+            <Link
+              href={`/dts/roadmap/${assessmentId}`}
+              className="inline-flex items-center gap-2 px-6 md:px-7 py-3.5 rounded-2xl text-white text-[15px] md:text-[16px] font-semibold transition-colors hover:opacity-90"
+              style={{ backgroundColor: GAPPLY_BLUE }}
+            >
+              Ver plan de acción →
+            </Link>
           </div>
 
-          <div className="text-center mt-10 text-[13px] text-slate-400 font-medium">Gapply · Standards-as-a-Service · DTS V1</div>
+          {/* Footer — fix: eliminado "Standards-as-a-Service · DTS V1" */}
+          <div className="text-center mt-10 text-[13px] text-slate-400 font-medium">Gapply</div>
         </main>
       </div>
 

@@ -2,10 +2,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { createClient } from "@supabase/supabase-js"
 import GapplyRoadmap from "./GapplyRoadmap"
-import { fetchRoadmapWithSummary, updateActionStatus, RoadmapData } from "@/lib/dts/roadmap-data"
+import { fetchRoadmapWithSummary, RoadmapData } from "@/lib/dts/roadmap-data"
 
-// V2.2: action codes that have structured templates (forms instead of checkboxes).
-// These match gapply_action_templates with template_type = 'structured'.
 const STRUCTURED_ACTION_CODES = new Set([
   "PRG-CORE-01-A01",
   "PRG-CORE-01-A02",
@@ -17,20 +15,25 @@ const STRUCTURED_ACTION_CODES = new Set([
   "PRG-CORE-03-A02",
 ])
 
-export default function RoadmapSection({ assessmentId }: { assessmentId: string }) {
+export default function RoadmapSection({
+  assessmentId,
+  score,
+  scoreLabel,
+}: {
+  assessmentId: string
+}) {
   const supabase = useMemo(() => createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
   ), [])
+
   const [data, setData] = useState<RoadmapData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // V2.2: demo token from URL params (e.g. ?demo_token=xxx)
   const demoToken = useMemo(() => {
     if (typeof window === "undefined") return null
-    const params = new URLSearchParams(window.location.search)
-    return params.get("demo_token")
+    return new URLSearchParams(window.location.search).get("demo_token")
   }, [])
 
   const loadData = useCallback(async () => {
@@ -40,7 +43,7 @@ export default function RoadmapSection({ assessmentId }: { assessmentId: string 
       const roadmap = await fetchRoadmapWithSummary(supabase, assessmentId)
       setData(roadmap)
     } catch (err: any) {
-      setError(err.message || "Error al cargar el plan de accion")
+      setError(err.message || "Error al cargar el plan de acción")
     } finally {
       setLoading(false)
     }
@@ -48,44 +51,46 @@ export default function RoadmapSection({ assessmentId }: { assessmentId: string 
 
   useEffect(() => {
     if (!assessmentId) return
-    let cancelled = false
-    loadData().then(() => { if (cancelled) return })
-    return () => { cancelled = true }
+    loadData()
   }, [assessmentId, loadData])
 
-  const isV22 = data?.summary?.version === 'v2.2'
-
+  // Sin bifurcación de packs — mismo handler para todos
   const handleStatusChange = useCallback(
-    async (id: string, s: "pending" | "completed") => {
-      if (isV22) {
-        setData(prev => {
-          if (!prev) return prev
-          const updated = { ...prev, programs: prev.programs.map(p => ({
+    async (actionId: string, status: "pending" | "completed") => {
+      // 1. Pintar inmediatamente (optimistic)
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          programs: prev.programs.map(p => ({
             ...p,
             actions: Object.fromEntries(
               Object.entries(p.actions).map(([phase, actions]) => [
                 phase,
-                actions.map(a => a.id === id ? { ...a, status: s } : a)
+                (actions as any[]).map(a => a.id === actionId ? { ...a, status } : a),
               ])
             ) as any,
-          }))}
-          return updated
-        })
-      } else {
-        try { await updateActionStatus(supabase, id, s) } catch {}
-      }
-    }, [isV22, supabase]
+          })),
+        }
+      })
+
+      // 2. Persistir en BD (fire and forget)
+      fetch("/api/dts/roadmap/action-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId, actionId, status }),
+      }).then(r => r.json()).then(result => {
+        if (!result.ok) console.error("[RoadmapSection] Error persistiendo:", result.error)
+      })
+    },
+    [assessmentId]
   )
 
   if (error) return (
     <div className="bg-white rounded-2xl p-8 text-center" style={{ border: "1.5px solid #dde3eb" }}>
-      <div className="text-[17px] font-bold text-slate-800 mb-2">No hemos podido cargar tu plan de accion</div>
+      <div className="text-[17px] font-bold text-slate-800 mb-2">No hemos podido cargar tu plan de acción</div>
       <div className="text-[15px] text-slate-500 mb-5">{error}</div>
-      <button
-        onClick={loadData}
-        className="px-6 py-2.5 rounded-xl text-[15px] font-semibold text-white"
-        style={{ backgroundColor: "#1a90ff" }}
-      >
+      <button onClick={loadData} className="px-6 py-2.5 rounded-xl text-[15px] font-semibold text-white" style={{ backgroundColor: "#1a90ff" }}>
         Reintentar
       </button>
     </div>
@@ -101,7 +106,6 @@ export default function RoadmapSection({ assessmentId }: { assessmentId: string 
       starterActionsForced={data?.summary?.starter_actions_forced || 0}
       onStatusChange={handleStatusChange}
       loading={loading}
-      // V2.2: structured templates
       supabase={supabase}
       assessmentId={assessmentId}
       demoToken={demoToken}

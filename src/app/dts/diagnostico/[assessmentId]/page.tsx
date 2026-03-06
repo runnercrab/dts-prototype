@@ -59,7 +59,6 @@ export default function DiagnosticoPage() {
   const [savedFlash, setSavedFlash] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  /* ── helpers ── */
   const isNotApplicable = (q: Question | undefined) =>
     q?.response?.as_is_notes === "NO_APLICA" || (q?.response && q.response.as_is_level === null);
 
@@ -136,9 +135,6 @@ export default function DiagnosticoPage() {
     setSaving(false);
   }
 
-  /* ══════════════════════════════════════════
-     D2 — "No aplica a mi empresa"
-     ══════════════════════════════════════════ */
   async function handleNotApplicable() {
     if (!questions[currentIndex]) return;
     setSaving(true);
@@ -231,7 +227,6 @@ export default function DiagnosticoPage() {
   const questionInDim = currentDimInfo ? currentIndex - currentDimInfo.startIndex + 1 : 1;
   const dimTotal = currentDimInfo?.total || 5;
 
-  /* ── can advance? nivel seleccionado O respuesta guardada (incluye no-aplica) ── */
   const canAdvance = !!asIsLevel || isAnswered(current);
 
   if (loading) {
@@ -301,7 +296,7 @@ export default function DiagnosticoPage() {
                 <h1 className="text-[32px] md:text-[40px] font-extrabold text-slate-900 mb-5 tracking-tight">Diagnóstico completado</h1>
                 <p className="text-[17px] md:text-[19px] text-slate-700 mb-4 max-w-lg leading-relaxed">Has evaluado las {questions.length} áreas clave de tu empresa.</p>
                 <p className="text-[16px] md:text-[17px] text-slate-600 mb-14 max-w-md">Tu informe incluye tu nivel de madurez digital, los obstáculos que te están frenando y el primer paso concreto para avanzar.</p>
-                <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all" style={{ backgroundColor: GAPPLY_BLUE }}>Ver mis resultados →</button>
+                <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all hover:opacity-90" style={{ backgroundColor: GAPPLY_BLUE }}>Ver mis resultados →</button>
               </div>
 
             ) : showDimIntro && currentDimInfo ? (
@@ -312,7 +307,7 @@ export default function DiagnosticoPage() {
                 <div className="text-[15px] md:text-[17px] font-extrabold uppercase tracking-[0.15em] mb-5 font-[family-name:var(--font-space-mono)]" style={{ color: GAPPLY_BLUE }}>{currentDimInfo.name}</div>
                 <h1 className="text-[26px] md:text-[34px] font-extrabold text-slate-900 leading-snug mb-6 max-w-xl px-2 tracking-tight">{currentDimInfo.context}</h1>
                 <p className="text-[16px] md:text-[19px] text-slate-700 mb-14 max-w-md leading-relaxed px-2">5 preguntas · Elige la opción que mejor describe tu situación <strong>HOY</strong></p>
-                <button onClick={() => setShowDimIntro(false)} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all" style={{ backgroundColor: GAPPLY_BLUE }}>Empezar →</button>
+                <button onClick={() => setShowDimIntro(false)} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all hover:opacity-90" style={{ backgroundColor: GAPPLY_BLUE }}>Empezar →</button>
               </div>
 
             ) : current ? (
@@ -340,7 +335,6 @@ export default function DiagnosticoPage() {
 
                 <h1 className="text-[24px] md:text-[30px] font-extrabold text-slate-900 leading-snug mb-10 tracking-tight">{current.question}</h1>
 
-                {/* ═══ D2: Indicador "ya marcada como no aplica" ═══ */}
                 {isNotApplicable(current) && (
                   <div className="flex items-center gap-3 mb-8 px-6 py-5 rounded-2xl bg-slate-50" style={{ border: '1.5px solid #dde3eb' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -348,17 +342,10 @@ export default function DiagnosticoPage() {
                       <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
                     </svg>
                     <span className="text-[16px] text-slate-500 font-medium">Marcada como &quot;no aplica a mi empresa&quot;</span>
-                    <button
-                      onClick={undoNotApplicable}
-                      className="ml-auto text-[15px] font-semibold hover:underline"
-                      style={{ color: GAPPLY_BLUE }}
-                    >
-                      Cambiar respuesta
-                    </button>
+                    <button onClick={undoNotApplicable} className="ml-auto text-[15px] font-semibold hover:underline" style={{ color: GAPPLY_BLUE }}>Cambiar respuesta</button>
                   </div>
                 )}
 
-                {/* ═══ Opciones de nivel (solo si NO está marcada como no-aplica) ═══ */}
                 {!isNotApplicable(current) && (
                   <>
                     <p className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-5 font-[family-name:var(--font-space-mono)]">Opciones</p>
@@ -368,9 +355,7 @@ export default function DiagnosticoPage() {
                         level ? (
                           <button key={i} onClick={() => handleSelect(i + 1)} disabled={saving}
                             className={`w-full text-left rounded-2xl transition-all duration-200 group ${asIsLevel === i + 1 ? "bg-[#e8f4ff] shadow-md" : "bg-white hover:shadow-sm"}`}
-                            style={{
-                              border: asIsLevel === i + 1 ? '2px solid #1a90ff' : '1.5px solid #dde3eb',
-                            }}>
+                            style={{ border: asIsLevel === i + 1 ? '2px solid #1a90ff' : '1.5px solid #dde3eb' }}>
                             <div className="flex items-start gap-4 md:gap-5 px-5 md:px-7 py-5 md:py-6">
                               <div className={`flex-shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center text-[15px] md:text-[17px] font-bold mt-0.5 transition-colors ${asIsLevel === i + 1 ? "text-white" : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"}`} style={asIsLevel === i + 1 ? { backgroundColor: GAPPLY_BLUE } : {}}>
                                 {i + 1}
@@ -387,7 +372,6 @@ export default function DiagnosticoPage() {
                       )}
                     </div>
 
-                    {/* ═══ D2: Botón "No aplica a mi empresa" ═══ */}
                     <div className="flex justify-center mb-16">
                       <button
                         onClick={handleNotApplicable}
@@ -411,12 +395,13 @@ export default function DiagnosticoPage() {
                     <div className="text-[15px] md:text-[17px] text-slate-700 font-semibold font-[family-name:var(--font-space-mono)]">{totalAnswered} de {questions.length} <span className="text-slate-500 font-normal font-[family-name:var(--font-dm-sans)]">respondidas</span></div>
                   </div>
                   <div className="flex items-center gap-3 w-full sm:w-auto">
-                    {/* ═══ D2: canAdvance en vez de !asIsLevel ═══ */}
-                    <button onClick={handleNext} disabled={!canAdvance} className="flex-1 sm:flex-none px-6 md:px-7 py-3.5 rounded-2xl text-white text-[15px] md:text-[16px] font-bold transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-md hover:shadow-lg" style={{ backgroundColor: GAPPLY_BLUE }}>
+                    <button onClick={handleNext} disabled={!canAdvance} className="flex-1 sm:flex-none px-6 md:px-7 py-3.5 rounded-2xl text-white text-[15px] md:text-[16px] font-bold transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:opacity-90" style={{ backgroundColor: GAPPLY_BLUE }}>
                       {currentIndex === questions.length - 1 ? "Finalizar" : "Siguiente →"}
                     </button>
                     {totalAnswered === questions.length && (
-                      <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="flex-1 sm:flex-none px-6 md:px-7 py-3.5 rounded-2xl bg-emerald-600 text-white text-[15px] md:text-[16px] font-bold hover:bg-emerald-700 transition-colors shadow-md hover:shadow-lg">Ver resultados →</button>
+                      <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="flex-1 sm:flex-none px-6 md:px-7 py-3.5 rounded-2xl text-white text-[15px] md:text-[16px] font-bold transition-colors shadow-md hover:shadow-lg hover:opacity-90" style={{ backgroundColor: GAPPLY_BLUE }}>
+                        Ver resultados →
+                      </button>
                     )}
                   </div>
                 </div>
@@ -426,7 +411,6 @@ export default function DiagnosticoPage() {
         </main>
       </div>
 
-      {/* ═══ FLOATING — continue later ═══ */}
       <div className="fixed bottom-8 right-8 z-50 hidden md:flex flex-col items-end gap-3">
         {!showCompletion && totalAnswered > 0 && totalAnswered < questions.length && (
           <button onClick={handleCopyLink} className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-slate-700 text-[14px] font-semibold shadow-md hover:shadow-lg transition-all" style={{ border: '1.5px solid #dde3eb' }}>

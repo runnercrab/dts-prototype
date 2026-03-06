@@ -1,19 +1,6 @@
 /**
  * GAPPLY ROADMAP V2.3 — Data Layer
  * LOCATION: src/lib/dts/roadmap-data.ts
- *
- * V2.3 CHANGES:
- *   - Added gapply_v23 pack (11 programs, 85 actions, 32 criteria)
- *   - Programs sorted by program_score only (no CORE/RING tier split)
- *   - Filters out deactivated programs (display_order = 999)
- *   - Falls back to V1 path for legacy assessments (dts_ceo30_v1, tmf_mvp12_v2)
- *
- * V2.2 CHANGES:
- *   - New path for gapply_v22 pack: reads directly from catalog + ranking RPC
- *   - No dependency on dts_v2_initiatives / dts_v2_generate_roadmap for V2.2
- *   - Actions read from dts_action_catalog.program_code (direct FK)
- *   - Phases: M1→30d, M2→60d, M3→90d
- *   - New fields: band, dod, hours_min/typical/max, dolor_ceo, tier
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
@@ -34,6 +21,11 @@ export interface RoadmapAction {
   hours_max: number | null
   month: string | null
   status: string
+  que_hacer: string | null
+  como_hacerlo: string | null
+  para_que_sirve: string | null
+  entregable_concreto: string | null
+  ejemplo: string | null
 }
 
 export interface RoadmapProgram {
@@ -44,6 +36,8 @@ export interface RoadmapProgram {
   tier: number | string
   dolor_ceo: string | null
   why_matters: string | null
+  expected_outcome: string | null
+  ejemplos: any | null
   weighted_need: number
   program_score: number
   priority_badge: string | null
@@ -88,19 +82,47 @@ const MONTH_TO_PHASE: Record<string, string> = {
   'M3': '90d',
 }
 
-// ── V2.2+ packs that use catalog-direct path ──
 const V22_PACKS = new Set(['gapply_v22', 'gapply_v23'])
+const PHASES = ['30d', '60d', '90d', 'backlog'] as const
+
+// ── Lee estados persistidos de dts_action_status ──
+async function fetchActionStatuses(
+  supabase: SupabaseClient,
+  assessmentId: string
+): Promise<Map<string, string>> {
+  const { data } = await supabase
+    .from('dts_action_status')
+    .select('action_id, status')
+    .eq('assessment_id', assessmentId)
+
+  const map = new Map<string, string>()
+  for (const row of (data || [])) {
+    map.set(row.action_id, row.status)
+  }
+  return map
+}
+
+// ── Aplica estados persistidos sobre programs ──
+function applyStatuses(programs: RoadmapProgram[], statuses: Map<string, string>) {
+  if (statuses.size === 0) return
+  for (const prog of programs) {
+    for (const phase of PHASES) {
+      for (const action of prog.actions[phase]) {
+        const saved = statuses.get(action.id)
+        if (saved) action.status = saved
+      }
+    }
+  }
+}
 
 // ══════════════════════════════════════════════════════════════════
-// Main fetch — routes to V2.2+ or V1 based on assessment pack
+// Main fetch
 // ══════════════════════════════════════════════════════════════════
 
 export async function fetchRoadmapWithSummary(
   supabase: SupabaseClient,
   assessmentId: string
 ): Promise<RoadmapData> {
-
-  // 1. Check assessment pack
   const { data: assessment, error: aErr } = await supabase
     .from('dts_assessments')
     .select('pack')
@@ -111,7 +133,6 @@ export async function fetchRoadmapWithSummary(
     throw new Error(`Assessment not found: ${aErr?.message || 'no data'}`)
   }
 
-  // 2. Route to appropriate data path
   if (V22_PACKS.has(assessment.pack)) {
     return fetchRoadmapV22(supabase, assessmentId)
   } else {
@@ -120,7 +141,7 @@ export async function fetchRoadmapWithSummary(
 }
 
 // ══════════════════════════════════════════════════════════════════
-// V2.2+ PATH — Catalog-direct (no initiatives table)
+// V2.2+ PATH
 // ══════════════════════════════════════════════════════════════════
 
 async function fetchRoadmapV22(
@@ -128,30 +149,19 @@ async function fetchRoadmapV22(
   assessmentId: string
 ): Promise<RoadmapData> {
 
-  // 1. Get ranked programs from RPC
   const { data: rankedRaw, error: rpcErr } = await supabase
     .rpc('dts_results_programs_v2', { p_assessment_id: assessmentId })
 
-  if (rpcErr?.message) {
-    throw new Error(`Program ranking failed: ${rpcErr.message}`)
-  }
+  if (rpcErr?.message) throw new Error(`Program ranking failed: ${rpcErr.message}`)
 
   const ranked = rankedRaw || []
+  if (ranked.length === 0) return emptyRoadmap('v2.3')
 
-  if (ranked.length === 0) {
-    return emptyRoadmap('v2.3')
-  }
-
-  // 2. Get program IDs for V2.2+ programs only
   const v22Programs = ranked.filter((p: any) =>
     p.program_code?.startsWith('PRG-CORE') || p.program_code?.startsWith('PRG-RING')
   )
+  if (v22Programs.length === 0) return emptyRoadmap('v2.3')
 
-  if (v22Programs.length === 0) {
-    return emptyRoadmap('v2.3')
-  }
-
-  // 3. Fetch program catalog details — filter out deactivated programs (display_order = 999)
   const programCodes = v22Programs.map((p: any) => p.program_code)
   const { data: catalogDetails } = await supabase
     .from('dts_program_catalog')
@@ -160,28 +170,21 @@ async function fetchRoadmapV22(
     .neq('display_order', 999)
 
   const catalogByCode = new Map<string, any>()
-  for (const d of (catalogDetails || [])) {
-    catalogByCode.set(d.code, d)
-  }
+  for (const d of (catalogDetails || [])) catalogByCode.set(d.code, d)
 
-  // Only active program codes
   const activeProgramCodes = Array.from(catalogByCode.keys())
 
-  // 4. Fetch actions from catalog for active program codes only
   const { data: actions, error: actErr } = await supabase
     .from('dts_action_catalog')
-    .select('id, code, title, description, deliverable, dod, band, hours_min, hours_typical, hours_max, effort_hours, month, program_code')
+    .select('id, code, title, description, deliverable, dod, band, hours_min, hours_typical, hours_max, effort_hours, month, program_code, que_hacer, como_hacerlo, para_que_sirve, entregable_concreto, ejemplo')
     .in('program_code', activeProgramCodes)
     .eq('is_active', true)
     .order('program_code')
     .order('month')
     .order('code')
 
-  if (actErr?.message) {
-    throw new Error(`Action fetch failed: ${actErr.message}`)
-  }
+  if (actErr?.message) throw new Error(`Action fetch failed: ${actErr.message}`)
 
-  // 5. Group actions by program_code
   const actionsByProgram = new Map<string, any[]>()
   for (const a of (actions || [])) {
     const list = actionsByProgram.get(a.program_code) || []
@@ -189,15 +192,11 @@ async function fetchRoadmapV22(
     actionsByProgram.set(a.program_code, list)
   }
 
-  // 6. Build RoadmapProgram[] from ranked + catalog (only active programs)
   const programs: RoadmapProgram[] = v22Programs
     .filter((p: any) => catalogByCode.has(p.program_code))
     .map((p: any, idx: number) => {
       const progActions = actionsByProgram.get(p.program_code) || []
-
-      const grouped: RoadmapProgram['actions'] = {
-        '30d': [], '60d': [], '90d': [], backlog: [],
-      }
+      const grouped: RoadmapProgram['actions'] = { '30d': [], '60d': [], '90d': [], backlog: [] }
 
       for (const a of progActions) {
         const phase = MONTH_TO_PHASE[a.month] || 'backlog'
@@ -215,11 +214,15 @@ async function fetchRoadmapV22(
           hours_max: a.hours_max,
           month: a.month,
           status: 'pending',
+          que_hacer: a.que_hacer || null,
+          como_hacerlo: a.como_hacerlo || null,
+          para_que_sirve: a.para_que_sirve || null,
+          entregable_concreto: a.entregable_concreto || null,
+          ejemplo: a.ejemplo || null,
         })
       }
 
       const cat = catalogByCode.get(p.program_code) || {}
-
       return {
         id: p.program_id || p.id || `prog-${idx}`,
         code: p.program_code,
@@ -228,6 +231,8 @@ async function fetchRoadmapV22(
         tier: cat.display_order || 99,
         dolor_ceo: cat.dolor_ceo || p.dolor_ceo || p.description_ceo || null,
         why_matters: cat.why_matters || p.why_matters || null,
+        expected_outcome: cat.expected_outcome || null,
+        ejemplos: cat.ejemplos || null,
         weighted_need: p.weighted_need || 0,
         program_score: p.program_score || 0,
         priority_badge: p.priority_badge || null,
@@ -239,28 +244,23 @@ async function fetchRoadmapV22(
       }
     })
 
-  // Sort by program_score descending — motor decides priority, not CORE/RING
   programs.sort((a, b) => b.program_score - a.program_score)
 
-  // 7. Calculate capacity
+  // Aplicar estados persistidos
+  const statuses = await fetchActionStatuses(supabase, assessmentId)
+  applyStatuses(programs, statuses)
+
   const calcUsed = (phase: string) =>
     programs.reduce((sum, p) => {
       const phaseActions = p.actions[phase as keyof typeof p.actions] || []
       return sum + phaseActions.reduce((s, a) => s + a.hours, 0)
     }, 0)
 
-  const used30 = calcUsed('30d')
-  const used60 = calcUsed('60d')
-  const used90 = calcUsed('90d')
-
-  // 8. Build summary
   const totalActions = programs.reduce(
-    (sum, p) => sum + p.actions['30d'].length + p.actions['60d'].length + p.actions['90d'].length + p.actions.backlog.length,
-    0
+    (sum, p) => sum + p.actions['30d'].length + p.actions['60d'].length + p.actions['90d'].length + p.actions.backlog.length, 0
   )
   const actionsIn90d = programs.reduce(
-    (sum, p) => sum + p.actions['30d'].length + p.actions['60d'].length + p.actions['90d'].length,
-    0
+    (sum, p) => sum + p.actions['30d'].length + p.actions['60d'].length + p.actions['90d'].length, 0
   )
 
   const summary: RoadmapSummary = {
@@ -282,9 +282,9 @@ async function fetchRoadmapV22(
   return {
     programs,
     capacity: {
-      '30d': { limit: 40, used: used30 },
-      '60d': { limit: 80, used: used60 },
-      '90d': { limit: 120, used: used90 },
+      '30d': { limit: 40, used: calcUsed('30d') },
+      '60d': { limit: 80, used: calcUsed('60d') },
+      '90d': { limit: 120, used: calcUsed('90d') },
     },
     d5: [],
     summary,
@@ -292,7 +292,7 @@ async function fetchRoadmapV22(
 }
 
 // ══════════════════════════════════════════════════════════════════
-// V1 PATH — Legacy (initiatives table + generate_roadmap RPC)
+// V1 PATH
 // ══════════════════════════════════════════════════════════════════
 
 async function fetchRoadmapV1(
@@ -300,7 +300,6 @@ async function fetchRoadmapV1(
   assessmentId: string
 ): Promise<RoadmapData> {
 
-  // 1. RPC — generate roadmap
   const { data: summaryRaw, error: rpcError } = await supabase
     .rpc('dts_v2_generate_roadmap', { p_assessment_id: assessmentId })
 
@@ -311,25 +310,13 @@ async function fetchRoadmapV1(
 
   const summary: RoadmapSummary = { ...summaryRaw, version: 'v1' }
 
-  // 2. Fetch initiatives with catalog joins
   const { data: initiatives, error: fetchError } = await supabase
     .from('dts_v2_initiatives')
     .select(`
-      id,
-      program_id,
-      action_id,
-      phase,
-      criticality_tier,
-      priority_badge,
-      assignment_reasons,
-      effort_hours_estimated,
-      status,
-      dts_program_catalog (
-        id, code, name_ceo, dimension_primary, category, impact_default, effort_default
-      ),
-      dts_action_catalog (
-        id, code, title, description, deliverable, dod, band, hours_min, hours_typical, hours_max, effort_hours, month
-      )
+      id, program_id, action_id, phase, criticality_tier, priority_badge,
+      assignment_reasons, effort_hours_estimated, status,
+      dts_program_catalog (id, code, name_ceo, dimension_primary, category, impact_default, effort_default),
+      dts_action_catalog (id, code, title, description, deliverable, dod, band, hours_min, hours_typical, hours_max, effort_hours, month)
     `)
     .eq('assessment_id', assessmentId)
     .order('criticality_tier', { ascending: true })
@@ -339,11 +326,8 @@ async function fetchRoadmapV1(
     throw new Error(`Failed to fetch initiatives: ${fetchError.message}`)
   }
 
-  if (!initiatives || initiatives.length === 0) {
-    return emptyRoadmap('v1')
-  }
+  if (!initiatives || initiatives.length === 0) return emptyRoadmap('v1')
 
-  // 3. Group by program
   const programMap = new Map<string, {
     program: any; tier: number; reasons: string[];
     actions: Record<string, RoadmapAction[]>
@@ -387,11 +371,15 @@ async function fetchRoadmapV1(
         hours_max: action?.hours_max || null,
         month: action?.month || null,
         status: init.status || 'pending',
+        que_hacer: null,
+        como_hacerlo: null,
+        para_que_sirve: null,
+        entregable_concreto: null,
+        ejemplo: null,
       })
     }
   }
 
-  // 4. Sort
   const programs: RoadmapProgram[] = Array.from(programMap.entries())
     .map(([progId, entry]) => ({
       id: progId,
@@ -401,6 +389,8 @@ async function fetchRoadmapV1(
       tier: entry.tier,
       dolor_ceo: null,
       why_matters: null,
+      expected_outcome: null,
+      ejemplos: null,
       weighted_need: 0,
       program_score: 0,
       priority_badge: null,
@@ -415,7 +405,10 @@ async function fetchRoadmapV1(
       return po(a) - po(b)
     })
 
-  // 5. Capacity
+  // Aplicar estados persistidos (universal — sobreescribe init.status)
+  const statuses = await fetchActionStatuses(supabase, assessmentId)
+  applyStatuses(programs, statuses)
+
   const calcUsed = (phase: string) =>
     initiatives.filter((i: any) => i.phase === phase).reduce((sum: number, i: any) => sum + (i.effort_hours_estimated || 0), 0)
 
@@ -463,8 +456,7 @@ function emptyRoadmap(version: string): RoadmapData {
   }
 }
 
-// ── Update action status (V1 only — works on initiatives table) ──
-
+// ── updateActionStatus mantenido por compatibilidad ──
 export async function updateActionStatus(
   supabase: SupabaseClient,
   initiativeId: string,
