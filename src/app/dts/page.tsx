@@ -33,7 +33,7 @@ export default function DtsHomePage() {
 
         {/* ═══ HEADER ═══ */}
         <div className="bg-white px-6 md:px-8 py-3.5 flex items-center justify-between border-b" style={{ borderColor: '#dde3eb' }}>
-          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Diagnóstico de Madurez Digital</span></span>
+          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Plataforma de transformación digital</span></span>
         </div>
         <div className="h-[3px] w-full flex-shrink-0" style={{ backgroundColor: GAPPLY_BLUE }} />
 
@@ -46,12 +46,12 @@ export default function DtsHomePage() {
             <div className="grid lg:grid-cols-2 gap-10 md:gap-14 items-center">
               <div>
                 <p className="text-[19px] md:text-[22px] font-semibold mb-5" style={{ color: GAPPLY_BLUE }}>
-                  La transformación digital no tiene que ser un laberinto.
+                  Transformación digital para PyMEs.
                 </p>
                 <h1 className="text-[34px] md:text-[42px] lg:text-[48px] font-extrabold text-slate-900 leading-[1.08] mb-6 tracking-tight">
-                  Necesitas claridad para decidir.
+                  Descubre cómo mejorar tu empresa con tecnología.
                 </h1>
-                <p className="text-[18px] md:text-[20px] text-slate-700 leading-relaxed mb-10">
+                <p className="text-[20px] md:text-[23px] font-semibold text-slate-700 leading-relaxed mb-10">
                   Gapply analiza tu empresa y te dice qué cambiar, en qué orden y con qué impacto.
                 </p>
                 <button
