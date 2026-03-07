@@ -36,11 +36,12 @@ const DIM_ICON: Record<string, string> = {
   DAT: "/icons/database.png",
   TEC: "/icons/chip.png",
   GOB: "/icons/handshake.png",
+  CLI: "/icons/users.png",
 };
 
 function dimCode(criteriaCode: string): string {
   const letter = criteriaCode.split(".")[1]?.[0] || "";
-  const map: Record<string, string> = { E: "EST", O: "OPE", P: "PER", D: "DAT", T: "TEC", G: "GOB" };
+  const map: Record<string, string> = { E: "EST", O: "OPE", P: "PER", D: "DAT", T: "TEC", G: "GOB", C: "CLI" };
   return map[letter] || letter;
 }
 
