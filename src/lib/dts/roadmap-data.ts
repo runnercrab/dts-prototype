@@ -192,6 +192,9 @@ async function fetchRoadmapV22(
     actionsByProgram.set(a.program_code, list)
   }
 
+  // Extraer multiplier de esfuerzo según tamaño de empresa (viene del motor)
+  const effortMultiplier: number = parseFloat(ranked[0]?.effort_multiplier ?? '1.0') || 1.0
+
   const programs: RoadmapProgram[] = v22Programs
     .filter((p: any) => catalogByCode.has(p.program_code))
     .map((p: any, idx: number) => {
@@ -200,6 +203,7 @@ async function fetchRoadmapV22(
 
       for (const a of progActions) {
         const phase = MONTH_TO_PHASE[a.month] || 'backlog'
+        const hoursTypical = a.hours_typical || a.effort_hours || 0
         grouped[phase as keyof typeof grouped].push({
           id: a.id,
           code: a.code || '',
@@ -208,10 +212,10 @@ async function fetchRoadmapV22(
           deliverable: a.deliverable || null,
           dod: a.dod || null,
           band: a.band || null,
-          hours: a.hours_typical || a.effort_hours || 0,
-          hours_min: a.hours_min,
-          hours_typical: a.hours_typical,
-          hours_max: a.hours_max,
+          hours: Math.round(hoursTypical * effortMultiplier),
+          hours_min: a.hours_min != null ? Math.round(a.hours_min * effortMultiplier) : null,
+          hours_typical: a.hours_typical != null ? Math.round(a.hours_typical * effortMultiplier) : null,
+          hours_max: a.hours_max != null ? Math.round(a.hours_max * effortMultiplier) : null,
           month: a.month,
           status: 'pending',
           que_hacer: a.que_hacer || null,
@@ -223,6 +227,7 @@ async function fetchRoadmapV22(
       }
 
       const cat = catalogByCode.get(p.program_code) || {}
+      const progHoursTypical = p.hours_typical ?? null
       return {
         id: p.program_id || p.id || `prog-${idx}`,
         code: p.program_code,
@@ -239,7 +244,7 @@ async function fetchRoadmapV22(
         reasons: p.top_contributors
           ? p.top_contributors.map((tc: any) => tc.criteria_label || tc.criteria_code)
           : [],
-        hours_typical: p.hours_typical || null,
+        hours_typical: progHoursTypical != null ? Math.round(progHoursTypical * effortMultiplier) : null,
         actions: grouped,
       }
     })
