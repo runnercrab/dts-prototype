@@ -272,7 +272,7 @@ export default function OnboardingPage() {
                   Contexto guardado
                 </h1>
                 <p className="text-[17px] md:text-[19px] text-slate-700 leading-relaxed mb-4">
-                  Ahora viene el diagnóstico: <strong>37 preguntas</strong> agrupadas en 7 dimensiones.
+                  Ahora viene el diagnóstico: <strong>39 preguntas</strong> agrupadas en 7 dimensiones.
                 </p>
                 <p className="text-[16px] text-slate-600 mb-12">
                   Para cada pregunta, elige la opción que mejor describe tu situación <strong>hoy</strong>. No hay respuestas correctas.
