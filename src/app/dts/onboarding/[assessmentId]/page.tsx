@@ -111,7 +111,7 @@ export default function OnboardingPage() {
 
         {/* HEADER */}
         <div className="bg-white px-6 md:px-8 py-3.5 flex items-center justify-between" style={{ borderBottom: '1.5px solid #dde3eb' }}>
-          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Onboarding</span></span>
+          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Onboarding</span>{companyName && <> · <span className="text-slate-800 font-semibold">{companyName}</span></>}</span>
           <span className="text-[12px] font-[family-name:var(--font-space-mono)] text-slate-400">{assessmentId.slice(0, 8)}</span>
         </div>
         <div className="h-[3px] w-full flex-shrink-0" style={{ backgroundColor: GAPPLY_BLUE }} />

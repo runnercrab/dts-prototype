@@ -59,6 +59,7 @@ export default function DiagnosticoPage() {
   const [showCompletion, setShowCompletion] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [companyName, setCompanyName] = useState("");
 
   const isNotApplicable = (q: Question | undefined) =>
     q?.response?.as_is_notes === "NO_APLICA" || (q?.response && q.response.as_is_level === null);
@@ -68,28 +69,38 @@ export default function DiagnosticoPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/dts/list-questions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ assessmentId }),
-        });
-        const data = await res.json();
-        if (data.questions) {
-          setQuestions(data.questions);
-          const firstUnanswered = data.questions.findIndex((q: Question) => !q.response);
+        const [questRes, onbRes] = await Promise.all([
+          fetch("/api/dts/list-questions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ assessmentId }),
+          }),
+          fetch(`/api/dts/get-onboarding?assessmentId=${assessmentId}`),
+        ]);
+
+        const questData = await questRes.json();
+        const onbData = await onbRes.json();
+
+        if (onbData?.onboarding_data?.companyName) {
+          setCompanyName(onbData.onboarding_data.companyName);
+        }
+
+        if (questData.questions) {
+          setQuestions(questData.questions);
+          const firstUnanswered = questData.questions.findIndex((q: Question) => !q.response);
           const idx = firstUnanswered >= 0 ? firstUnanswered : 0;
           setCurrentIndex(idx);
-          setAsIsLevel(data.questions[idx]?.response?.as_is_level || null);
+          setAsIsLevel(questData.questions[idx]?.response?.as_is_level || null);
           const isFirstOfDim =
             idx === 0 ||
-            dimCode(data.questions[idx].criteria_code) !==
-              dimCode(data.questions[idx - 1]?.criteria_code || "");
-          setShowDimIntro(isFirstOfDim && !data.questions[idx]?.response);
+            dimCode(questData.questions[idx].criteria_code) !==
+              dimCode(questData.questions[idx - 1]?.criteria_code || "");
+          setShowDimIntro(isFirstOfDim && !questData.questions[idx]?.response);
 
-          const allAnswered = data.questions.every((q: Question) => q.response);
-          if (allAnswered && data.questions.length > 0) {
+          const allAnswered = questData.questions.every((q: Question) => q.response);
+          if (allAnswered && questData.questions.length > 0) {
             setCurrentIndex(0);
-            setAsIsLevel(data.questions[0]?.response?.as_is_level || null);
+            setAsIsLevel(questData.questions[0]?.response?.as_is_level || null);
             setShowDimIntro(false);
             setShowCompletion(false);
           }
@@ -240,12 +251,12 @@ export default function DiagnosticoPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] flex">
-      <DtsSidebar currentPhase={2} assessmentId={assessmentId} />
+      <DtsSidebar currentPhase={2} assessmentId={assessmentId} maxPhase={4} />
 
       <div className="ml-0 md:ml-[220px] flex-1 flex flex-col min-h-screen overflow-x-hidden">
 
         <div className="bg-white px-6 md:px-8 py-3.5 flex items-center justify-between" style={{ borderBottom: '1.5px solid #dde3eb' }}>
-          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Diagnóstico</span></span>
+          <span className="text-[14px] text-slate-500 font-medium">Gapply · <span className="text-slate-800 font-semibold">Diagnóstico</span>{companyName && <> · <span className="text-slate-800 font-semibold">{companyName}</span></>}</span>
           <span className="text-[12px] font-[family-name:var(--font-space-mono)] text-slate-400">{assessmentId.slice(0, 8)}</span>
         </div>
         <div className="h-[3px] w-full flex-shrink-0" style={{ backgroundColor: GAPPLY_BLUE }} />

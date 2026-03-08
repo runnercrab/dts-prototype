@@ -15,11 +15,13 @@ const PHASES = [
 
 interface Props {
   currentPhase: number;
+  maxPhase?: number;
   assessmentId?: string;
 }
 
-export default function DtsSidebar({ currentPhase, assessmentId }: Props) {
+export default function DtsSidebar({ currentPhase, maxPhase, assessmentId }: Props) {
   const pathname = usePathname();
+  const reached = maxPhase ?? currentPhase;
 
   function getHref(phase: typeof PHASES[number]) {
     if (phase.n === 0) return "/dts";
@@ -45,8 +47,8 @@ export default function DtsSidebar({ currentPhase, assessmentId }: Props) {
           <div className="space-y-1">
             {PHASES.map((phase) => {
               const isActive = phase.n === currentPhase;
-              const isPast = phase.n < currentPhase;
-              const isFuture = phase.n > currentPhase;
+              const isPast = phase.n < currentPhase || (phase.n !== currentPhase && phase.n <= reached);
+              const isFuture = phase.n > reached;
               const href = getHref(phase);
               const isDisabled = isFuture || (!assessmentId && phase.n > 0);
 
@@ -95,7 +97,7 @@ export default function DtsSidebar({ currentPhase, assessmentId }: Props) {
         {/* Footer */}
         <div className="px-5 py-4" style={{ borderTop: '1.5px solid #dde3eb' }}>
           <div className="text-[12px] text-slate-400 font-medium font-[family-name:var(--font-space-mono)]">
-            CEO30 · v1.0
+            CEO38 · v2.2
           </div>
         </div>
       </aside>

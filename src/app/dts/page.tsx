@@ -98,8 +98,8 @@ export default function DtsHomePage() {
               <div className="space-y-10 md:space-y-14">
                 {[
                   { n: 1, title: "Diagnosticamos tu empresa", body: "Analizamos cómo decides, cómo operas y cómo evolucionas. Identificamos lo que hoy está limitando tu crecimiento." },
-                  { n: 2, title: "Te damos un plan para mejorar", body: "Iniciativas con acciones concretas, ordenadas por impacto, esfuerzo y urgencia. Con seguimiento real." },
-                  { n: 3, title: "Anticipas lo que viene", body: "Te comparas con empresas de tu sector y tamaño. Detectas riesgos antes de que te cuesten dinero." },
+                  { n: 2, title: "Te damos un plan para mejorar", body: "Iniciativas con acciones concretas, ordenadas por impacto, esfuerzo y urgencia." },
+                  { n: 3, title: "Haz seguimiento de tu avance", body: "Marca cada acción completada y ve en tiempo real si tu empresa está mejorando." },
                 ].map((step) => (
                   <div key={step.n} className="flex gap-6 md:gap-8">
                     <div className="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ border: '2px solid #1a90ff', backgroundColor: '#e8f4ff' }}>
@@ -141,7 +141,7 @@ export default function DtsHomePage() {
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-10 md:mb-12">
                 <h2 className="text-[28px] md:text-[34px] font-extrabold text-slate-900 mb-4 tracking-tight">Las 6 áreas que analizamos</h2>
-                <p className="text-[16px] md:text-[18px] text-slate-600 leading-relaxed max-w-2xl mx-auto">La transformación digital no es solo tecnología. Es transformar cómo funciona tu empresa. Si una de estas áreas se queda atrás, frena a las demás.</p>
+                <p className="text-[16px] md:text-[18px] text-slate-600 leading-relaxed max-w-2xl mx-auto">La transformación digital no es solo tecnología. Es transformar cómo funciona tu empresa. Si una de estas áreas se queda atrás, las demás sufren.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
                 {[
@@ -188,7 +188,7 @@ export default function DtsHomePage() {
                 <div className="flex items-center gap-8 p-8 md:p-10 rounded-2xl bg-[#f7f9fb]" style={{ border: '1.5px solid #dde3eb' }}>
                   <img src="/MIT-logo.png" alt="MIT" className="w-28 h-28 md:w-32 md:h-32 object-contain shrink-0" />
                   <div className="min-w-0">
-                    <div className="text-[20px] md:text-[22px] font-bold text-slate-900 mb-2">MIT CDO Candidate 2025-26</div>
+                    <div className="text-[20px] md:text-[22px] font-bold text-slate-900 mb-2">MIT CDO Candidate 2026</div>
                     <div className="text-[16px] md:text-[17px] text-slate-700 leading-relaxed">Programa Chief Digital Officer del MIT, aplicado al contexto real de las empresas españolas.</div>
                   </div>
                 </div>
