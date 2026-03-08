@@ -56,7 +56,7 @@ export default function FeedbackPage() {
               <path d="M7 16.5L13 22.5L25 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h1 style={styles.doneTitle}>Gracias, {"\u00fa"}til de verdad.</h1>
+          <h1 style={styles.doneTitle}>Gracias, {"ú"}til de verdad.</h1>
           <p style={styles.doneText}>
             Tu feedback llega directo al equipo de Gapply. Lo usaremos para mejorar la plataforma.
           </p>
@@ -76,9 +76,9 @@ export default function FeedbackPage() {
 
       <div style={styles.container}>
         <div style={styles.intro}>
-          <p style={styles.tag}>Tu opini{"\u00f3"}n</p>
+          <p style={styles.tag}>Tu opini{"ó"}n</p>
           <h1 style={styles.title}>
-            {"\u00bf"}El plan de acci{"\u00f3"}n te es {"\u00fa"}til?
+            {"¿"}El plan de acci{"ó"}n te es {"ú"}til?
           </h1>
           <p style={styles.subtitle}>
             4 preguntas. Menos de 2 minutos. Sin trampa.
@@ -89,11 +89,11 @@ export default function FeedbackPage() {
         <div style={styles.question}>
           <p style={styles.qLabel}>
             <span style={styles.qNumber}>01</span>
-            {"\u00bf"}El plan de acci{"\u00f3"}n refleja los problemas reales de tu empresa?
+            {"¿"}El plan de acci{"ó"}n refleja los problemas reales de tu empresa?
           </p>
           <div style={styles.optionRow}>
             {([
-              { value: "yes", label: "S\u00ed, es muy preciso" },
+              { value: "yes", label: "Sí, es muy preciso" },
               { value: "almost", label: "Casi, pero falta algo" },
               { value: "no", label: "No del todo" },
             ] as { value: Q1; label: string }[]).map((opt) => (
@@ -115,11 +115,11 @@ export default function FeedbackPage() {
         <div style={styles.question}>
           <p style={styles.qLabel}>
             <span style={styles.qNumber}>02</span>
-            {"\u00bf"}Hay algo importante que falta y no aparece en el plan?
+            {"¿"}Hay algo importante que falta y no aparece en el plan?
           </p>
           <textarea
             style={styles.textarea}
-            placeholder="Si algo no encaja o ech\u00e1s en falta algo, cu\u00e9ntanos aqu\u00ed."
+            placeholder="Si algo no encaja o echáis en falta algo, cuéntanos aquí."
             value={q2}
             onChange={(e) => setQ2(e.target.value)}
             rows={3}
@@ -130,11 +130,11 @@ export default function FeedbackPage() {
         <div style={styles.question}>
           <p style={styles.qLabel}>
             <span style={styles.qNumber}>03</span>
-            {"\u00bf"}Pagar\u00edas por tener esto para tu empresa?
+            ¿Pagarías por una herramienta que te ayude a ejecutar este plan y hacer seguimiento hasta completarlo?
           </p>
           <div style={styles.optionRow}>
             {([
-              { value: "yes", label: "S\u00ed" },
+              { value: "yes", label: "Sí" },
               { value: "no", label: "No" },
               { value: "depends", label: "Depende" },
             ] as { value: Q3; label: string }[]).map((opt) => (
@@ -153,7 +153,7 @@ export default function FeedbackPage() {
           {q3 === "depends" && (
             <textarea
               style={{ ...styles.textarea, marginTop: 12 }}
-              placeholder="\u00bfDe qu\u00e9 depender\u00eda?"
+              placeholder="¿De qué dependería?"
               value={q3Why}
               onChange={(e) => setQ3Why(e.target.value)}
               rows={2}
@@ -165,11 +165,11 @@ export default function FeedbackPage() {
         <div style={styles.question}>
           <p style={styles.qLabel}>
             <span style={styles.qNumber}>04</span>
-            {"\u00bf"}Conoces a alg\u00fan CEO que est\u00e9 pasando por algo parecido a lo que sali\u00f3 en tu diagn\u00f3stico?
+            ¿Conoces a algún CEO que esté pasando por algo parecido a lo que salió en tu diagnóstico?
           </p>
           <textarea
             style={styles.textarea}
-            placeholder="Si te viene alguien a la cabeza, pon su nombre aqu\u00ed. No hace falta m\u00e1s."
+            placeholder="Si te viene alguien a la cabeza, pon su nombre aquí. No hace falta más."
             value={q4}
             onChange={(e) => setQ4(e.target.value)}
             rows={2}
@@ -298,7 +298,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   optionBtnActive: {
     background: BLUE,
-    borderColor: BLUE,
+    border: `1.5px solid ${BLUE}`,
     color: "white",
   },
   textarea: {
