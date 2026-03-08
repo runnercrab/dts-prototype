@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import DtsSidebar from "@/components/dts/DtsSidebar";
 import FloatingAvatar from "@/components/dts/FloatingAvatar";
@@ -48,6 +48,7 @@ export default function OnboardingPage() {
 
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [companyName, setCompanyName] = useState("");
   const [sector, setSector] = useState("");
@@ -55,6 +56,24 @@ export default function OnboardingPage() {
   const [role, setRole] = useState("");
 
   const canProceed = sector && size && role;
+
+  // Cargar datos existentes si los hay y pre-rellenar el formulario
+  useEffect(() => {
+    if (!assessmentId) { setLoading(false); return; }
+    fetch(`/api/dts/get-onboarding?assessmentId=${assessmentId}`)
+      .then(r => r.json())
+      .then(({ onboarding_data: od }) => {
+        if (od && Object.keys(od).length > 0) {
+          setCompanyName(od.companyName || "");
+          setSector(od.sector || "");
+          setSize(od.companySize || "");
+          setRole(od.role || "");
+          setStep(1);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [assessmentId]);
 
   async function handleFinishOnboarding() {
     setSaving(true);
@@ -76,9 +95,17 @@ export default function OnboardingPage() {
     router.push(`/dts/diagnostico/${assessmentId}`);
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f7f9fb] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-[3px] border-slate-200 animate-spin" style={{ borderTopColor: GAPPLY_BLUE }} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f9fb] flex">
-      <DtsSidebar currentPhase={1} assessmentId={assessmentId} />
+      <DtsSidebar currentPhase={1} assessmentId={assessmentId} maxPhase={4} />
 
       <div className="ml-0 md:ml-[220px] flex-1 flex flex-col min-h-screen">
 
@@ -212,15 +239,24 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* Submit */}
-                <button
-                  onClick={handleFinishOnboarding}
-                  disabled={!canProceed || saving}
-                  className="w-full py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: GAPPLY_BLUE }}
-                >
-                  {saving ? "Guardando..." : "Continuar al diagnóstico →"}
-                </button>
+                {/* Botones */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleFinishOnboarding}
+                    disabled={!canProceed || saving}
+                    className="flex-1 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: GAPPLY_BLUE }}
+                  >
+                    {saving ? "Guardando..." : "Guardar y continuar →"}
+                  </button>
+                  <button
+                    onClick={goToDiagnostic}
+                    className="px-6 py-4 rounded-2xl text-[16px] font-semibold text-slate-600 hover:bg-slate-100 transition-all"
+                    style={{ border: '1.5px solid #dde3eb' }}
+                  >
+                    Ir al diagnóstico
+                  </button>
+                </div>
               </div>
             )}
 
@@ -236,7 +272,7 @@ export default function OnboardingPage() {
                   Contexto guardado
                 </h1>
                 <p className="text-[17px] md:text-[19px] text-slate-700 leading-relaxed mb-4">
-                  Ahora viene el diagnóstico: <strong>30 preguntas</strong> agrupadas en 6 dimensiones.
+                  Ahora viene el diagnóstico: <strong>38 preguntas</strong> agrupadas en 7 dimensiones.
                 </p>
                 <p className="text-[16px] text-slate-600 mb-12">
                   Para cada pregunta, elige la opción que mejor describe tu situación <strong>hoy</strong>. No hay respuestas correctas.
