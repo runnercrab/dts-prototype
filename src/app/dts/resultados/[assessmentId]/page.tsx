@@ -4,6 +4,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import DtsSidebar from "@/components/dts/DtsSidebar";
 import FloatingAvatar from "@/components/dts/FloatingAvatar";
+import { getResultsData } from "@/lib/dts/getResultsData";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const GAPPLY_BLUE = "#1a90ff";
@@ -72,23 +73,22 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
   const { assessmentId } = await params;
   if (!assessmentId || !UUID_RE.test(assessmentId)) redirect("/dts");
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/dts/results?assessmentId=${assessmentId}`, { cache: "no-store" });
-
-  if (!res.ok) {
-    const { error } = await res.json().catch(() => ({ error: "Error desconocido" }));
+  let resultData;
+  try {
+    resultData = await getResultsData(assessmentId);
+  } catch (e: any) {
     return (
       <div className="min-h-screen bg-[#f7f9fb] flex items-center justify-center">
         <div className="bg-white rounded-2xl p-10 max-w-md" style={{ border: '1.5px solid #dde3eb' }}>
           <h1 className="text-xl font-bold text-slate-900">Error</h1>
-          <p className="mt-3 text-[16px] text-slate-700">{error}</p>
+          <p className="mt-3 text-[16px] text-slate-700">{e.message}</p>
           <Link href="/dts" className="mt-5 inline-block text-[15px] font-semibold hover:underline" style={{ color: GAPPLY_BLUE }}>← Volver</Link>
         </div>
       </div>
     );
   }
 
-  const { data, companyName } = await res.json();
+  const { data, companyName } = resultData;
   const { scores, frenos, resumen } = data;
   const g = scores.global;
   const foto = resumen.foto_general;
