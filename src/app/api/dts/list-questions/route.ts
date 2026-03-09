@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       dimension_code: q.dimension_code,
       dimension_name: q.dimension_name,
       question: q.question_es,
-      context: q.dimension_context || c.context_es || null,
+      context: c.context_es || q.dimension_context || null, // ✅ context_es primero, dimension_context como fallback
       display_order: q.display_order,
       levels: [
         c.level_1_description_es,
