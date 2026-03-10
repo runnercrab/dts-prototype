@@ -9,6 +9,9 @@
 //          ✅ Cambio: NO bloquear navegación si está incompleto.
 //            - Si está totalmente vacío: navega sin guardar.
 //            - Si hay algo (parcial o completo): guarda (permitiendo nulls) y navega.
+//          ✅ Cambio: botón ℹ️ junto al título — muestra context_es en modal.
+//            - Un solo componente genérico. No hay 39 botones hardcoded.
+//            - Botón solo visible si context_es (o context) no es null.
 // ============================================================================
 
 'use client'
@@ -20,10 +23,11 @@ interface Criterion {
   id: string
   code: string
 
-  // copy “DTS”
+  // copy "DTS"
   description: string
   short_label: string
   context?: string
+  context_es?: string | null
 
   // ✅ campos derivados de explain_json (vienen del endpoint)
   pregunta?: string | null
@@ -143,6 +147,7 @@ export default function CriterionQuestion({
   const toBeTimeframe: Timeframe | null = null
 
   const [saving, setSaving] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const asIsSelectedRef = useRef<HTMLDivElement | null>(null)
@@ -250,6 +255,8 @@ export default function CriterionQuestion({
       setImportance(null)
       setComments('')
     }
+    // Cerrar modal de ayuda al cambiar de criterio
+    setShowHelp(false)
   }, [criterion.id, initialResponse])
 
   const guardarTodo = async () => {
@@ -356,6 +363,8 @@ export default function CriterionQuestion({
       ? criterion.pregunta.trim()
       : criterion.short_label
 
+  const helpText = criterion.context_es || criterion.context || null
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       {/* Header con progreso */}
@@ -385,16 +394,62 @@ export default function CriterionQuestion({
 
       {/* Código y Título */}
       <div className="mb-6">
-        {/* ✅ Código MUCHO más grande y en negrita */}
         <div className="text-3xl font-extrabold text-slate-900 mb-2">{criterion.code}</div>
 
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{questionTitle}</h2>
+        <div className="flex items-start gap-3">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 flex-1">{questionTitle}</h2>
+          {helpText && (
+            <button
+              onClick={() => setShowHelp(true)}
+              className="flex-shrink-0 mt-1 p-1.5 rounded-full text-blue-500 hover:bg-blue-50 transition-colors"
+              title="¿Por qué se mide esto?"
+              aria-label="Más información sobre este criterio"
+            >
+              <Info className="w-5 h-5" />
+            </button>
+          )}
+        </div>
 
-        {/* Copy de apoyo */}
         {criterion.description && <p className="text-gray-600">{criterion.description}</p>}
-
-        {/* ✅ Contexto eliminado a propósito */}
       </div>
+
+      {/* Modal de ayuda */}
+      {showHelp && helpText && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5" style={{ color: ASIS_MAIN }} />
+                <span className="font-bold text-gray-900">¿Por qué se mide esto?</span>
+              </div>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none"
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-line">
+              {helpText}
+            </p>
+            <button
+              onClick={() => setShowHelp(false)}
+              className="mt-5 w-full py-2 rounded-xl text-white text-sm font-medium"
+              style={{ background: ASIS_MAIN }}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Selección AS-IS / TO-BE */}
       <div ref={containerRef} className="relative mb-6 p-6 bg-white border border-gray-200 rounded-xl overflow-hidden">

@@ -40,7 +40,8 @@ export async function POST(req: Request) {
       dimension_code: q.dimension_code,
       dimension_name: q.dimension_name,
       question: q.question_es,
-      context: c.context_es || q.dimension_context || null, // ✅ context_es primero, dimension_context como fallback
+      context: c.context_es || null,              // ✅ botón ℹ️ — específico del criterio
+      dimension_context: q.dimension_context || null, // ✅ intro de dimensión — de dts_dimensions
       display_order: q.display_order,
       levels: [
         c.level_1_description_es,

@@ -286,6 +286,7 @@ export async function GET(req: Request) {
         description: c.description_es || c.description || "",
         short_label: c.short_label_es || c.short_label || "",
         context: c.context_es || c.context || null,
+        context_es: c.context_es || null,  // ✅ campo explícito para botón ℹ️
 
         focus_area: c.focus_area || "",
         subdimension_id: c.subdimension_id,

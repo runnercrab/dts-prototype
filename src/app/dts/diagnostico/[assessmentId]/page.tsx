@@ -14,6 +14,7 @@ interface Question {
   dimension_name: string;
   question: string;
   context: string | null;
+  dimension_context?: string | null;
   display_order: number;
   levels: string[];
   response: { as_is_level: number | null; notes: string } | null;
@@ -36,7 +37,7 @@ const DIM_ICON: Record<string, string> = {
   DAT: "/icons/database.png",
   TEC: "/icons/chip.png",
   GOB: "/icons/handshake.png",
-  CLI: "/icons/users.png",
+  CLI: "/icons/graph.png",
 };
 
 function dimCode(criteriaCode: string): string {
@@ -58,8 +59,8 @@ export default function DiagnosticoPage() {
   const [showDimIntro, setShowDimIntro] = useState(true);
   const [showCompletion, setShowCompletion] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
   const [companyName, setCompanyName] = useState("");
+  const [showHelp, setShowHelp] = useState(false); // ✅ modal ℹ️
 
   const isNotApplicable = (q: Question | undefined) =>
     q?.response?.as_is_notes === "NO_APLICA" || (q?.response && q.response.as_is_level === null);
@@ -112,6 +113,11 @@ export default function DiagnosticoPage() {
     }
     load();
   }, [assessmentId]);
+
+  // ✅ Cerrar modal al cambiar de pregunta
+  useEffect(() => {
+    setShowHelp(false);
+  }, [currentIndex]);
 
   const saveResponse = useCallback(
     async (level?: number) => {
@@ -210,13 +216,6 @@ export default function DiagnosticoPage() {
     }
   }
 
-  function handleCopyLink() {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2500);
-    });
-  }
-
   const current = questions[currentIndex];
   const currentDim = current ? dimCode(current.criteria_code) : "";
 
@@ -225,7 +224,7 @@ export default function DiagnosticoPage() {
   questions.forEach((q, i) => {
     const dc = dimCode(q.criteria_code);
     if (!dimMap.has(dc)) {
-      const dim: DimInfo = { code: dc, name: q.dimension_name, icon: DIM_ICON[dc] || "/icons/target.png", context: q.context || "", total: 0, answered: 0, startIndex: i };
+      const dim: DimInfo = { code: dc, name: q.dimension_name, icon: DIM_ICON[dc] || "/icons/target.png", context: q.dimension_context || "", total: 0, answered: 0, startIndex: i };
       dimMap.set(dc, dim);
       dimensions.push(dim);
     }
@@ -252,6 +251,54 @@ export default function DiagnosticoPage() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] flex">
       <DtsSidebar currentPhase={2} assessmentId={assessmentId} maxPhase={4} />
+
+      {/* ✅ Panel lateral derecho — no bloquea el contenido */}
+      <div
+        className="fixed top-0 right-0 h-full z-40 flex flex-col bg-white shadow-2xl transition-all duration-300 ease-in-out"
+        style={{
+          width: '340px',
+          top: '51px',
+          bottom: '90px',
+          height: 'auto',
+          transform: showHelp && current?.context ? 'translateX(0)' : 'translateX(100%)',
+          borderLeft: '1.5px solid #dde3eb',
+          borderBottomLeftRadius: '20px',
+        }}
+      >
+        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1.5px solid #dde3eb' }}>
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GAPPLY_BLUE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span className="font-bold text-slate-800 text-[14px] uppercase tracking-wider font-[family-name:var(--font-space-mono)]">¿Por qué se mide?</span>
+          </div>
+          <button
+            onClick={() => setShowHelp(false)}
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            aria-label="Cerrar"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <p className="text-slate-700 leading-relaxed text-[15px] whitespace-pre-line">
+            {current?.context}
+          </p>
+        </div>
+        <div className="px-6 py-5" style={{ borderTop: '1.5px solid #dde3eb' }}>
+          <button
+            onClick={() => setShowHelp(false)}
+            className="w-full py-2.5 rounded-xl text-[14px] font-semibold text-slate-500 hover:bg-slate-50 transition-colors"
+            style={{ border: '1.5px solid #dde3eb' }}
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
 
       <div className="ml-0 md:ml-[220px] flex-1 flex flex-col min-h-screen overflow-x-hidden">
 
@@ -312,14 +359,14 @@ export default function DiagnosticoPage() {
               </div>
 
             ) : showDimIntro && currentDimInfo ? (
-              <div className="flex flex-col items-center justify-center text-center py-20 md:py-24">
-                <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl flex items-center justify-center mb-10 bg-slate-100 shadow-lg">
-                  <Image src={currentDimInfo.icon} alt={currentDimInfo.name} width={60} height={60} className="md:w-[68px] md:h-[68px]" />
+              <div className="flex flex-col items-center justify-center text-center py-12 md:py-16">
+                <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-7 bg-slate-100 shadow-lg">
+                  <Image src={currentDimInfo.icon} alt={currentDimInfo.name} width={44} height={44} />
                 </div>
-                <div className="text-[15px] md:text-[17px] font-extrabold uppercase tracking-[0.15em] mb-5 font-[family-name:var(--font-space-mono)]" style={{ color: GAPPLY_BLUE }}>{currentDimInfo.name}</div>
-                <h1 className="text-[26px] md:text-[34px] font-extrabold text-slate-900 leading-snug mb-6 max-w-xl px-2 tracking-tight">{currentDimInfo.context}</h1>
-                <p className="text-[16px] md:text-[19px] text-slate-700 mb-14 max-w-md leading-relaxed px-2">5 preguntas · Elige la opción que mejor describe tu situación <strong>HOY</strong></p>
-                <button onClick={() => setShowDimIntro(false)} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all hover:opacity-90" style={{ backgroundColor: GAPPLY_BLUE }}>Empezar →</button>
+                <div className="text-[13px] md:text-[14px] font-extrabold uppercase tracking-[0.15em] mb-4 font-[family-name:var(--font-space-mono)]" style={{ color: GAPPLY_BLUE }}>{currentDimInfo.name}</div>
+                <h1 className="text-[18px] md:text-[22px] font-bold text-slate-900 leading-relaxed mb-5 max-w-2xl px-2">{currentDimInfo.context}</h1>
+                <p className="text-[14px] md:text-[15px] text-slate-500 mb-10 max-w-lg leading-relaxed px-2">Elige la opción que mejor describe tu situación <strong className="text-slate-700">HOY</strong></p>
+                <button onClick={() => setShowDimIntro(false)} className="px-10 py-3.5 rounded-2xl text-white text-[16px] font-bold shadow-lg hover:shadow-xl transition-all hover:opacity-90" style={{ backgroundColor: GAPPLY_BLUE }}>Empezar →</button>
               </div>
 
             ) : current ? (
@@ -345,7 +392,26 @@ export default function DiagnosticoPage() {
                   </div>
                 </div>
 
-                <h1 className="text-[24px] md:text-[30px] font-extrabold text-slate-900 leading-snug mb-10 tracking-tight">{current.question}</h1>
+                {/* ✅ Título pregunta + botón ℹ️ */}
+                <div className="flex items-start gap-3 mb-10">
+                  <h1 className="flex-1 text-[24px] md:text-[30px] font-extrabold text-slate-900 leading-snug tracking-tight">
+                    {current.question}
+                  </h1>
+                  {current.context && (
+                    <button
+                      onClick={() => setShowHelp(true)}
+                      className="flex-shrink-0 mt-1.5 w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-blue-50"
+                      style={{ color: GAPPLY_BLUE, border: `1.5px solid ${GAPPLY_BLUE}20` }}
+                      aria-label="¿Por qué se mide esto?"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
 
                 {isNotApplicable(current) && (
                   <div className="flex items-center gap-3 mb-8 px-6 py-5 rounded-2xl bg-slate-50" style={{ border: '1.5px solid #dde3eb' }}>
@@ -423,17 +489,7 @@ export default function DiagnosticoPage() {
         </main>
       </div>
 
-      <div className="fixed bottom-8 right-8 z-50 hidden md:flex flex-col items-end gap-3">
-        {!showCompletion && totalAnswered > 0 && totalAnswered < questions.length && (
-          <button onClick={handleCopyLink} className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-slate-700 text-[14px] font-semibold shadow-md hover:shadow-lg transition-all" style={{ border: '1.5px solid #dde3eb' }}>
-            {linkCopied ? (
-              <><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7L6 10L11 4" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg><span className="text-emerald-600">Enlace copiado</span></>
-            ) : (
-              <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Continuar después</>
-            )}
-          </button>
-        )}
-      </div>
+
 
       <FloatingAvatar />
     </div>
