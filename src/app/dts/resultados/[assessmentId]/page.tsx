@@ -16,6 +16,7 @@ const DIM_ICON: Record<string, string> = {
   DAT: "/icons/database.png",
   TEC: "/icons/chip.png",
   GOB: "/icons/handshake.png",
+  CLI: "/icons/graph.png",
 };
 
 function getBand(score_1_5: number) {
@@ -252,7 +253,7 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                   <div>
                     <div className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-3 font-[family-name:var(--font-space-mono)]">Plan de acción</div>
                     <div className="text-[20px] md:text-[24px] font-extrabold text-slate-900 tracking-tight mb-2">Hemos generado tu roadmap priorizado</div>
-                    <div className="text-[15px] md:text-[16px] text-slate-600 leading-relaxed">Programas ordenados por urgencia, acciones concretas mes a mes y seguimiento de progreso.</div>
+                    <div className="text-[15px] md:text-[16px] text-slate-600 leading-relaxed">Iniciativas ordenadas por urgencia, acciones concretas mes a mes y seguimiento de progreso.</div>
                   </div>
                   <div className="ml-6 flex-shrink-0">
                     <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors group-hover:bg-[#e8f4ff]" style={{ backgroundColor: '#f7f9fb' }}>
@@ -348,7 +349,7 @@ export default async function DtsResultadosPage({ params }: { params: Promise<{ 
                         <span className="inline-flex w-11 h-11 items-center justify-center rounded-xl text-[16px] font-bold text-white" style={{ backgroundColor: GAPPLY_BLUE, opacity: Math.max(0.4, avg / 5) }}>{avg.toFixed(1)}</span>
                         <div>
                           <div className="text-[16px] md:text-[18px] font-semibold text-slate-900">{group.name}</div>
-                          <div className="text-[14px] md:text-[15px] text-slate-500">{group.items.length} preguntas · {humanLevel(Math.round(avg))}</div>
+                          <div className="text-[14px] md:text-[15px] text-slate-500">{group.items.length} preguntas · {humanLevel(Math.floor(avg))}</div>
                         </div>
                       </div>
                       <div className="flex gap-1 items-center">
