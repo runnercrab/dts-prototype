@@ -334,7 +334,7 @@ function ProgramSection({ title, subtitle, programs, openProgramId, onToggleOpen
                 </div>
               )}
 
-              <div onClick={() => onToggleOpen(isOpen ? null : prog.id)} className="px-6 md:px-8 py-6 md:py-8 cursor-pointer"
+              <div onClick={() => onToggleOpen(isOpen ? null : prog.id)} className="px-6 md:px-8 py-8 md:py-10 cursor-pointer"
                 style={isTop3 && !isOpen ? { backgroundColor: "#fafcff" } : {}}>
                 <div className="flex items-start gap-5 md:gap-6">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center text-[20px] font-extrabold flex-shrink-0 mt-0.5"
@@ -343,7 +343,7 @@ function ProgramSection({ title, subtitle, programs, openProgramId, onToggleOpen
                   </div>
                   <div className="flex-1 min-w-0">
                     {prog.dolor_ceo && (
-                      <p className="text-[19px] md:text-[22px] text-slate-900 leading-snug font-bold mb-2">{prog.dolor_ceo}</p>
+                      <p className="text-slate-900 leading-snug font-extrabold mb-2" style={{ fontSize: 28 }}>{prog.dolor_ceo}</p>
                     )}
                     <p className="text-[13px] font-semibold text-slate-500 leading-snug mb-3">{name}</p>
                     <div className="flex items-center gap-2 flex-wrap">

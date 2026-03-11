@@ -297,7 +297,7 @@ async function fetchRoadmapV22(
 }
 
 // ══════════════════════════════════════════════════════════════════
-// V1 PATH
+// V1 PATH — legacy, mantener hasta migración completa a gapply_v23
 // ══════════════════════════════════════════════════════════════════
 
 async function fetchRoadmapV1(
@@ -320,7 +320,7 @@ async function fetchRoadmapV1(
     .select(`
       id, program_id, action_id, phase, criticality_tier, priority_badge,
       assignment_reasons, effort_hours_estimated, status,
-      dts_program_catalog (id, code, name_ceo, dimension_primary, category, impact_default, effort_default),
+      dts_program_catalog (id, code, name_ceo, dolor_ceo, why_matters, expected_outcome, dimension_primary, category, impact_default, effort_default),
       dts_action_catalog (id, code, title, description, deliverable, dod, band, hours_min, hours_typical, hours_max, effort_hours, month)
     `)
     .eq('assessment_id', assessmentId)
@@ -392,9 +392,9 @@ async function fetchRoadmapV1(
       name: entry.program.name_ceo,
       dimension: entry.program.dimension_primary,
       tier: entry.tier,
-      dolor_ceo: null,
-      why_matters: null,
-      expected_outcome: null,
+      dolor_ceo: entry.program.dolor_ceo || null,
+      why_matters: entry.program.why_matters || null,
+      expected_outcome: entry.program.expected_outcome || null,
       ejemplos: null,
       weighted_need: 0,
       program_score: 0,
