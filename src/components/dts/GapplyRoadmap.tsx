@@ -444,12 +444,27 @@ function ProgramSection({ title, subtitle, programs, assessmentId, openProgramId
                       <p className="text-slate-900 leading-snug font-extrabold mb-1.5" style={{ fontSize: 36 }}>{prog.dolor_ceo}</p>
                     )}
                     
-                    <div className="flex items-center gap-2 flex-wrap">
-                      
-                      
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-[16px] font-semibold text-slate-400">{acts} acciones</span>
                       {!isTop3 && rank <= 6 && <span className="text-[13px] font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-500 font-[family-name:var(--font-space-mono)]">SIGUIENTE</span>}
                       {rank > 6 && <span className="text-[13px] font-bold px-3 py-1 rounded-full bg-slate-50 text-slate-400 font-[family-name:var(--font-space-mono)]">OPCIONAL</span>}
+                      {(() => {
+                        const done = allActs.filter(a => (statusOverrides[a.id] || a.status) === 'completed').length
+                        if (done === 0) return null
+                        const pct = Math.round((done / allActs.length) * 100)
+                        const color = pct === 100 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#1a90ff'
+                        const emoji = pct === 100 ? '✓' : null
+                        return (
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+                            </div>
+                            <span className="text-[14px] font-bold font-[family-name:var(--font-space-mono)]" style={{ color }}>
+                              {emoji || `${done}/${allActs.length}`}
+                            </span>
+                          </div>
+                        )
+                      })()}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0 pt-1">
