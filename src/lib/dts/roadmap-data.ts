@@ -115,6 +115,115 @@ function applyStatuses(programs: RoadmapProgram[], statuses: Map<string, string>
   }
 }
 
+// ── Enrich reasons: traduce jerga técnica a lenguaje CEO ──
+// Patrones entrada:
+//   "Criterio ceo30_v1.CLI-3 en nivel 1 (critico)"
+//   "Puntuacion TEC = 2.00 (por debajo de 2.5)"
+//   "Dimension OPE con 2 criterios ≤2 (debilidad estructural)"
+//   "Elevado a Tier N por prerequisitos..." → se elimina (jerga interna)
+//   "Acción de arranque (capacidad ajustada)" → se elimina (jerga interna)
+
+const DIM_NAMES: Record<string, string> = {
+  EST: 'Estrategia', OPE: 'Operaciones', PER: 'Personas',
+  DAT: 'Datos', TEC: 'Tecnología', GOB: 'Gobierno', CLI: 'Clientes',
+}
+
+async function enrichReasons(supabase: SupabaseClient, programs: RoadmapProgram[]) {
+  // Collect criteria codes for lookup
+  const codeRegex = /([a-z0-9_]+\.([A-Z]+)-\d+)/gi
+  const allCodes = new Set<string>()
+  for (const prog of programs) {
+    for (const r of prog.reasons) {
+      let m: RegExpExecArray | null
+      const rx = /([a-z0-9_]+\.([A-Z]+-\d+))/gi
+      while ((m = rx.exec(r)) !== null) allCodes.add(m[1])
+    }
+  }
+
+  const labelMap = new Map<string, string>()
+  if (allCodes.size > 0) {
+    const { data: criteria } = await supabase
+      .from('dts_criteria')
+      .select('code, short_label_es')
+      .in('code', Array.from(allCodes))
+    for (const c of (criteria || [])) {
+      labelMap.set(c.code, c.short_label_es || c.code)
+    }
+  }
+
+  for (const prog of programs) {
+    const enriched: string[] = []
+    for (const r of prog.reasons) {
+      // Traducir arranque
+      if (/acción de arranque/i.test(r)) {
+        enriched.push('Punto de partida recomendado para tu plan')
+        continue
+      }
+
+      // "Elevado a Tier N por prerequisitos" → traducir
+      if (/elevado a tier/i.test(r)) {
+        enriched.push('Necesario para completar otro programa de tu plan')
+        continue
+      }
+
+      // "Criterio ceo30_v1.CLI-3 en nivel 1 (critico)"
+      const criterioMatch = r.match(/([a-z0-9_]+\.([A-Z]+-\d+)).*nivel\s*(\d+)/i)
+      if (criterioMatch) {
+        const fullCode = criterioMatch[1]
+        const shortCode = criterioMatch[2]
+        const level = parseInt(criterioMatch[3])
+        const label = labelMap.get(fullCode)
+        const levelText = level === 1 ? 'puntuación muy baja (1/5)' : `puntuación baja (${level}/5)`
+        enriched.push(label ? `${shortCode} · ${label} — ${levelText}` : `${shortCode} — ${levelText}`)
+        continue
+      }
+
+      // "Puntuacion TEC = 2.00 (por debajo de 2.5)"
+      const puntuacionMatch = r.match(/Puntuacion\s+([A-Z]+)\s*=\s*([\d.]+)/i)
+      if (puntuacionMatch) {
+        const dim = puntuacionMatch[1].toUpperCase()
+        const score = parseFloat(puntuacionMatch[2]).toFixed(1)
+        const dimName = DIM_NAMES[dim] || dim
+        enriched.push(`${dimName} con puntuación baja (${score}/5)`)
+        continue
+      }
+
+      // "Dimension OPE con 2 criterios ≤2 (debilidad estructural)"
+      const dimMatch = r.match(/Dimension\s+([A-Z]+)\s+con\s+(\d+)\s+criterios/i)
+      if (dimMatch) {
+        const dim = dimMatch[1].toUpperCase()
+        const count = dimMatch[2]
+        const dimName = DIM_NAMES[dim] || dim
+        enriched.push(`${dimName}: ${count} áreas con puntuación muy baja`)
+        continue
+      }
+
+      // Cualquier otro reason — dejarlo tal cual
+      enriched.push(r)
+    }
+    // Deduplicar
+    const seen = new Set<string>()
+    const deduped = enriched.filter(r => {
+      if (seen.has(r)) return false
+      seen.add(r)
+      return true
+    })
+
+    // Fallback para programas CORE sin reasons (incluidos por defecto en todos los planes)
+    if (deduped.length === 0) {
+      if (prog.code?.startsWith('PRG-CORE')) {
+        deduped.push('Programa base — incluido en todos los planes de acción')
+      } else if (prog.code?.startsWith('PRG-RING')) {
+        deduped.push('Complementa otros programas de tu plan')
+      } else {
+        deduped.push('Incluido en tu plan de acción')
+      }
+    }
+
+    prog.reasons = deduped
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════
 // Main fetch
 // ══════════════════════════════════════════════════════════════════
@@ -192,7 +301,6 @@ async function fetchRoadmapV22(
     actionsByProgram.set(a.program_code, list)
   }
 
-  // Extraer multiplier de esfuerzo según tamaño de empresa (viene del motor)
   const effortMultiplier: number = parseFloat(ranked[0]?.effort_multiplier ?? '1.0') || 1.0
 
   const programs: RoadmapProgram[] = v22Programs
@@ -251,9 +359,9 @@ async function fetchRoadmapV22(
 
   programs.sort((a, b) => b.program_score - a.program_score)
 
-  // Aplicar estados persistidos
   const statuses = await fetchActionStatuses(supabase, assessmentId)
   applyStatuses(programs, statuses)
+  await enrichReasons(supabase, programs)
 
   const calcUsed = (phase: string) =>
     programs.reduce((sum, p) => {
@@ -360,7 +468,11 @@ async function fetchRoadmapV1(
       }
     }
 
-    const phase = init.phase as string
+    // FIX: usar month del catálogo cuando la RPC manda todo a backlog
+    const rawPhase = init.phase as string
+    const monthPhase = MONTH_TO_PHASE[action?.month as string] || 'backlog'
+    const phase = (rawPhase && rawPhase !== 'backlog') ? rawPhase : monthPhase
+
     if (entry.actions[phase]) {
       entry.actions[phase].push({
         id: init.id,
@@ -410,9 +522,9 @@ async function fetchRoadmapV1(
       return po(a) - po(b)
     })
 
-  // Aplicar estados persistidos (universal — sobreescribe init.status)
   const statuses = await fetchActionStatuses(supabase, assessmentId)
   applyStatuses(programs, statuses)
+  await enrichReasons(supabase, programs)
 
   const calcUsed = (phase: string) =>
     initiatives.filter((i: any) => i.phase === phase).reduce((sum: number, i: any) => sum + (i.effort_hours_estimated || 0), 0)
