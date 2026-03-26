@@ -97,9 +97,10 @@ export default function DtsHomePage() {
 
               <div className="space-y-10 md:space-y-14">
                 {[
-                  { n: 1, title: "Diagnosticamos tu empresa", body: "Analizamos cómo decides, cómo operas y cómo evolucionas. Identificamos lo que hoy está limitando tu crecimiento." },
-                  { n: 2, title: "Te damos un plan para mejorar", body: "Iniciativas con acciones concretas, ordenadas por impacto, esfuerzo y urgencia." },
-                  { n: 3, title: "Haz seguimiento de tu avance", body: "Marca cada acción completada y ve en tiempo real si tu empresa está mejorando." },
+                  { n: 1, title: "Respondes preguntas sobre tu empresa", body: "Sin tecnicismos. Solo cómo decides, trabajas y operas." },
+                  { n: 2, title: "Detectamos qué está fallando", body: "Identificamos dónde estás perdiendo tiempo, dinero o control." },
+                  { n: 3, title: "Recibes un plan claro", body: "Acciones concretas, ordenadas por impacto y esfuerzo." },
+                  { n: 4, title: "Lo ejecutas sin consultores", body: "Sabes exactamente qué hacer y cuándo está terminado." },
                 ].map((step) => (
                   <div key={step.n} className="flex gap-6 md:gap-8">
                     <div className="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ border: '2px solid #1a90ff', backgroundColor: '#e8f4ff' }}>
@@ -145,20 +146,19 @@ export default function DtsHomePage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
                 {[
-                  { icon: "/icons/target.png", name: "Estrategia", question: "¿Sabes hacia dónde vas?", desc: "Muchas empresas compran tecnología sin tener claro para qué. Un CRM que nadie usa. Una web nueva que no resuelve nada. Si intentas mejorar todo a la vez, no mejoras nada. Estrategia es elegir qué va primero." },
-                  { icon: "/icons/database.png", name: "Datos", question: "¿Decides con información o con intuición?", desc: "\"Me suena que este mes fue mejor.\" \"Creo que ese cliente nos da dinero.\" \"Supongo que vamos bien.\" Si tus decisiones empiezan con \"creo\", \"me suena\" o \"supongo\", estás decidiendo a ciegas. Datos es tener los números cuando los necesitas." },
-                  { icon: "/icons/gears.png", name: "Operaciones", question: "¿Qué pasa si alguien clave no viene mañana?", desc: "Si Paco se va de vacaciones y se para medio negocio, tienes un problema. Si los procesos importantes están en la cabeza de la gente en vez de documentados, no puedes ni delegar ni crecer. Operaciones es que las cosas funcionen sin depender de una persona." },
-                  { icon: "/icons/users.png", name: "Personas y decisiones", question: "¿Todo pasa por ti?", desc: "El cliente grande llama, te lo pasan a ti. Hay que aprobar un gasto, tú. Hay un problema con un pedido, tú. Si eres el cuello de botella de tu propia empresa, no puedes crecer. Personas es que tu equipo sepa qué puede decidir sin preguntarte." },
-                  { icon: "/icons/chip.png", name: "Tecnología", question: "¿Tus herramientas se hablan entre sí?", desc: "El ERP por un lado, el Excel de rutas por otro, los emails por otro. Cada sistema es una isla y acabas copiando datos a mano de uno a otro. Tecnología no es tener más herramientas. Es que las que tienes trabajen juntas." },
-                  { icon: "/icons/handshake.png", name: "Gobierno", question: "¿Alguien revisa si lo que decidisteis funciona?", desc: "Hace 3 meses decidisteis cambiar de proveedor. ¿Funcionó? ¿Alguien lo ha mirado? Si el único momento en que os sentáis a revisar cómo va el negocio es cuando algo explota, estáis pilotando a ciegas. Gobierno es pararse a mirar los indicadores antes de que sea tarde." },
+                  { icon: "/icons/target.png", name: "Estrategia", question: "¿Sabes hacia dónde vas?" },
+                  { icon: "/icons/database.png", name: "Datos", question: "¿Decides con información o con intuición?" },
+                  { icon: "/icons/gears.png", name: "Operaciones", question: "¿Qué pasa si alguien clave no viene mañana?" },
+                  { icon: "/icons/users.png", name: "Personas y decisiones", question: "¿Todo pasa por ti?" },
+                  { icon: "/icons/chip.png", name: "Tecnología", question: "¿Tus herramientas se hablan entre sí?" },
+                  { icon: "/icons/handshake.png", name: "Gobierno", question: "¿Alguien revisa si lo que decidisteis funciona?" },
                 ].map((d) => (
                   <div key={d.name} className="bg-white rounded-2xl p-8 md:p-10 transition-all hover:shadow-lg" style={{ border: '1.5px solid #dde3eb' }}>
                     <div className="flex items-center gap-4 mb-3">
                       <img src={d.icon} alt="" className="w-14 h-14 md:w-16 md:h-16 shrink-0 opacity-60" />
                       <h3 className="text-[20px] md:text-[22px] font-bold text-slate-900">{d.name}</h3>
                     </div>
-                    <p className="text-[15px] md:text-[16px] font-semibold mb-2" style={{ color: GAPPLY_BLUE }}>{d.question}</p>
-                    <p className="text-[16px] md:text-[17px] text-slate-700 leading-relaxed">{d.desc}</p>
+                    <p className="text-[15px] md:text-[16px] font-semibold" style={{ color: GAPPLY_BLUE }}>{d.question}</p>
                   </div>
                 ))}
               </div>
@@ -200,7 +200,7 @@ export default function DtsHomePage() {
           {/* ── CTA FINAL                         ── */}
           {/* ══════════════════════════════════════ */}
           <section className="px-6 md:px-10 lg:px-16 py-16 md:py-24 text-center bg-white">
-            <h2 className="text-[28px] md:text-[34px] font-extrabold text-slate-900 mb-10 tracking-tight">¿Listo para salir del laberinto?</h2>
+            <h2 className="text-[28px] md:text-[34px] font-extrabold text-slate-900 mb-10 tracking-tight">Empieza ahora y descubre qué cambiar en tu empresa</h2>
             <button
               onClick={handleStart}
               disabled={loading}
