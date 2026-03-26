@@ -117,6 +117,34 @@ export default function DtsHomePage() {
           </section>
 
           {/* ══════════════════════════════════════ */}
+          {/* ── CREDIBILIDAD                      ── */}
+          {/* ══════════════════════════════════════ */}
+          <section className="px-6 md:px-10 lg:px-16 py-16 md:py-24 bg-white" style={{ borderTop: '1.5px solid #dde3eb', borderBottom: '1.5px solid #dde3eb' }}>
+            <div className="max-w-5xl mx-auto">
+              <div className="text-center mb-12 md:mb-16">
+                <h2 className="text-[28px] md:text-[34px] font-extrabold text-slate-900 mb-5 tracking-tight">Construido sobre estándares de referencia mundial</h2>
+                <p className="text-[17px] md:text-[19px] text-slate-600 leading-relaxed max-w-2xl mx-auto">Gapply no inventa metodologías. Utiliza los mismos estándares que usan las grandes consultoras, adaptados para que sean accesibles a cualquier PyME.</p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-6 md:gap-8">
+                <div className="flex items-center gap-8 p-8 md:p-10 rounded-2xl bg-[#f7f9fb]" style={{ border: '1.5px solid #dde3eb' }}>
+                  <img src="/TMForum-logo.png" alt="TM Forum" className="w-28 h-28 md:w-32 md:h-32 object-contain shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[20px] md:text-[22px] font-bold text-slate-900 mb-2">TM Forum Member</div>
+                    <div className="text-[16px] md:text-[17px] text-slate-700 leading-relaxed">Digital Maturity Model v5.0.1 — el estándar de referencia en transformación digital, usado por más de 850 empresas en el mundo.</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-8 p-8 md:p-10 rounded-2xl bg-[#f7f9fb]" style={{ border: '1.5px solid #dde3eb' }}>
+                  <img src="/MIT-logo.png" alt="MIT" className="w-28 h-28 md:w-32 md:h-32 object-contain shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[20px] md:text-[22px] font-bold text-slate-900 mb-2">MIT CDO 2026</div>
+                    <div className="text-[16px] md:text-[17px] text-slate-700 leading-relaxed">Programa Chief Digital Officer del MIT, aplicado al contexto real de las empresas españolas.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════ */}
           {/* ── AVATAR / ASISTENTE                ── */}
           {/* ══════════════════════════════════════ */}
           <section className="px-6 md:px-10 lg:px-16 py-16 md:py-24 bg-white">
@@ -165,34 +193,6 @@ export default function DtsHomePage() {
               <p className="text-[16px] md:text-[17px] text-slate-600 text-center mt-10">
                 Las seis tienen que avanzar juntas. Cuando están alineadas, crecer deja de ser improvisar.
               </p>
-            </div>
-          </section>
-
-          {/* ══════════════════════════════════════ */}
-          {/* ── CREDIBILIDAD                      ── */}
-          {/* ══════════════════════════════════════ */}
-          <section className="px-6 md:px-10 lg:px-16 py-16 md:py-24 bg-white" style={{ borderTop: '1.5px solid #dde3eb', borderBottom: '1.5px solid #dde3eb' }}>
-            <div className="max-w-5xl mx-auto">
-              <div className="text-center mb-12 md:mb-16">
-                <h2 className="text-[28px] md:text-[34px] font-extrabold text-slate-900 mb-5 tracking-tight">Construido sobre estándares de referencia mundial</h2>
-                <p className="text-[17px] md:text-[19px] text-slate-600 leading-relaxed max-w-2xl mx-auto">Gapply no inventa metodologías. Utiliza los mismos estándares que usan las grandes consultoras, adaptados para que sean accesibles a cualquier PyME.</p>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-6 md:gap-8">
-                <div className="flex items-center gap-8 p-8 md:p-10 rounded-2xl bg-[#f7f9fb]" style={{ border: '1.5px solid #dde3eb' }}>
-                  <img src="/TMForum-logo.png" alt="TM Forum" className="w-28 h-28 md:w-32 md:h-32 object-contain shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-[20px] md:text-[22px] font-bold text-slate-900 mb-2">TM Forum Member</div>
-                    <div className="text-[16px] md:text-[17px] text-slate-700 leading-relaxed">Digital Maturity Model v5.0.1 — el estándar de referencia en transformación digital, usado por más de 850 empresas en el mundo.</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-8 p-8 md:p-10 rounded-2xl bg-[#f7f9fb]" style={{ border: '1.5px solid #dde3eb' }}>
-                  <img src="/MIT-logo.png" alt="MIT" className="w-28 h-28 md:w-32 md:h-32 object-contain shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-[20px] md:text-[22px] font-bold text-slate-900 mb-2">MIT CDO Candidate 2026</div>
-                    <div className="text-[16px] md:text-[17px] text-slate-700 leading-relaxed">Programa Chief Digital Officer del MIT, aplicado al contexto real de las empresas españolas.</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </section>
 
