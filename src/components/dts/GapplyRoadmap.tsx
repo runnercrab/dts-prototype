@@ -511,6 +511,7 @@ function ProgramSection({ title, subtitle, programs, assessmentId, openProgramId
                             <p className="text-[17px] text-slate-800 leading-relaxed font-medium">{prog.expected_outcome}</p>
                           </div>
                         )}
+                        {/* OCULTO: bloque "Por qué está en tu plan"
                         {prog.reasons && prog.reasons.length > 0 && (
                           <div>
                             <p className="text-[13px] font-bold uppercase tracking-widest text-slate-400 mb-2 font-[family-name:var(--font-space-mono)]">Por qué está en tu plan</p>
@@ -524,6 +525,7 @@ function ProgramSection({ title, subtitle, programs, assessmentId, openProgramId
                             </div>
                           </div>
                         )}
+                        */}
                       </div>
                     )}
 
