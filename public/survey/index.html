@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Gapply — Tu opinión como empresario</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --border: #e2e5e9;
+  --blue: #1a90ff;
+  --blue-dark: #0066cc;
+  --blue-light: #ebf5ff;
+  --text: #1a1a2e;
+  --muted: #6b7280;
+  --green: #10b981;
+  --green-light: #f0fdf4;
+  --green-border: #86efac;
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.logo-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--blue);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+
+.header p {
+  font-size: 15px;
+  opacity: 0.8;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+.intro {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.intro p {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.intro p:last-child { margin-bottom: 0; }
+
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.section-header {
+  background: var(--blue-light);
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-emoji {
+  font-size: 22px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--blue-dark);
+}
+
+.section-body {
+  padding: 8px 24px 24px;
+}
+
+.question {
+  padding: 20px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.question:last-child {
+  border-bottom: none;
+}
+
+.question-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 10px;
+  display: block;
+}
+
+.question-number {
+  color: var(--blue);
+  font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  margin-right: 6px;
+}
+
+.question textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fafbfc;
+}
+
+.question textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26, 144, 255, 0.15);
+  background: white;
+}
+
+.question textarea::placeholder {
+  color: #b0b8c4;
+}
+
+.question input[type="text"] {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fafbfc;
+}
+
+.question input[type="text"]:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26, 144, 255, 0.15);
+  background: white;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 500px) {
+  .field-row { grid-template-columns: 1fr; }
+}
+
+.optional-tag {
+  display: inline-block;
+  background: #f3f4f6;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+.submit-section {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.submit-btn {
+  background: var(--blue);
+  color: white;
+  border: none;
+  padding: 16px 48px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 4px 12px rgba(26, 144, 255, 0.3);
+}
+
+.submit-btn:hover {
+  background: var(--blue-dark);
+}
+
+.submit-btn:active {
+  transform: scale(0.98);
+}
+
+.submit-btn:disabled {
+  background: #b0b8c4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.submit-note {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.success-message {
+  display: none;
+  background: var(--green-light);
+  border: 1px solid var(--green-border);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.success-message h2 {
+  color: #166534;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.success-message p {
+  color: #166534;
+  font-size: 15px;
+}
+
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 4px;
+  background: var(--blue);
+  transition: width 0.3s;
+  z-index: 100;
+}
+
+.counter {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 100;
+  font-family: 'Space Mono', monospace;
+}
+
+.counter span { color: var(--blue); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">G</div>
+    <span style="font-size:22px;font-weight:700">Gapply</span>
+  </div>
+  <h1>Tu opinión como empresario</h1>
+  <p>Necesito contrastar con empresarios reales si lo que estoy construyendo tiene sentido. No hay respuestas correctas ni incorrectas. Contesta solo lo que quieras.</p>
+</div>
+
+<div class="container">
+
+  <div class="intro">
+    <p>Estoy cerrando la siguiente versión de Gapply y tu criterio como empresario es lo más valioso que puedo tener.</p>
+    <p>No es una encuesta comercial. Lo que necesito es saber: qué problemas te suenan reales, qué no aplica a tu empresa, qué falta y qué está mal planteado.</p>
+    <p><strong>Cuanto más honesto seas, más me ayudas. Un "esto no tiene sentido" vale más que un "todo bien".</strong></p>
+  </div>
+
+  <form id="surveyForm">
+
+    <!-- DATOS -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">👤</span>
+        <span class="section-title">Tus datos</span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label">Tu nombre</label>
+          <input type="text" name="nombre" placeholder="Nombre y apellido" required>
+        </div>
+        <div class="question">
+          <div class="field-row">
+            <div>
+              <label class="question-label">Empresa</label>
+              <input type="text" name="empresa" placeholder="Nombre de la empresa">
+            </div>
+            <div>
+              <label class="question-label">Sector</label>
+              <input type="text" name="sector" placeholder="Ej: logística, hostelería...">
+            </div>
+          </div>
+        </div>
+        <div class="question">
+          <div class="field-row">
+            <div>
+              <label class="question-label">Nº empleados (aproximado)</label>
+              <input type="text" name="num_empleados" placeholder="Ej: 22">
+            </div>
+            <div>
+              <label class="question-label">País</label>
+              <input type="text" name="pais" placeholder="Ej: España, México...">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOCO -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">🎯</span>
+        <span class="section-title">Foco y prioridades</span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label"><span class="question-number">1.</span>¿Tienes claro cuáles son las 3 cosas más importantes de tu empresa ahora mismo? ¿Tu equipo las sabe?</label>
+          <textarea name="q1" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">2.</span>Cuando te llega una idea nueva o una oportunidad, ¿cómo decides si la persigues o la descartas?</label>
+          <textarea name="q2" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- DATOS -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">📊</span>
+        <span class="section-title">Datos y decisiones</span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label"><span class="question-number">3.</span>Si ahora mismo te pregunto cuánto has facturado este mes, ¿cuánto tardas en saberlo? ¿30 segundos, 30 minutos, o tienes que llamar a alguien?</label>
+          <textarea name="q3" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">4.</span>Si le pido el mismo dato (facturación, clientes activos, costes) a dos personas de tu empresa, ¿me dan el mismo número?</label>
+          <textarea name="q4" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">5.</span>¿Usas los datos de tu empresa para tomar decisiones o decides más por experiencia e intuición?</label>
+          <textarea name="q5" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">6.</span>¿Alguien controla quién puede cambiar datos importantes — precios, datos de clientes, costes? ¿O cualquiera toca lo que quiera?</label>
+          <textarea name="q6" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERSONAS -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">👥</span>
+        <span class="section-title">Personas y dependencias</span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label"><span class="question-number">7.</span>Si mañana falta tu persona más importante, ¿qué se para? ¿Hay alguien que pueda cubrir?</label>
+          <textarea name="q7" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">8.</span>Si tú desaparecieras 30 días — vacaciones, enfermedad — ¿la empresa puede seguir funcionando? ¿Alguien puede firmar, pagar nóminas, tomar decisiones?</label>
+          <textarea name="q8" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">9.</span>¿Tienes a alguien en tu empresa que entienda de tecnología? No un programador — alguien que sepa evaluar si una herramienta os conviene o no.</label>
+          <textarea name="q9" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">10.</span>Cuando propones un cambio en la forma de trabajar, ¿el equipo lo acepta o hay resistencia?</label>
+          <textarea name="q10" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- TECNOLOGÍA -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">💻</span>
+        <span class="section-title">Tecnología</span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label"><span class="question-number">11.</span>¿Sabes cuánto pagas en total en software al mes? ¿Te has llevado alguna sorpresa al sumar todo?</label>
+          <textarea name="q11" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">12.</span>¿Tu equipo puede trabajar fuera de la oficina con las mismas herramientas que dentro?</label>
+          <textarea name="q12" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">13.</span>¿Has probado usar inteligencia artificial para algo en tu empresa? ¿ChatGPT, Copilot, algo así? ¿Para qué?</label>
+          <textarea name="q13" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">14.</span>Si se cae tu sistema principal — el de facturación, el de pedidos — ¿qué pasa? ¿Hay plan B?</label>
+          <textarea name="q14" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENTES -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">🤝</span>
+        <span class="section-title">Clientes</span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label"><span class="question-number">15.</span>¿Sabes cuáles de tus clientes te dan dinero de verdad y cuáles te cuestan más de lo que pagan?</label>
+          <textarea name="q15" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">16.</span>¿Cuánto depende tu facturación de tus 3 mejores clientes? Si se va uno, ¿qué impacto tiene?</label>
+          <textarea name="q16" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">17.</span>Cuando un cliente tiene un problema contigo — un retraso, un error — ¿cómo lo gestionas? ¿Queda registro?</label>
+          <textarea name="q17" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">18.</span>¿Cuánto tarda tu empresa en responder a un cliente nuevo que pide presupuesto?</label>
+          <textarea name="q18" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROCESOS -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">⚙️</span>
+        <span class="section-title">Procesos y reuniones</span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label"><span class="question-number">19.</span>Si yo entrara mañana como empleado nuevo, ¿hay algún sitio donde ver cómo se hacen las cosas? ¿O me lo tiene que explicar alguien de palabra?</label>
+          <textarea name="q19" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">20.</span>¿Tus reuniones producen decisiones concretas con responsable y fecha? ¿O se habla mucho y no se decide?</label>
+          <textarea name="q20" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">21.</span>¿Las decisiones del día a día pasan todas por ti o hay gente que puede decidir sola hasta cierto límite?</label>
+          <textarea name="q21" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEGURIDAD -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">🔒</span>
+        <span class="section-title">Seguridad</span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label"><span class="question-number">22.</span>¿Te preocupa la ciberseguridad? ¿Habéis tenido algún susto — un phishing, un virus, un ex-empleado con acceso?</label>
+          <textarea name="q22" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">23.</span>¿Hacéis copias de seguridad? ¿Alguna vez habéis probado a restaurar una para ver si funciona?</label>
+          <textarea name="q23" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAPPLY -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">📋</span>
+        <span class="section-title">Sobre Gapply <span class="optional-tag">Solo si ya hiciste el diagnóstico</span></span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label"><span class="question-number">24.</span>¿Te sentiste identificado con los problemas que señalaba el diagnóstico?</label>
+          <textarea name="q24" placeholder="Si no hiciste el diagnóstico, salta esta sección..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">25.</span>¿Alguna acción del plan no tenía sentido para tu empresa? ¿Cuál?</label>
+          <textarea name="q25" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">26.</span>¿El orden de los programas — cuál te salía primero — te pareció lógico para tu situación?</label>
+          <textarea name="q26" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+        <div class="question">
+          <label class="question-label"><span class="question-number">27.</span>¿Hay algo que te preocupe de tu empresa que no apareció ni en el diagnóstico ni en el plan?</label>
+          <textarea name="q27" placeholder="Escribe tu respuesta aquí..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIBRE -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-emoji">💬</span>
+        <span class="section-title">Algo más que quieras decirme</span>
+      </div>
+      <div class="section-body">
+        <div class="question">
+          <label class="question-label">Cualquier cosa que no te haya preguntado y creas importante:</label>
+          <textarea name="q_extra" placeholder="Escribe lo que quieras..." style="min-height:120px"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBMIT -->
+    <div class="submit-section">
+      <button type="submit" class="submit-btn" id="submitBtn">Enviar respuestas</button>
+      <p class="submit-note">Tus respuestas son confidenciales. Solo las veré yo.</p>
+    </div>
+
+  </form>
+
+  <!-- SUCCESS -->
+  <div class="success-message" id="successMessage">
+    <h2>¡Gracias!</h2>
+    <p>Tus respuestas me ayudan muchísimo a construir algo que de verdad funcione para empresas como la tuya.</p>
+    <p style="margin-top:16px;font-size:13px;opacity:0.7">Puedes cerrar esta página.</p>
+  </div>
+
+</div>
+
+<div class="counter" id="counter"><span>0</span>/27 respondidas</div>
+
+<script>
+// Progress tracking
+const form = document.getElementById('surveyForm');
+const textareas = form.querySelectorAll('textarea');
+const progressBar = document.getElementById('progressBar');
+const counter = document.getElementById('counter');
+const totalQuestions = 27;
+
+function updateProgress() {
+  let answered = 0;
+  textareas.forEach(ta => {
+    if (ta.value.trim().length > 0) answered++;
+  });
+  const pct = (answered / totalQuestions) * 100;
+  progressBar.style.width = pct + '%';
+  counter.innerHTML = '<span>' + answered + '</span>/' + totalQuestions + ' respondidas';
+}
+
+textareas.forEach(ta => ta.addEventListener('input', updateProgress));
+
+// Submit
+form.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const formData = new FormData(form);
+  const data = {};
+  for (let [key, value] of formData.entries()) {
+    data[key] = value;
+  }
+  data.submitted_at = new Date().toISOString();
+
+  // === SUPABASE CONNECTION ===
+  // Claude Code: reemplaza SUPABASE_URL y SUPABASE_ANON_KEY con los valores reales
+  // y crea la tabla 'ceo_survey_responses' con columnas:
+  // id (uuid), nombre (text), empresa (text), sector (text), num_empleados (text),
+  // pais (text), q1-q27 (text), q_extra (text), submitted_at (timestamptz),
+  // created_at (timestamptz default now())
+  
+  const SUPABASE_URL = 'https://fgczfshqldxkyowbyuzq.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnY3pmc2hxbGR4a3lvd2J5dXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwMTU1MzMsImV4cCI6MjA3NzU5MTUzM30.nCxVjHv5A8vQawfpUK-SWFbUCTHiHghcYfZfgH7GTFs'; // Claude Code pone la key aquí
+  
+  try {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/ceo_survey_responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (response.ok) {
+      form.style.display = 'none';
+      document.getElementById('successMessage').style.display = 'block';
+      document.getElementById('counter').style.display = 'none';
+      progressBar.style.width = '100%';
+      progressBar.style.background = '#10b981';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      throw new Error('Error al enviar');
+    }
+  } catch (err) {
+    // Fallback: enviar por email si Supabase falla
+    const mailBody = encodeURIComponent(JSON.stringify(data, null, 2));
+    window.location.href = 'mailto:david@gapply.io?subject=Cuestionario%20CEO&body=' + mailBody;
+    btn.disabled = false;
+    btn.textContent = 'Enviar respuestas';
+  }
+});
+</script>
+
+</body>
+</html>
