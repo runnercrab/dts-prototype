@@ -137,7 +137,7 @@ export default function SeguimientoClient({ assessmentId }: { assessmentId: stri
       {/* Programa */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="text-sm font-semibold text-slate-900">Programa en ejecución</div>
-        <div className="mt-1 text-xl font-semibold">{ok.program_instance?.title || "—"}</div>
+        <div className="mt-1 text-xl font-semibold">{ok?.program_instance?.title || "—"}</div>
       </div>
 
       {/* Tabla */}
