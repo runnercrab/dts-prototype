@@ -17,3 +17,4 @@ ayuda
 backups/
 *.OLD
 backup_local/
+.claude/

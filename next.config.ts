@@ -9,12 +9,6 @@ const nextConfig: NextConfig = {
 
   async rewrites() {
     return {
-      // beforeFiles: se ejecutan ANTES del filesystem routing.
-      // Necesario para que `/` sirva `/dts` pese a que (marketing)/page.tsx
-      // existe como handler de `/`.
-      beforeFiles: [
-        { source: '/', destination: '/dts' },
-      ],
       // afterFiles: URLs limpias para los HTML estáticos en public/.
       afterFiles: [
         { source: '/plan',            destination: '/plan.html' },
@@ -35,4 +29,3 @@ export default withSentryConfig(
     project: "dts-prototype",
   }
 );
-

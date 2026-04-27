@@ -8,7 +8,7 @@ export default function Home() {
 
   return (
     <>
-      {/* 🟦 BLOQUE 1 — HERO */}
+      {/* BLOQUE 1 - HERO */}
       <div className="w-full pt-12 pb-10 bg-gradient-to-b from-white to-blue-50">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-slate-900">
@@ -16,38 +16,18 @@ export default function Home() {
           </h1>
 
           <h2 className="text-xl md:text-2xl lg:text-3xl font-semibold mb-10 text-slate-600 leading-snug">
-            Te decimos qué mejorar, en qué orden y con qué impacto.
+            Te decimos qué está fallando, en qué orden arreglarlo
             <br />
-            Y con claridad, una pyme avanza.
+            y cómo mejorarlo con tecnología.
           </h2>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            {/* ✅ Botón 1: MVP (editable) — backend decide resume/create */}
-            <Link
-              href="/start?mode=mvp&pack=tmf_mvp12_v2"
-              className="px-8 py-4 rounded-2xl bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition-all text-center"
-            >
-              Continuar diagnóstico
-              <div className="text-sm font-normal opacity-90">
-                Retoma donde lo dejaste · si no existe, se crea uno nuevo
-              </div>
-            </Link>
-
-            {/* ✅ Botón 2: Demo fijo (solo lectura) */}
-            <Link
-              href="/start?mode=demo&pack=tmf_mvp12_v2"
-              className="px-8 py-4 rounded-2xl border border-blue-600 text-blue-700 font-semibold hover:bg-blue-50 transition-all text-center"
-            >
-              Ver ejemplo (solo lectura)
-              <div className="text-sm font-normal opacity-80">
-                Ejemplo completo del informe · no editable
-              </div>
-            </Link>
+          <div className="inline-block px-6 py-3 rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 font-medium">
+            En pre-lanzamiento · Acceso por invitación
           </div>
         </div>
       </div>
 
-      {/* 🟦 BLOQUE 2 — VIDEO */}
+      {/* BLOQUE 2 - VIDEO */}
       <div
         className="w-full mb-12"
         style={{
@@ -71,34 +51,34 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 🟦 BLOQUE 3 — ¿QUÉ HACE REALMENTE DTS? */}
+      {/* BLOQUE 3 - QUE HACE REALMENTE GAPPLY */}
       <section className="container-page mb-16">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">
           ¿Qué hace realmente Gapply?
         </h2>
         <p className="text-center text-lg text-slate-600 mb-10">
-          No es un test. Es un sistema para decidir mejor.
+          No es un test. Es un sistema para ejecutar.
         </p>
 
         <div className="grid lg:grid-cols-3 gap-6">
           {[
             {
-              step: "① Lo que realmente te frena",
-              title: "Falta de dirección práctica",
+              step: "① Respondes preguntas sobre tu empresa",
+              title: "Sin tecnicismos",
               text:
-                "Sabes que deberías mejorar procesos, tecnología, equipo y datos, pero nadie te ordena el camino: qué hacer primero, cuánto cuesta y qué impacto tiene en ventas, costes y eficiencia.",
+                "Solo cómo decides, trabajas y operas. 20 minutos sin jerga de consultor.",
             },
             {
-              step: "② Un plan claro, realista",
-              title: "Diagnóstico → frenos → decisiones",
+              step: "② Detectamos qué está fallando",
+              title: "Frenos reales, no genéricos",
               text:
-                "Medimos AS-IS, TO-BE e Importancia, lo traducimos a frenos reales (tiempo, dinero y foco) y lo convertimos en prioridades y un roadmap trimestral que se revisa cada mes.",
+                "Identificamos dónde estás perdiendo tiempo, dinero o control. Con datos, no opiniones.",
             },
             {
-              step: "③ No avanzas solo",
-              title: "Copiloto Digital 24/7",
+              step: "③ Sabes exactamente qué hacer",
+              title: "Acciones, no informes",
               text:
-                "Te guía con tu lenguaje, explica lo que no entiendas y te avisa cuando toca decidir o cuando algo bloquea el avance.",
+                "Cada acción es concreta, ejecutable y con criterio claro de cuándo está terminada.",
             },
           ].map((b) => (
             <div key={b.title} className="card">
@@ -112,23 +92,21 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 🟦 BLOQUE 4 — 6 DIMENSIONES */}
+      {/* BLOQUE 4 - 7 DIMENSIONES */}
       <section className="container-page mb-16">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">
-          El diagnóstico cubre 6 dimensiones del negocio
+          El diagnóstico cubre 7 dimensiones del negocio
         </h2>
-        <p className="text-center text-lg text-slate-600 mb-10">
-          Misma lógica en versión reducida (12) y completa (129).
-        </p>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-6 mt-10">
           {[
             ["Estrategia", "Prioridades claras y foco real."],
             ["Cliente", "Experiencia, captación y retención."],
             ["Tecnología", "Que el negocio no se frene."],
             ["Operaciones", "Procesos, ejecución y métricas."],
-            ["Equipo", "Adopción, hábitos y forma de trabajar."],
+            ["Personas", "Adopción, hábitos y forma de trabajar."],
             ["Datos", "Calidad, gobierno y decisiones con datos."],
+            ["Gobernanza", "Riesgos, seguridad y liderazgo."],
           ].map(([t, d]) => (
             <div key={t} className="card">
               <div className="card-body">
@@ -140,7 +118,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 🟦 BLOQUE 5 — CREDENCIALES */}
+      {/* BLOQUE 5 - CREDENCIALES */}
       <section className="container-page mb-16">
         <div className="card bg-indigo-50">
           <div className="card-body">
@@ -154,7 +132,7 @@ export default function Home() {
                   <strong>Miembro de TM Forum</strong> · Digital Maturity Model v5.0.1 y estándares para IA
                 </li>
                 <li>
-                  <strong>MIT – Chief Digital Officer Candidate</strong>
+                  <strong>MIT – Chief Digital Officer</strong>
                 </li>
                 <li>Metodologías de grandes corporaciones, adaptadas a la realidad de las pymes.</li>
               </ul>
@@ -168,7 +146,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 🟦 BLOQUE 6 — SERVICIOS */}
+      {/* BLOQUE 6 - SERVICIOS */}
       <main className="container-page">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">Nuestros Servicios</h2>
         <p className="text-center text-lg mb-8 text-slate-600">
@@ -183,12 +161,12 @@ export default function Home() {
               </span>
               <h3 className="text-xl font-bold mb-3 text-slate-900">Madurez Digital</h3>
               <p className="mb-4 text-slate-600">
-                Evaluación basada en <strong>TM Forum DMM v5.0.1</strong>.
+                Evaluación inspirada en <strong>TM Forum DMM v5.0.1</strong>.
               </p>
               <ul className="space-y-2 text-slate-600">
-                <li>✓ 129 criterios profesionales</li>
-                <li>✓ Roadmap 30/60/90 días</li>
-                <li>✓ Copiloto digital guiando el proceso</li>
+                <li>✓ 40 criterios en 7 dimensiones</li>
+                <li>✓ Roadmap priorizado y ejecutable</li>
+                <li>✓ Plan de acción paso a paso</li>
               </ul>
             </div>
           </div>
