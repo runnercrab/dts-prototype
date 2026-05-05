@@ -1,29 +1,12 @@
 //src/app/api/dts/results/v1/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveCoverageV1 } from "@/lib/dts/snapshotResolver";
 
 function isUuid(v: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     v
   );
-}
-
-function normalizePayload(data: any) {
-  // Some DB tools / queries wrap results as: [{ results_v1: {...} }]
-  // Or: [{...}] or: { results_v1: {...} } or: {...}
-  const payload = Array.isArray(data)
-    ? (data[0]?.results_v1 ?? data[0] ?? null)
-    : (data?.results_v1 ?? data ?? null);
-
-  if (!payload) return null;
-
-  // Minimal shape validation (avoid returning nonsense)
-  const hasTotals =
-    typeof payload?.totals === "object" && payload?.totals !== null;
-  const hasByDim = Array.isArray(payload?.by_dimension);
-  if (!hasTotals || !hasByDim) return null;
-
-  return payload;
 }
 
 /**
@@ -198,70 +181,94 @@ export async function GET(req: Request) {
       );
     }
 
-    // 3) Call RPC
-    const { data, error } = await supabase.rpc("dts_results_v1", {
-      p_assessment_id: assessmentId,
-    });
-
-    if (error) {
-      console.error("[results/v1] RPC error", {
+    // 3) Resolver cobertura (snapshot if cacheable + state allows; live otherwise)
+    //    Nota: variable se llama resolvedCoverage para evitar colisión con
+    //    `resolved` ya usada en resolveCriteriaTotalInPack helper local.
+    let resolvedCoverage;
+    try {
+      resolvedCoverage = await resolveCoverageV1(supabase, assessmentId);
+    } catch (err: any) {
+      console.error("[results/v1] resolver error", {
         requestId,
         assessmentId,
         packCode,
-        message: error.message,
+        message: err?.message,
       });
       return NextResponse.json(
-        { ok: false, requestId, error: error.message },
+        { ok: false, requestId, error: err?.message ?? "Resolver error" },
         { status: 500 }
       );
     }
+    const payload = resolvedCoverage.data; // CoverageV1, ya validada por shape del helper
 
-    const payload = normalizePayload(data);
-
-    if (!payload) {
-      console.error("[results/v1] No/invalid payload", {
-        requestId,
-        assessmentId,
-        packCode,
-        data,
-      });
-      return NextResponse.json(
-        {
-          ok: false,
-          requestId,
-          error: "No data (or invalid payload) for assessmentId",
-        },
-        { status: 404 }
-      );
-    }
-
-    // 4) Pack-aware guard: prevent 12/129 mismatch
+    // 4) Pack-aware guard: dual-mode (R-PR2-2)
+    //    - fromSnapshot=false (live): 409 hard como antes (PACK_OUT_OF_SYNC)
+    //    - fromSnapshot=true (snapshot): WARN diagnóstico + servir snapshot
     const rpcTotal = Number(payload?.totals?.total_criteria ?? NaN);
+    const totalsMismatch =
+      !Number.isFinite(rpcTotal) || rpcTotal !== criteriaTotalInPack;
 
-    if (!Number.isFinite(rpcTotal) || rpcTotal !== criteriaTotalInPack) {
-      console.error("[results/v1] PACK_OUT_OF_SYNC", {
-        requestId,
-        assessmentId,
-        packCode,
-        criteriaTotalInPack,
-        rpcTotal,
-      });
-      return NextResponse.json(
-        {
-          ok: false,
+    if (totalsMismatch) {
+      if (!resolvedCoverage.fromSnapshot) {
+        // LIVE MODE: comportamiento existente preservado (409)
+        console.error("[results/v1] PACK_OUT_OF_SYNC", {
           requestId,
-          error: "PACK_OUT_OF_SYNC",
-          pack: packCode,
+          assessmentId,
+          packCode,
           criteriaTotalInPack,
           rpcTotal,
-          hint:
-            "El RPC dts_results_v1 está devolviendo un total distinto al mapping del pack en dts_pack_criteria.",
-        },
-        { status: 409 }
-      );
+          fromSnapshot: false,
+          snapshotState: resolvedCoverage.state,
+        });
+        return NextResponse.json(
+          {
+            ok: false,
+            requestId,
+            error: "PACK_OUT_OF_SYNC",
+            pack: packCode,
+            criteriaTotalInPack,
+            rpcTotal,
+            hint:
+              "El RPC dts_results_v1 está devolviendo un total distinto al mapping del pack en dts_pack_criteria.",
+          },
+          { status: 409 }
+        );
+      } else {
+        // SNAPSHOT MODE: WARN + servir snapshot (no 409).
+        // Razón: el snapshot es histórico inmutable; si el pack live cambió tras
+        // el complete, el CEO debe seguir viendo su diagnóstico congelado.
+        console.warn("[results/v1] PACK_TOTALS_DRIFT_SNAPSHOT_MODE", {
+          requestId,
+          assessmentId,
+          packCode,
+          snapshotTotal: rpcTotal,
+          livePackTotal: criteriaTotalInPack,
+          snapshotState: resolvedCoverage.state,
+          snapshotId:
+            "snapshotId" in resolvedCoverage ? resolvedCoverage.snapshotId : null,
+          modelFingerprintMatch:
+            "modelFingerprintMatch" in resolvedCoverage
+              ? resolvedCoverage.modelFingerprintMatch
+              : null,
+          note:
+            "Snapshot conservado como histórico. Drift de pack live vs snapshot detectado, no se corta render.",
+        });
+        // continuar sin abortar
+      }
     }
 
-    const res = NextResponse.json(payload, { status: 200 });
+    // 5) Response success — flags al root del payload (R-PR2-1, aditivo)
+    const responseBody = {
+      ...payload,
+      fromSnapshot: resolvedCoverage.fromSnapshot,
+      snapshotId:
+        "snapshotId" in resolvedCoverage ? resolvedCoverage.snapshotId : null,
+      snapshotState: resolvedCoverage.state,
+      metadataLive: resolvedCoverage.metadataLive,
+    };
+    const res = NextResponse.json(responseBody, { status: 200 });
+    res.headers.set("X-From-Snapshot", String(resolvedCoverage.fromSnapshot));
+    res.headers.set("X-Snapshot-State", resolvedCoverage.state);
     res.headers.set("Cache-Control", "no-store");
     return res;
   } catch (e: any) {

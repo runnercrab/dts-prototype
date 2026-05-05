@@ -132,9 +132,22 @@ export type ResolvedCoverageE1 =
       state: "D_drift";
       fromSnapshot: false;
       snapshotInputs: false;
+      modelFingerprintMatch: null;
       inputFingerprintMatch: false;
       metadataLive: false;
       reason: "input_fingerprint_mismatch";
+      data: CoverageV1;
+    }
+  | {
+      // Defensive fallback: status not in ["completed", "draft"] or other unexpected combo.
+      // Coverage en fallback NO usa joins live a dts_dimensions/subdimensions
+      // (sirve directamente lo que devuelva dts_results_v1 live).
+      state: "unexpected_fallback";
+      fromSnapshot: false;
+      snapshotInputs: false;
+      modelFingerprintMatch: null;
+      metadataLive: false;
+      reason: "unexpected_fallback";
       data: CoverageV1;
     };
 
@@ -194,6 +207,18 @@ export type ResolvedFrozenInputs<TInputs> =
       metadataLive: true;
       reason: "input_fingerprint_mismatch" | "model_fingerprint_mismatch";
       inputs: TInputs;
+    }
+  | {
+      // Defensive fallback: status not in ["completed", "draft"] or other unexpected combo.
+      // FrozenInputs en fallback usa metadataLive:true para consistencia: el caller
+      // (frenos/priorización) SIEMPRE joinea con dts_criteria live para labels/effort.
+      state: "unexpected_fallback";
+      fromSnapshot: false;
+      snapshotInputs: false;
+      modelFingerprintMatch: null;
+      metadataLive: true;
+      reason: "unexpected_fallback";
+      inputs: TInputs;
     };
 
 // ─── Variante uncacheable params (programs_v2) ─────────────────────────
@@ -239,7 +264,8 @@ export type CoverageV1 = {
     completion_rate: number;
   };
   by_dimension: Array<{
-    dimension_id: string | null;
+    // PR-2: non-null garantizado por el adapter (fallback dimension_code si lookup live falla)
+    dimension_id: string;
     dimension_code: string;
     dimension_name: string;
     total_criteria: number;
@@ -247,7 +273,8 @@ export type CoverageV1 = {
   }>;
   by_subdimension: Array<{
     dimension_code: string;
-    subdimension_id: string | null;
+    // PR-2: non-null (fallback subdimension_code)
+    subdimension_id: string;
     subdimension_code: string;
     subdimension_name: string;
     total_criteria: number;
@@ -328,6 +355,12 @@ function logResolver(
   else console.log(line);
 }
 
+// normalizeCode: trim() only, consistente con /frenos y /priorizacion.
+// Privado al helper para evitar acoplamiento con consumers.
+function normalizeCode(code: string): string {
+  return code.trim();
+}
+
 async function computeModelFingerprint(
   sb: SupabaseClient,
   pack: string
@@ -405,6 +438,264 @@ async function callDtsResultsProgramsV2(
     );
   }
   return Array.isArray(data) ? data : [];
+}
+
+// callDtsResultsV1Coverage: live RPC dts_results_v1 (cobertura) → CoverageV1.
+// PR-2: usado por resolveCoverageV1 en estados B/C/D_drift/unexpected_fallback.
+// Coerce shape con fallbacks string para garantizar non-null en dimension_id/subdimension_id.
+async function callDtsResultsV1Coverage(
+  sb: SupabaseClient,
+  assessmentId: string
+): Promise<CoverageV1> {
+  const { data, error } = await sb.rpc("dts_results_v1", {
+    p_assessment_id: assessmentId,
+  });
+  if (error) {
+    throw new Error(
+      `[snapshotResolver] dts_results_v1 failed for ${assessmentId}: ${error.message}`
+    );
+  }
+  // Shape extraction (handles wrapped/unwrapped formats que ya manejaban /frenos y /priorización)
+  const payload = Array.isArray(data)
+    ? ((data[0] as any)?.results_v1 ?? (data[0] as any) ?? null)
+    : ((data as any)?.results_v1 ?? (data as any) ?? null);
+  if (!payload || typeof payload !== "object") {
+    throw new Error(
+      `[snapshotResolver] dts_results_v1 returned no/invalid payload for ${assessmentId}`
+    );
+  }
+  const hasTotals = typeof payload.totals === "object" && payload.totals !== null;
+  const hasByDim = Array.isArray(payload.by_dimension);
+  if (!hasTotals || !hasByDim) {
+    throw new Error(
+      `[snapshotResolver] dts_results_v1 payload shape invalid for ${assessmentId}`
+    );
+  }
+  const byDim = (payload.by_dimension as any[]).map((d: any) => ({
+    dimension_id: String(d?.dimension_id ?? d?.dimension_code ?? ""),
+    dimension_code: String(d?.dimension_code ?? ""),
+    dimension_name: String(d?.dimension_name ?? d?.dimension_code ?? ""),
+    total_criteria: Number(d?.total_criteria) || 0,
+    answered_criteria: Number(d?.answered_criteria) || 0,
+  }));
+  const bySubArr = Array.isArray(payload.by_subdimension) ? payload.by_subdimension : [];
+  const bySub = bySubArr.map((s: any) => ({
+    dimension_code: String(s?.dimension_code ?? ""),
+    subdimension_id: String(s?.subdimension_id ?? s?.subdimension_code ?? ""),
+    subdimension_code: String(s?.subdimension_code ?? ""),
+    subdimension_name: String(s?.subdimension_name ?? s?.subdimension_code ?? ""),
+    total_criteria: Number(s?.total_criteria) || 0,
+    answered_criteria: Number(s?.answered_criteria) || 0,
+  }));
+  return {
+    assessment_id: String(payload.assessment_id ?? assessmentId),
+    pack: String(payload.pack ?? ""),
+    assessment_type: String(payload.assessment_type ?? "full"),
+    totals: {
+      total_criteria: Number(payload.totals?.total_criteria) || 0,
+      answered_criteria: Number(payload.totals?.answered_criteria) || 0,
+      completion_rate: Number(payload.totals?.completion_rate) || 0,
+    },
+    by_dimension: byDim,
+    by_subdimension: bySub,
+  };
+}
+
+// callDtsResponsesLive: live query a dts_responses (todos los campos relevantes
+// de ResponsesArray). PR-2: usado por resolveFrozenInputs en estados live.
+async function callDtsResponsesLive(
+  sb: SupabaseClient,
+  assessmentId: string
+): Promise<ResponsesArray> {
+  const { data, error } = await sb
+    .from("dts_responses")
+    .select(
+      "id, assessment_id, criteria_code, criteria_id, dimension_code, subdimension_code, " +
+        "as_is_level, as_is_notes, as_is_confidence, to_be_level, to_be_timeframe, " +
+        "importance, response_source, reviewed_by_user, inference_confidence, " +
+        "created_at, updated_at"
+    )
+    .eq("assessment_id", assessmentId);
+  if (error) {
+    throw new Error(
+      `[snapshotResolver] dts_responses query failed for ${assessmentId}: ${error.message}`
+    );
+  }
+  // Cast vía unknown: Supabase JS infiere tipos parciales para queries largas
+  // y produce GenericStringError[] union que no encaja directamente con ResponsesArray.
+  return ((data ?? []) as unknown) as ResponsesArray;
+}
+
+// buildCoverageFromSnapshot: reconstruye CoverageV1 desde snapshot.
+//  - totals desde scores.by_dimension (frozen counts)
+//  - by_dimension: snapshot.dimension_name_es (frozen) + lookup live dts_dimensions.id
+//  - by_subdimension: GROUP BY responses_payload FILTRADO por allowedCriteriaCodes
+//                     (de scores.by_criteria) + lookup live dts_subdimensions.{id, name}
+//  - Fallbacks string non-null si lookup falla (usar code como fallback)
+//  - Returns metadataPartial=true si algún lookup retornó menos rows que esperado.
+async function buildCoverageFromSnapshot(
+  sb: SupabaseClient,
+  snapshot: SnapshotRow,
+  assessmentId: string,
+  pack: string,
+  assessmentType: string
+): Promise<{ coverage: CoverageV1; metadataPartial: boolean }> {
+  const resultsPayload = snapshot.results_payload as Record<string, any>;
+  const scores = (resultsPayload?.scores ?? {}) as Record<string, any>;
+  const byCriteria: any[] = Array.isArray(scores.by_criteria) ? scores.by_criteria : [];
+  const byDimSnap: any[] = Array.isArray(scores.by_dimension) ? scores.by_dimension : [];
+
+  if (byCriteria.length === 0 || byDimSnap.length === 0) {
+    throw new Error(
+      `[snapshotResolver] buildCoverageFromSnapshot: snapshot incomplete for ${assessmentId} (by_criteria=${byCriteria.length}, by_dimension=${byDimSnap.length})`
+    );
+  }
+
+  // 1) allowedCriteriaCodes (autoritative pack scope from snapshot, normalized)
+  const allowedCriteriaCodes = new Set<string>(
+    byCriteria
+      .map((c: any) => c?.criteria_code)
+      .filter((code: any): code is string => typeof code === "string" && code.length > 0)
+      .map((code: string) => normalizeCode(code))
+  );
+
+  // 2) Totals derived from scores.by_dimension SUM
+  const totalCriteria = byDimSnap.reduce(
+    (s: number, d: any) => s + (Number(d?.criteria_total) || 0),
+    0
+  );
+  const answeredCriteria = byDimSnap.reduce(
+    (s: number, d: any) => s + (Number(d?.criteria_answered) || 0),
+    0
+  );
+  const completionRate = totalCriteria > 0 ? answeredCriteria / totalCriteria : 0;
+
+  // 3) Lookup live dts_dimensions (only for dimension_id)
+  const dimCodes = byDimSnap
+    .map((d: any) => d?.dimension_code)
+    .filter((c: any): c is string => typeof c === "string" && c.length > 0);
+  let dimMetadataMissing = false;
+  const dimIdByCode = new Map<string, string>();
+  if (dimCodes.length > 0) {
+    const { data: dimRows, error: dimErr } = await sb
+      .from("dts_dimensions")
+      .select("id, code")
+      .in("code", dimCodes);
+    if (dimErr) {
+      dimMetadataMissing = true;
+    } else {
+      for (const row of (dimRows ?? [])) {
+        if (row?.code && row?.id) dimIdByCode.set(row.code, row.id);
+      }
+      if (!Array.isArray(dimRows) || dimRows.length < dimCodes.length) {
+        dimMetadataMissing = true;
+      }
+    }
+  }
+
+  // 4) Build by_dimension (frozen names + live id with code fallback)
+  const by_dimension = byDimSnap.map((d: any) => {
+    const code = String(d?.dimension_code ?? "");
+    return {
+      dimension_id: dimIdByCode.get(code) ?? code,
+      dimension_code: code,
+      dimension_name: String(d?.dimension_name_es ?? code),
+      total_criteria: Number(d?.criteria_total) || 0,
+      answered_criteria: Number(d?.criteria_answered) || 0,
+    };
+  });
+
+  // 5) Reconstruct by_subdimension from filtered responses_payload
+  const responsesArr: any[] = Array.isArray(snapshot.responses_payload)
+    ? snapshot.responses_payload
+    : [];
+  const filteredResponses = responsesArr.filter(
+    (r: any) =>
+      r?.criteria_code && allowedCriteriaCodes.has(normalizeCode(String(r.criteria_code)))
+  );
+
+  type SubdimAgg = {
+    dimension_code: string;
+    subdimension_code: string;
+    criteria: Set<string>;
+    answered: Set<string>;
+  };
+  const subdimAgg = new Map<string, SubdimAgg>();
+  for (const r of filteredResponses) {
+    const subKey = String(r?.subdimension_code ?? "").trim();
+    if (!subKey) continue;
+    const code = normalizeCode(String(r?.criteria_code ?? ""));
+    if (!code) continue;
+    let agg = subdimAgg.get(subKey);
+    if (!agg) {
+      agg = {
+        dimension_code: String(r?.dimension_code ?? ""),
+        subdimension_code: subKey,
+        criteria: new Set<string>(),
+        answered: new Set<string>(),
+      };
+      subdimAgg.set(subKey, agg);
+    }
+    agg.criteria.add(code);
+    if (r?.as_is_level != null) agg.answered.add(code);
+  }
+
+  // 6) Lookup live dts_subdimensions (id + name; preflight confirmó name has 0 nulls)
+  const subCodes = Array.from(subdimAgg.keys());
+  let subMetadataMissing = false;
+  const subInfoByCode = new Map<string, { id: string; name: string }>();
+  if (subCodes.length > 0) {
+    const { data: subRows, error: subErr } = await sb
+      .from("dts_subdimensions")
+      .select("id, code, name")
+      .in("code", subCodes);
+    if (subErr) {
+      subMetadataMissing = true;
+    } else {
+      for (const row of (subRows ?? [])) {
+        if (row?.code && row?.id) {
+          subInfoByCode.set(row.code, {
+            id: row.id,
+            name:
+              typeof row.name === "string" && row.name.length > 0
+                ? row.name
+                : row.code,
+          });
+        }
+      }
+      if (!Array.isArray(subRows) || subRows.length < subCodes.length) {
+        subMetadataMissing = true;
+      }
+    }
+  }
+
+  // 7) Build by_subdimension with non-null string fallbacks
+  const by_subdimension = Array.from(subdimAgg.values()).map((agg) => {
+    const liveInfo = subInfoByCode.get(agg.subdimension_code);
+    return {
+      dimension_code: agg.dimension_code,
+      subdimension_id: liveInfo?.id ?? agg.subdimension_code,
+      subdimension_code: agg.subdimension_code,
+      subdimension_name: liveInfo?.name ?? agg.subdimension_code,
+      total_criteria: agg.criteria.size,
+      answered_criteria: agg.answered.size,
+    };
+  });
+
+  const coverage: CoverageV1 = {
+    assessment_id: assessmentId,
+    pack,
+    assessment_type: assessmentType,
+    totals: {
+      total_criteria: totalCriteria,
+      answered_criteria: answeredCriteria,
+      completion_rate: completionRate,
+    },
+    by_dimension,
+    by_subdimension,
+  };
+
+  return { coverage, metadataPartial: dimMetadataMissing || subMetadataMissing };
 }
 
 // ─── Public API: resolveResultsPayload (PR-1) ─────────────────────────
@@ -794,19 +1085,401 @@ export async function resolveProgramsPayload(
 // ─── Public API: stubs para PR-2 (exportadas, no llamadas en PR-1) ────
 
 export async function resolveCoverageV1(
-  _sb: SupabaseClient,
-  _assessmentId: string
+  sb: SupabaseClient,
+  assessmentId: string
 ): Promise<ResolvedCoverageE1> {
-  throw new Error(
-    "[snapshotResolver] resolveCoverageV1 not implemented in PR-1; scheduled for PR-2"
-  );
+  const { assessment, snapshot } = await loadAssessmentAndSnapshot(sb, assessmentId);
+  const status = assessment.status;
+  const pack = assessment.pack;
+  const assessmentType = (assessment.assessment_type ?? "full")
+    .toString()
+    .toLowerCase()
+    .trim();
+  const baseLog = { kind: "coverage", assessment: assessmentId };
+
+  // Estado A / A_metadata_partial
+  if (status === "completed" && snapshot) {
+    const liveModelFp = await computeModelFingerprint(sb, pack);
+    const modelFingerprintMatch = liveModelFp === snapshot.model_fingerprint;
+    const { coverage, metadataPartial } = await buildCoverageFromSnapshot(
+      sb,
+      snapshot,
+      assessmentId,
+      pack,
+      assessmentType
+    );
+    if (metadataPartial) {
+      logResolver("warn", {
+        ...baseLog,
+        state: "A_metadata_partial",
+        fromSnapshot: true,
+        snapshotInputs: true,
+        modelFingerprintMatch,
+        metadataLive: true,
+        snapshotId: snapshot.id,
+        reason: "metadata_lookup_failed",
+      });
+      return {
+        state: "A_metadata_partial",
+        fromSnapshot: true,
+        snapshotInputs: true,
+        modelFingerprintMatch,
+        metadataLive: true,
+        snapshotId: snapshot.id,
+        reason: "metadata_lookup_failed",
+        data: coverage,
+      };
+    }
+    logResolver("info", {
+      ...baseLog,
+      state: "A",
+      fromSnapshot: true,
+      snapshotInputs: true,
+      modelFingerprintMatch,
+      metadataLive: true,
+      snapshotId: snapshot.id,
+    });
+    return {
+      state: "A",
+      fromSnapshot: true,
+      snapshotInputs: true,
+      modelFingerprintMatch,
+      metadataLive: true,
+      snapshotId: snapshot.id,
+      data: coverage,
+    };
+  }
+
+  // Estado B (completed, sin snapshot)
+  if (status === "completed" && !snapshot) {
+    const data = await callDtsResultsV1Coverage(sb, assessmentId);
+    logResolver("warn", {
+      ...baseLog,
+      state: "B",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      metadataLive: false,
+      reason: "completed_without_snapshot",
+    });
+    return {
+      state: "B",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      metadataLive: false,
+      reason: "completed_without_snapshot",
+      data,
+    };
+  }
+
+  // Estado C (draft, sin snapshot)
+  if (status === "draft" && !snapshot) {
+    const data = await callDtsResultsV1Coverage(sb, assessmentId);
+    logResolver("info", {
+      ...baseLog,
+      state: "C",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      metadataLive: false,
+    });
+    return {
+      state: "C",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      metadataLive: false,
+      data,
+    };
+  }
+
+  // Estado D / D_drift (draft + snapshot)
+  if (status === "draft" && snapshot) {
+    const liveInputFp = await computeInputFingerprint(sb, assessmentId);
+    const inputFingerprintMatch = liveInputFp === snapshot.input_fingerprint;
+    if (inputFingerprintMatch) {
+      const liveModelFp = await computeModelFingerprint(sb, pack);
+      const modelFingerprintMatch = liveModelFp === snapshot.model_fingerprint;
+      const { coverage } = await buildCoverageFromSnapshot(
+        sb,
+        snapshot,
+        assessmentId,
+        pack,
+        assessmentType
+      );
+      logResolver("info", {
+        ...baseLog,
+        state: "D",
+        fromSnapshot: true,
+        snapshotInputs: true,
+        modelFingerprintMatch,
+        metadataLive: true,
+        snapshotId: snapshot.id,
+      });
+      return {
+        state: "D",
+        fromSnapshot: true,
+        snapshotInputs: true,
+        modelFingerprintMatch,
+        inputFingerprintMatch: true,
+        metadataLive: true,
+        snapshotId: snapshot.id,
+        data: coverage,
+      };
+    }
+    // D_drift
+    const data = await callDtsResultsV1Coverage(sb, assessmentId);
+    logResolver("warn", {
+      ...baseLog,
+      state: "D_drift",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      inputFingerprintMatch: false,
+      metadataLive: false,
+      reason: "input_fingerprint_mismatch",
+    });
+    return {
+      state: "D_drift",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      inputFingerprintMatch: false,
+      metadataLive: false,
+      reason: "input_fingerprint_mismatch",
+      data,
+    };
+  }
+
+  // Unexpected fallback (status not in ["completed", "draft"])
+  const fallbackData = await callDtsResultsV1Coverage(sb, assessmentId);
+  logResolver("warn", {
+    ...baseLog,
+    state: "unexpected_fallback",
+    fromSnapshot: false,
+    snapshotInputs: false,
+    modelFingerprintMatch: null,
+    metadataLive: false,
+    reason: "unexpected_fallback",
+    status,
+    hasSnapshot: Boolean(snapshot),
+  });
+  return {
+    state: "unexpected_fallback",
+    fromSnapshot: false,
+    snapshotInputs: false,
+    modelFingerprintMatch: null,
+    metadataLive: false,
+    reason: "unexpected_fallback",
+    data: fallbackData,
+  };
 }
 
 export async function resolveFrozenInputs(
-  _sb: SupabaseClient,
-  _assessmentId: string
+  sb: SupabaseClient,
+  assessmentId: string
 ): Promise<ResolvedFrozenInputs<ResponsesArray>> {
-  throw new Error(
-    "[snapshotResolver] resolveFrozenInputs not implemented in PR-1; scheduled for PR-2"
-  );
+  const { assessment, snapshot } = await loadAssessmentAndSnapshot(sb, assessmentId);
+  const status = assessment.status;
+  const pack = assessment.pack;
+  const baseLog = { kind: "inputs", assessment: assessmentId };
+
+  // Helper local: extraer responses_payload del snapshot como ResponsesArray.
+  // El caller (frenos/priorización) filtra por packCodes live.
+  const extractSnapshotInputs = (): ResponsesArray => {
+    const arr = Array.isArray(snapshot?.responses_payload)
+      ? snapshot!.responses_payload
+      : [];
+    return arr as ResponsesArray;
+  };
+
+  // Estado A_guarded / A_drift (status === "completed" && snapshot)
+  if (status === "completed" && snapshot) {
+    const liveModelFp = await computeModelFingerprint(sb, pack);
+    if (liveModelFp === snapshot.model_fingerprint) {
+      const inputs = extractSnapshotInputs();
+      logResolver("info", {
+        ...baseLog,
+        state: "A_guarded",
+        fromSnapshot: true,
+        snapshotInputs: true,
+        modelFingerprintMatch: true,
+        metadataLive: true,
+        snapshotId: snapshot.id,
+      });
+      return {
+        state: "A_guarded",
+        fromSnapshot: true,
+        snapshotInputs: true,
+        modelFingerprintMatch: true,
+        metadataLive: true,
+        snapshotId: snapshot.id,
+        inputs,
+      };
+    }
+    // A_drift
+    const inputs = await callDtsResponsesLive(sb, assessmentId);
+    logResolver("warn", {
+      ...baseLog,
+      state: "A_drift",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: false,
+      metadataLive: true,
+      reason: "model_fingerprint_mismatch",
+    });
+    return {
+      state: "A_drift",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: false,
+      metadataLive: true,
+      reason: "model_fingerprint_mismatch",
+      inputs,
+    };
+  }
+
+  // Estado B (completed sin snapshot)
+  if (status === "completed" && !snapshot) {
+    const inputs = await callDtsResponsesLive(sb, assessmentId);
+    logResolver("warn", {
+      ...baseLog,
+      state: "B",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      metadataLive: true,
+      reason: "completed_without_snapshot",
+    });
+    return {
+      state: "B",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      metadataLive: true,
+      reason: "completed_without_snapshot",
+      inputs,
+    };
+  }
+
+  // Estado C (draft sin snapshot)
+  if (status === "draft" && !snapshot) {
+    const inputs = await callDtsResponsesLive(sb, assessmentId);
+    logResolver("info", {
+      ...baseLog,
+      state: "C",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      metadataLive: true,
+    });
+    return {
+      state: "C",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      metadataLive: true,
+      inputs,
+    };
+  }
+
+  // Estado D_guarded / D_drift (draft + snapshot)
+  if (status === "draft" && snapshot) {
+    const liveInputFp = await computeInputFingerprint(sb, assessmentId);
+    const inputFingerprintMatch = liveInputFp === snapshot.input_fingerprint;
+    if (inputFingerprintMatch) {
+      const liveModelFp = await computeModelFingerprint(sb, pack);
+      const modelFingerprintMatch = liveModelFp === snapshot.model_fingerprint;
+      if (modelFingerprintMatch) {
+        const inputs = extractSnapshotInputs();
+        logResolver("info", {
+          ...baseLog,
+          state: "D_guarded",
+          fromSnapshot: true,
+          snapshotInputs: true,
+          modelFingerprintMatch: true,
+          metadataLive: true,
+          snapshotId: snapshot.id,
+        });
+        return {
+          state: "D_guarded",
+          fromSnapshot: true,
+          snapshotInputs: true,
+          modelFingerprintMatch: true,
+          inputFingerprintMatch: true,
+          metadataLive: true,
+          snapshotId: snapshot.id,
+          inputs,
+        };
+      }
+      // input match pero model_fingerprint mismatch → D_drift
+      const inputs = await callDtsResponsesLive(sb, assessmentId);
+      logResolver("warn", {
+        ...baseLog,
+        state: "D_drift",
+        fromSnapshot: false,
+        snapshotInputs: false,
+        modelFingerprintMatch: false,
+        inputFingerprintMatch: true,
+        metadataLive: true,
+        reason: "model_fingerprint_mismatch",
+      });
+      return {
+        state: "D_drift",
+        fromSnapshot: false,
+        snapshotInputs: false,
+        modelFingerprintMatch: false,
+        inputFingerprintMatch: true,
+        metadataLive: true,
+        reason: "model_fingerprint_mismatch",
+        inputs,
+      };
+    }
+    // input_fingerprint mismatch → D_drift
+    const inputs = await callDtsResponsesLive(sb, assessmentId);
+    logResolver("warn", {
+      ...baseLog,
+      state: "D_drift",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      inputFingerprintMatch: false,
+      metadataLive: true,
+      reason: "input_fingerprint_mismatch",
+    });
+    return {
+      state: "D_drift",
+      fromSnapshot: false,
+      snapshotInputs: false,
+      modelFingerprintMatch: null,
+      inputFingerprintMatch: false,
+      metadataLive: true,
+      reason: "input_fingerprint_mismatch",
+      inputs,
+    };
+  }
+
+  // Unexpected fallback
+  const inputs = await callDtsResponsesLive(sb, assessmentId);
+  logResolver("warn", {
+    ...baseLog,
+    state: "unexpected_fallback",
+    fromSnapshot: false,
+    snapshotInputs: false,
+    modelFingerprintMatch: null,
+    metadataLive: true,
+    reason: "unexpected_fallback",
+    status,
+    hasSnapshot: Boolean(snapshot),
+  });
+  return {
+    state: "unexpected_fallback",
+    fromSnapshot: false,
+    snapshotInputs: false,
+    modelFingerprintMatch: null,
+    metadataLive: true,
+    reason: "unexpected_fallback",
+    inputs,
+  };
 }

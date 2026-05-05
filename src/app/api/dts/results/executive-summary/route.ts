@@ -233,10 +233,12 @@ export async function GET(req: Request) {
 
     const supabase = createClient(url, serviceKey, { auth: { persistSession: false } });
 
-    // 0) assessment (pack + estado UX)
+    // 0) assessment (pack + estado UX + assessment_type)
+    //    PR-2 (R-PR2-4): incluir assessment_type en el select para no derivarlo
+    //    desde coverage. dts_results_v1 se mantiene porque coverage va en el response body.
     const { data: assessmentRow, error: asErr } = await supabase
       .from("dts_assessments")
-      .select("id, pack, status, current_phase")
+      .select("id, pack, status, current_phase, assessment_type")
       .eq("id", assessmentId)
       .single();
 
@@ -255,7 +257,14 @@ export async function GET(req: Request) {
       );
     }
 
-    // 1) coverage (RPC) = tu results/v1 “puro”
+    // 1) coverage (RPC) — necesaria para el response body
+    //
+    // PR-2 note:
+    // dts_results_v1 is intentionally kept here because the response includes
+    // the full `coverage` object. The RPC is not redundant for this endpoint.
+    // Only assessment_type is read from dts_assessments to avoid deriving it
+    // from coverage. A future PR could migrate this endpoint to resolveCoverageV1
+    // if we decide to snapshot-serve executive-summary too.
     const { data: rpcData, error: rpcErr } = await supabase.rpc("dts_results_v1", {
       p_assessment_id: assessmentId,
     });
@@ -275,9 +284,15 @@ export async function GET(req: Request) {
       );
     }
 
-    // preferimos assessment_type del RPC si existe
-    const assessmentType = String(coverage.assessment_type || "full").toLowerCase().trim();
-    const isPyme = assessmentType === "sme" || assessmentType === "pyme" || assessmentType === "mvp";
+    // PR-2 (R-PR2-4): assessment_type viene de dts_assessments (no de coverage),
+    //   por consistencia con frenos/priorizacion. coverage queda en el response shape.
+    const assessmentType = String((assessmentRow as any).assessment_type || "full")
+      .toLowerCase()
+      .trim();
+    const isPyme =
+      assessmentType === "sme" ||
+      assessmentType === "pyme" ||
+      assessmentType === "mvp";
 
     // 2) pack criteria ids (robusto)
     const resolved = await resolvePackCriteriaIds(supabase, packCode);

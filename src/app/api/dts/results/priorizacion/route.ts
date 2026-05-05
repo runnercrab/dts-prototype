@@ -1,6 +1,7 @@
 // src/app/api/dts/results/priorizacion/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveFrozenInputs } from "@/lib/dts/snapshotResolver";
 
 function isUuid(v: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -107,25 +108,27 @@ export async function GET(req: Request) {
       auth: { persistSession: false },
     });
 
-    // 1) validar assessment + pack (RPC estable)
-    const { data, error } = await supabase.rpc("dts_results_v1", {
-      p_assessment_id: assessmentId,
-    });
-    if (error)
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    // 1) Validar assessment + leer pack directo (R-PR2-3)
+    //    Eliminada llamada redundante a dts_results_v1 (solo necesitábamos pack).
+    const { data: assessmentRow, error: aErr } = await supabase
+      .from("dts_assessments")
+      .select("pack")
+      .eq("id", assessmentId)
+      .maybeSingle();
 
-    const payload = extractResultsPayload(data) as ResultsPayload | null;
-    if (!payload) {
+    if (aErr) {
+      return NextResponse.json({ error: aErr.message }, { status: 500 });
+    }
+    if (!assessmentRow) {
       return NextResponse.json(
-        { error: "No data for assessmentId" },
+        { error: "Assessment not found" },
         { status: 404 }
       );
     }
-
-    const pack = (payload.pack || "").toString().trim();
+    const pack = (assessmentRow.pack || "").toString().trim();
     if (!pack) {
       return NextResponse.json(
-        { error: "Missing pack in dts_results_v1 payload" },
+        { error: "Missing pack on assessment" },
         { status: 500 }
       );
     }
@@ -192,22 +195,58 @@ export async function GET(req: Request) {
       return res;
     }
 
-    // 4) respuestas del assessment (del pack)
-    const { data: respRows, error: respErr } = await supabase
-      .from("dts_responses")
-      .select("criteria_code, as_is_level, to_be_level, importance")
-      .eq("assessment_id", assessmentId)
-      .in("criteria_code", packCodes);
+    // 4) Inputs algorítmicos via resolveFrozenInputs (R-PR2-6)
+    //    A_guarded/D_guarded → responses_payload del snapshot (filtrado por packCodes)
+    //    Otros estados → live dts_responses
+    let resolvedInputs;
+    try {
+      resolvedInputs = await resolveFrozenInputs(supabase, assessmentId);
+    } catch (err: any) {
+      console.error("[api priorizacion] resolver error:", err);
+      return NextResponse.json(
+        { error: "Resolver error", details: err?.message ?? null },
+        { status: 500 }
+      );
+    }
 
-    if (respErr)
-      return NextResponse.json({ error: respErr.message }, { status: 500 });
+    let responses: ResponseRow[];
+    if (
+      resolvedInputs.state === "A_guarded" ||
+      resolvedInputs.state === "D_guarded"
+    ) {
+      // Snapshot inputs: filtrar por packCodes live (cubierto por model_fingerprint canario)
+      const packCodesSet = new Set(packCodes.map(normalizeCode));
+      responses = resolvedInputs.inputs
+        .filter((r: any) => {
+          const code = r?.criteria_code
+            ? normalizeCode(String(r.criteria_code))
+            : "";
+          return code && packCodesSet.has(code);
+        })
+        .map((r: any) => ({
+          criteria_code: r.criteria_code ?? null,
+          as_is_level: r.as_is_level ?? null,
+          to_be_level: r.to_be_level ?? null,
+          importance: r.importance ?? null,
+        }));
+    } else {
+      // Live: A_drift, B, C, D_drift, unexpected_fallback
+      const { data: respRows, error: respErr } = await supabase
+        .from("dts_responses")
+        .select("criteria_code, as_is_level, to_be_level, importance")
+        .eq("assessment_id", assessmentId)
+        .in("criteria_code", packCodes);
 
-    const responses: ResponseRow[] = (respRows || []).map((r: any) => ({
-      criteria_code: r.criteria_code ?? null,
-      as_is_level: r.as_is_level ?? null,
-      to_be_level: r.to_be_level ?? null,
-      importance: r.importance ?? null,
-    }));
+      if (respErr)
+        return NextResponse.json({ error: respErr.message }, { status: 500 });
+
+      responses = (respRows || []).map((r: any) => ({
+        criteria_code: r.criteria_code ?? null,
+        as_is_level: r.as_is_level ?? null,
+        to_be_level: r.to_be_level ?? null,
+        importance: r.importance ?? null,
+      }));
+    }
 
     // 5) ranking por gap*importance (solo gap>0)
     const ranked = scoreByWeightedGap(packCodes, responses);
@@ -247,10 +286,20 @@ export async function GET(req: Request) {
         disclaimer: usingFallback
           ? "MVP: no hay datos suficientes para priorizar por tus respuestas (faltan AS-IS/TO-BE/Importancia o gap<=0). Mostramos criterios del pack sin ranking por criticidad."
           : "MVP: priorización basada en tus respuestas (gap × importancia). No son acciones: son áreas donde concentrar la atención.",
+        // Flags PR-2 (snapshotResolver)
+        fromSnapshot: resolvedInputs.fromSnapshot,
+        snapshotId:
+          "snapshotId" in resolvedInputs ? resolvedInputs.snapshotId : null,
+        snapshotState: resolvedInputs.state,
+        snapshotInputs: resolvedInputs.snapshotInputs,
+        modelFingerprintMatch: resolvedInputs.modelFingerprintMatch,
+        metadataLive: resolvedInputs.metadataLive,
       },
       { status: 200 }
     );
 
+    res.headers.set("X-From-Snapshot", String(resolvedInputs.fromSnapshot));
+    res.headers.set("X-Snapshot-State", resolvedInputs.state);
     res.headers.set("Cache-Control", "no-store");
     return res;
   } catch (e: any) {
