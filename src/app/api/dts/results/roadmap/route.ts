@@ -1,6 +1,7 @@
 // src/app/api/dts/results/roadmap/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveProgramsPayload } from "@/lib/dts/snapshotResolver";
 
 export const dynamic = "force-dynamic";
 
@@ -299,21 +300,21 @@ export async function GET(req: Request) {
     });
   }
 
-  // 3) Roadmap “normal” (con respuestas) -> tu RPC actual
-  const { data, error } = await supabase.rpc("dts_results_programs_v2", {
-    p_assessment_id: assessmentId,
-    p_only_shortlist: onlyShortlist,
-    p_use_overrides: useOverrides,
-  });
-
-  if (error) {
-    console.error("[api roadmap] rpc error:", error);
+  // 3) Roadmap “normal” (con respuestas) -> snapshotResolver (snapshot if cacheable + state allows; live otherwise)
+  let resolved;
+  try {
+    resolved = await resolveProgramsPayload(supabase, assessmentId, {
+      onlyShortlist,
+      useOverrides,
+    });
+  } catch (err: any) {
+    console.error("[api roadmap] resolver error:", err);
     return NextResponse.json(
-      { error: "Error obteniendo programas para roadmap", details: error.message },
+      { error: "Error obteniendo programas para roadmap", details: err?.message ?? null },
       { status: 500 }
     );
   }
-
+  const data = resolved.data;
   const rpcRows = Array.isArray(data) ? data : [];
 
   // Ranked (ya viene rankeado desde RPC, reforzamos estabilidad)
@@ -390,7 +391,7 @@ export async function GET(req: Request) {
 
   const includedCount = phases.reduce((acc, ph) => acc + ph.programs.length, 0);
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     assessment_id: assessmentId,
     pack: assessment.pack,
     max_per_phase: maxPerPhase,
@@ -408,5 +409,11 @@ export async function GET(req: Request) {
       note:
         "Las olas 1-2-3 se asignan por capacidad de ejecución (max por fase), no por esfuerzo. Foundation y Maintenance no entran en el roadmap inicial para mantener foco ejecutivo.",
     },
+    fromSnapshot: resolved.fromSnapshot,
+    snapshotId: "snapshotId" in resolved ? resolved.snapshotId : null,
+    snapshotState: resolved.state,
   });
+  res.headers.set("X-From-Snapshot", String(resolved.fromSnapshot));
+  res.headers.set("X-Snapshot-State", resolved.state);
+  return res;
 }

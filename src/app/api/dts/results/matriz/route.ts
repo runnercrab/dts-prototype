@@ -1,6 +1,7 @@
 // src/app/api/dts/results/matriz/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveProgramsPayload } from "@/lib/dts/snapshotResolver";
 
 export const dynamic = "force-dynamic";
 
@@ -143,21 +144,21 @@ export async function GET(req: Request) {
     );
   }
 
-  // 2) Programas canónicos (RPC)
-  const { data, error } = await supabase.rpc("dts_results_programs_v2", {
-    p_assessment_id: assessmentId,
-    p_only_shortlist: onlyShortlist,
-    p_use_overrides: useOverrides,
-  });
-
-  if (error) {
-    console.error("[api matriz] rpc error:", error);
+  // 2) Programas canónicos via snapshotResolver (snapshot if cacheable + state allows; live otherwise)
+  let resolved;
+  try {
+    resolved = await resolveProgramsPayload(supabase, assessmentId, {
+      onlyShortlist,
+      useOverrides,
+    });
+  } catch (err: any) {
+    console.error("[api matriz] resolver error:", err);
     return NextResponse.json(
-      { error: "Error obteniendo programas para matriz", details: error.message },
+      { error: "Error obteniendo programas para matriz", details: err?.message ?? null },
       { status: 500 }
     );
   }
-
+  const data = resolved.data;
   const rows = Array.isArray(data) ? data : [];
 
   // Plot tuning (garantía: no se salen)
@@ -264,7 +265,7 @@ export async function GET(req: Request) {
 
   items.sort((a, b) => a.rank - b.rank);
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     assessment_id: assessmentId,
     pack: assessment.pack,
     plot: {
@@ -279,5 +280,11 @@ export async function GET(req: Request) {
     },
     count: items.length,
     items,
+    fromSnapshot: resolved.fromSnapshot,
+    snapshotId: "snapshotId" in resolved ? resolved.snapshotId : null,
+    snapshotState: resolved.state,
   });
+  res.headers.set("X-From-Snapshot", String(resolved.fromSnapshot));
+  res.headers.set("X-Snapshot-State", resolved.state);
+  return res;
 }

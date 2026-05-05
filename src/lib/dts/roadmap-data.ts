@@ -4,6 +4,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { resolveProgramsPayload } from '@/lib/dts/snapshotResolver'
 
 // ── Types ──
 
@@ -73,6 +74,9 @@ export interface RoadmapData {
   capacity: { '30d': CapacityPhase; '60d': CapacityPhase; '90d': CapacityPhase }
   d5: D5Dimension[]
   summary: RoadmapSummary
+  fromSnapshot?: boolean
+  snapshotId?: string | null
+  snapshotState?: string
 }
 
 // ── Month → phase mapping ──
@@ -258,13 +262,17 @@ async function fetchRoadmapV22(
   assessmentId: string
 ): Promise<RoadmapData> {
 
-  const { data: rankedRaw, error: rpcErr } = await supabase
-    .rpc('dts_results_programs_v2', { p_assessment_id: assessmentId })
-
-  if (rpcErr?.message) throw new Error(`Program ranking failed: ${rpcErr.message}`)
-
-  const ranked = rankedRaw || []
-  if (ranked.length === 0) return emptyRoadmap('v2.3')
+  const resolved = await resolveProgramsPayload(supabase, assessmentId, {
+    onlyShortlist: false,
+    useOverrides: true,
+  })
+  const ranked: any[] = (resolved.data as any[]) || []
+  const resolverMeta = {
+    fromSnapshot: resolved.fromSnapshot,
+    snapshotId: 'snapshotId' in resolved ? resolved.snapshotId : null,
+    snapshotState: resolved.state,
+  }
+  if (ranked.length === 0) return emptyRoadmap('v2.3', resolverMeta)
 
   const v22Programs = ranked.filter((p: any) =>
     p.program_code?.startsWith('PRG-CORE') || p.program_code?.startsWith('PRG-RING')
@@ -401,6 +409,9 @@ async function fetchRoadmapV22(
     },
     d5: [],
     summary,
+    fromSnapshot: resolverMeta.fromSnapshot,
+    snapshotId: resolverMeta.snapshotId,
+    snapshotState: resolverMeta.snapshotState,
   }
 }
 
@@ -548,8 +559,11 @@ async function fetchRoadmapV1(
 
 // ── Empty roadmap helper ──
 
-function emptyRoadmap(version: string): RoadmapData {
-  return {
+function emptyRoadmap(
+  version: string,
+  meta?: { fromSnapshot: boolean; snapshotId: string | null; snapshotState: string }
+): RoadmapData {
+  const base: RoadmapData = {
     programs: [],
     capacity: {
       '30d': { limit: 40, used: 0 },
@@ -571,6 +585,12 @@ function emptyRoadmap(version: string): RoadmapData {
       version,
     },
   }
+  if (meta) {
+    base.fromSnapshot = meta.fromSnapshot
+    base.snapshotId = meta.snapshotId
+    base.snapshotState = meta.snapshotState
+  }
+  return base
 }
 
 // ── updateActionStatus mantenido por compatibilidad ──

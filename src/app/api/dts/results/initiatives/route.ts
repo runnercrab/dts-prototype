@@ -1,6 +1,7 @@
 // src/app/api/dts/results/initiatives/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveProgramsPayload } from "@/lib/dts/snapshotResolver";
 
 export const dynamic = "force-dynamic";
 
@@ -101,27 +102,27 @@ export async function GET(req: Request) {
     );
   }
 
-  // 2) RPC canónica (PROGRAMS)
-  const { data, error } = await supabase.rpc("dts_results_programs_v2", {
-    p_assessment_id: assessmentId,
-    p_only_shortlist: onlyShortlist,
-    p_use_overrides: useOverrides,
-  });
-
-  if (error) {
-    console.error("[api initiatives alias->programs] rpc error:", error);
+  // 2) Ranking via snapshotResolver (snapshot if cacheable + state allows; live otherwise)
+  let resolved;
+  try {
+    resolved = await resolveProgramsPayload(supabase, assessmentId, {
+      onlyShortlist,
+      useOverrides,
+    });
+  } catch (err: any) {
+    console.error("[api initiatives alias->programs] resolver error:", err);
     return NextResponse.json(
-      { error: "Error ejecutando ranking de programas", details: error.message },
+      { error: "Error ejecutando ranking de programas", details: err?.message ?? null },
       { status: 500 }
     );
   }
-
+  const data = resolved.data;
   const rawItems = data ?? [];
   const items = rawItems.map(normalizeProgramItem);
 
   const thresholds = { top: 8, mid_end: 18 };
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     assessment_id: assessmentId,
     pack: assessment.pack,
     thresholds,
@@ -129,5 +130,11 @@ export async function GET(req: Request) {
     items,
     deprecated: true,
     canonical_endpoint: "/api/dts/results/programs",
+    fromSnapshot: resolved.fromSnapshot,
+    snapshotId: "snapshotId" in resolved ? resolved.snapshotId : null,
+    snapshotState: resolved.state,
   });
+  res.headers.set("X-From-Snapshot", String(resolved.fromSnapshot));
+  res.headers.set("X-Snapshot-State", resolved.state);
+  return res;
 }

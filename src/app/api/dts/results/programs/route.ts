@@ -1,6 +1,7 @@
 // src/app/api/dts/results/programs/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveProgramsPayload } from "@/lib/dts/snapshotResolver";
 
 export const dynamic = "force-dynamic";
 
@@ -140,26 +141,26 @@ export async function GET(req: Request) {
     );
   }
 
-  // 2) RPC ranking
-  const { data, error } = await supabase.rpc("dts_results_programs_v2", {
-    p_assessment_id: assessmentId,
-    p_only_shortlist: onlyShortlist,
-    p_use_overrides: useOverrides,
-  });
-
-  if (error) {
-    console.error("[api programs] rpc error:", error);
+  // 2) Ranking via snapshotResolver (snapshot if cacheable + state allows; live otherwise)
+  let resolved;
+  try {
+    resolved = await resolveProgramsPayload(supabase, assessmentId, {
+      onlyShortlist,
+      useOverrides,
+    });
+  } catch (err: any) {
+    console.error("[api programs] resolver error:", err);
     return NextResponse.json(
       {
         ok: false,
         version: "v1",
         error: "Error obteniendo programas",
-        details: error.message,
+        details: err?.message ?? null,
       },
       { status: 500 }
     );
   }
-
+  const data = resolved.data;
   const rows = Array.isArray(data) ? data : [];
 
   // ✅ Modo normal: ranking con datos
@@ -205,7 +206,7 @@ export async function GET(req: Request) {
       }))
       .sort((a: any, b: any) => (a.rank ?? 999) - (b.rank ?? 999));
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       ok: true,
       version: "v1",
       assessment_id: assessmentId,
@@ -214,7 +215,13 @@ export async function GET(req: Request) {
       state: buildState(assessmentId),
       count: items.length,
       items,
+      fromSnapshot: resolved.fromSnapshot,
+      snapshotId: "snapshotId" in resolved ? resolved.snapshotId : null,
+      snapshotState: resolved.state,
     });
+    res.headers.set("X-From-Snapshot", String(resolved.fromSnapshot));
+    res.headers.set("X-Snapshot-State", resolved.state);
+    return res;
   }
 
   // ✅ Modo fallback: catálogo del pack (para que UI nunca quede vacía)
@@ -251,7 +258,7 @@ export async function GET(req: Request) {
     ]);
     const c3 = await safeCount(supabase, "dts_program_catalog");
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       ok: true,
       version: "v1",
       assessment_id: assessmentId,
@@ -272,7 +279,13 @@ export async function GET(req: Request) {
             : "Hay filas en dts_pack_programs pero ninguna activa o el join no aporta title/code.",
         ],
       },
+      fromSnapshot: resolved.fromSnapshot,
+      snapshotId: "snapshotId" in resolved ? resolved.snapshotId : null,
+      snapshotState: resolved.state,
     });
+    res.headers.set("X-From-Snapshot", String(resolved.fromSnapshot));
+    res.headers.set("X-Snapshot-State", resolved.state);
+    return res;
   }
 
   const items = fallbackRows.map((r: any, idx: number) => ({
@@ -301,7 +314,7 @@ export async function GET(req: Request) {
     top_contributors_count: null,
   }));
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     ok: true,
     version: "v1",
     assessment_id: assessmentId,
@@ -312,5 +325,11 @@ export async function GET(req: Request) {
       "No hay ranking disponible (RPC devolvió 0 filas). Se muestra el catálogo del pack para permitir activar ejecución.",
     count: items.length,
     items,
+    fromSnapshot: resolved.fromSnapshot,
+    snapshotId: "snapshotId" in resolved ? resolved.snapshotId : null,
+    snapshotState: resolved.state,
   });
+  res.headers.set("X-From-Snapshot", String(resolved.fromSnapshot));
+  res.headers.set("X-Snapshot-State", resolved.state);
+  return res;
 }
