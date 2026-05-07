@@ -18,3 +18,22 @@ backups/
 *.OLD
 backup_local/
 .claude/
+
+# Archivos comprimidos/backups locales
+*.tgz
+*.tar
+*.tar.gz
+*.zip
+*.dump
+*.sql
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Backups/golden outputs locales
+/local_backups/
+/local_golden_outputs/
