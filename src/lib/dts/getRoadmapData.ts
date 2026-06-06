@@ -15,6 +15,5 @@ export async function getRoadmapData(assessmentId: string) {
 
   return {
     ...roadmap,
-    companyName: asmResult.data?.onboarding_data?.companyName || "",
   };
 }

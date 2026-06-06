@@ -15,7 +15,6 @@ export async function getResultsData(assessmentId: string) {
 
   return {
     data: resolved.data,
-    companyName: asmResult.data?.onboarding_data?.companyName || "",
     fromSnapshot: resolved.fromSnapshot,
     snapshotId: "snapshotId" in resolved ? resolved.snapshotId : null,
     snapshotState: resolved.state,
