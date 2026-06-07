@@ -1,9 +1,7 @@
 name: Export Supabase RPCs
 
 on:
-  push:
-    branches:
-      - "**"
+  workflow_dispatch:
 
 permissions:
   contents: write
