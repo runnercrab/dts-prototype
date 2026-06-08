@@ -20,6 +20,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ...roadmap,
-    companyName: asmResult.data?.onboarding_data?.companyName || "",
   });
 }

@@ -22,6 +22,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     data: rpcResult.data,
-    companyName: asmResult.data?.onboarding_data?.companyName || "",
   });
 }
