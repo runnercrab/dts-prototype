@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapply · Tu opinión sobre el plan de acción</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#1a90ff;
+    --blue-dark:#0f6fd4;
+    --dark:#16243A;
+    --muted:#5A6B82;
+    --bg:#F5FAFF;
+    --white:#ffffff;
+    --border:#dce8f5;
+    --shadow:0 8px 30px rgba(26,144,255,0.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'DM Sans',system-ui,sans-serif;
+    background:linear-gradient(160deg,#F5FAFF 0%,#eaf4ff 100%);
+    color:var(--dark);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  /* Progress bar */
+  #progress-track{
+    position:fixed;top:0;left:0;right:0;height:5px;background:rgba(26,144,255,0.12);z-index:50;
+  }
+  #progress-bar{
+    height:100%;width:0%;background:var(--blue);
+    transition:width .45s cubic-bezier(.4,0,.2,1);
+  }
+  /* Header */
+  header{
+    position:fixed;top:22px;left:0;right:0;display:flex;justify-content:center;z-index:40;
+    pointer-events:none;
+  }
+  .logo{
+    display:flex;align-items:center;gap:10px;font-weight:700;font-size:24px;color:var(--blue);
+    letter-spacing:-0.5px;
+  }
+  .logo svg{width:34px;height:34px}
+  /* Stage */
+  #stage{
+    position:relative;height:100vh;width:100%;
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;
+  }
+  .card{
+    width:100%;max-width:680px;
+    position:absolute;
+    opacity:0;transform:translateY(40px);
+    transition:opacity .5s ease,transform .5s cubic-bezier(.16,1,.3,1);
+    pointer-events:none;
+  }
+  .card.active{opacity:1;transform:translateY(0);pointer-events:auto;}
+  .card.leaving{opacity:0;transform:translateY(-40px);}
+  .qnum{
+    font-family:'Space Mono',monospace;font-size:14px;color:var(--blue);
+    display:flex;align-items:center;gap:8px;margin-bottom:18px;font-weight:700;
+  }
+  .qnum svg{width:14px;height:14px}
+  .qtitle{
+    font-size:30px;line-height:1.25;font-weight:600;color:var(--dark);margin-bottom:10px;
+    letter-spacing:-0.5px;
+  }
+  .qhint{font-size:16px;color:var(--muted);margin-bottom:30px;line-height:1.5}
+  /* Text inputs */
+  textarea,input[type=text]{
+    width:100%;font-family:'DM Sans',sans-serif;font-size:19px;color:var(--dark);
+    background:var(--white);border:1.5px solid var(--border);border-radius:18px;
+    padding:20px 22px;resize:none;transition:border-color .2s,box-shadow .2s;
+  }
+  textarea{min-height:130px}
+  textarea:focus,input[type=text]:focus{
+    outline:none;border-color:var(--blue);box-shadow:0 0 0 4px rgba(26,144,255,0.12);
+  }
+  textarea::placeholder,input::placeholder{color:#aebfd4}
+  /* Choice options */
+  .options{display:flex;flex-direction:column;gap:12px}
+  .opt{
+    display:flex;align-items:center;gap:14px;cursor:pointer;
+    background:var(--white);border:1.5px solid var(--border);border-radius:16px;
+    padding:16px 20px;font-size:18px;color:var(--dark);transition:all .18s;
+  }
+  .opt:hover{border-color:var(--blue);background:#fafdff}
+  .opt.selected{border-color:var(--blue);background:#eef7ff;box-shadow:var(--shadow)}
+  .opt .key{
+    font-family:'Space Mono',monospace;font-size:13px;font-weight:700;
+    width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    border:1.5px solid var(--border);border-radius:8px;color:var(--muted);transition:all .18s;
+  }
+  .opt.selected .key{background:var(--blue);color:#fff;border-color:var(--blue)}
+  /* Scale */
+  .scale{display:flex;gap:10px;flex-wrap:wrap}
+  .scale .pip{
+    flex:1;min-width:54px;text-align:center;cursor:pointer;
+    background:var(--white);border:1.5px solid var(--border);border-radius:14px;
+    padding:18px 0;font-size:20px;font-weight:600;color:var(--muted);transition:all .18s;
+    font-family:'Space Mono',monospace;
+  }
+  .scale .pip:hover{border-color:var(--blue);color:var(--blue)}
+  .scale .pip.selected{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:var(--shadow)}
+  .scale-labels{display:flex;justify-content:space-between;margin-top:10px;font-size:13px;color:var(--muted)}
+  /* Controls */
+  .controls{display:flex;align-items:center;gap:14px;margin-top:28px}
+  .btn{
+    font-family:'DM Sans',sans-serif;font-weight:600;font-size:17px;cursor:pointer;
+    border:none;border-radius:14px;padding:15px 30px;transition:all .18s;
+  }
+  .btn-primary{background:var(--blue);color:#fff;box-shadow:var(--shadow)}
+  .btn-primary:hover{background:var(--blue-dark);transform:translateY(-1px)}
+  .btn-ghost{background:transparent;color:var(--muted);padding:15px 14px}
+  .btn-ghost:hover{color:var(--dark)}
+  .enter-hint{font-size:13px;color:var(--muted);font-family:'Space Mono',monospace}
+  .enter-hint b{color:var(--blue)}
+  /* Intro & end */
+  .big-title{font-size:42px;font-weight:700;letter-spacing:-1px;line-height:1.1;margin-bottom:18px;color:var(--dark)}
+  .lead{font-size:19px;color:var(--muted);line-height:1.6;margin-bottom:34px;max-width:560px}
+  /* responsive */
+  @media(max-width:600px){
+    .qtitle{font-size:24px}.big-title{font-size:32px}
+    .scale .pip{min-width:44px;padding:14px 0;font-size:17px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .card{transition:opacity .2s}
+    #progress-bar{transition:none}
+  }
+</style>
+</head>
+<body>
+<div id="progress-track"><div id="progress-bar"></div></div>
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="14" height="14" rx="3" stroke="#1a90ff" stroke-width="2.5"/>
+      <rect x="22" y="4" width="14" height="14" rx="3" stroke="#1a90ff" stroke-width="2.5"/>
+      <rect x="4" y="22" width="14" height="14" rx="3" stroke="#1a90ff" stroke-width="2.5"/>
+      <path d="M25 29h8m0 0-3-3m3 3-3 3" stroke="#1a90ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Gapply
+  </div>
+</header>
+
+<div id="stage"></div>
+
+<script>
+/* ---------- PREGUNTAS ---------- */
+const QUESTIONS = [
+  { type:"intro",
+    title:"Tu opinión sobre el plan de acción",
+    lead:"Miguel, eres el primero que completó el plan de acción entero, así que tu opinión me vale oro. Son unas preguntas rápidas, sin filtros. Gracias, crack." },
+
+  { id:"q1", type:"choice", title:"Cuando viste el plan de acción completo, ¿qué sensación te dio?",
+    options:["Potente y útil","Claro y abarcable","Interesante pero largo","Algo abrumador"] },
+
+  { id:"q2", type:"choice", title:"¿Cómo lo viste?",
+    options:["Aplicable de verdad a una empresa","Una herramienta interesante para entender el diagnóstico","Un poco de las dos"] },
+
+  { id:"q3", type:"text", title:"¿Las acciones se entendían bien?",
+    hint:"¿Alguna te dejó pensando \"vale, pero esto cómo lo hago exactamente\"?" },
+
+  { id:"q4", type:"choice", title:"El \"qué hacer\", el \"cómo\" y el \"para qué sirve\" de cada acción…",
+    options:["Suficientes, bien","Demasiado largos","Se quedaban cortos","Variaba según la acción"] },
+
+  { id:"q5", type:"scale", title:"¿Los tiempos estimados de las acciones te parecieron realistas?",
+    min:1,max:5,minLabel:"Nada realistas",maxLabel:"Muy realistas" },
+
+  { id:"q6", type:"text", title:"¿El orden de las acciones tenía sentido?",
+    hint:"¿O las habrías priorizado de otra manera?" },
+
+  { id:"q7", type:"text", title:"¿Hubo alguna acción o recomendación que dijeras \"esto sí aporta valor\"?",
+    hint:"Si te acuerdas de alguna en concreto, mejor." },
+
+  { id:"q8", type:"text", title:"¿Y alguna que te pareciera inútil, repetida, genérica o que no aplicaba?",
+    hint:"Sé sincero, esto es lo que más me ayuda." },
+
+  { id:"q9", type:"text", title:"¿En algún momento te perdiste, te aburriste o te costó seguir?",
+    hint:"¿Dónde, si te acuerdas?" },
+
+  { id:"q10", type:"text", title:"¿Echaste de menos alguna forma mejor de saber por dónde ibas o qué era lo más importante?",
+    hint:"" },
+
+  { id:"q11", type:"text", title:"¿Viste algo raro, incoherente o que no cuadrara?",
+    hint:"Entre el diagnóstico, los resultados y el plan de acción." },
+
+  { id:"q12", type:"choice", title:"¿Se lo recomendarías a otro empresario?",
+    options:["Sí, sin duda","Sí, con matices","No estoy seguro","No"] },
+
+  { id:"q12b", type:"text", title:"¿Por qué?",
+    hint:"Una línea sobre tu respuesta anterior." },
+
+  { id:"q13", type:"text", title:"Si pudieras cambiar UNA sola cosa del plan de acción, ¿cuál sería?",
+    hint:"La que más te chirríe." },
+
+  { id:"q14", type:"text", title:"Pensando en lo vuestro de familias empresarias / ROEF…",
+    hint:"¿Qué parte de Gapply tendría sentido adaptar a ese mundo, y qué parte no encajaría?" },
+
+  { type:"end",
+    title:"¡Gracias, Miguel!",
+    lead:"Esto me ayuda muchísimo. Lo comentamos con calma en el café. Un abrazo." }
+];
+
+/* ---------- ESTADO ---------- */
+const answers = {};
+let idx = 0;
+const stage = document.getElementById('stage');
+const bar = document.getElementById('progress-bar');
+const totalAnswerable = QUESTIONS.filter(q=>q.id).length;
+
+function answeredCount(){ return Object.keys(answers).length; }
+function updateProgress(){
+  bar.style.width = Math.round((answeredCount()/totalAnswerable)*100) + '%';
+}
+
+function render(){
+  const q = QUESTIONS[idx];
+  const card = document.createElement('div');
+  card.className='card';
+
+  if(q.type==='intro' || q.type==='end'){
+    card.innerHTML = `
+      <div class="big-title">${q.title}</div>
+      <div class="lead">${q.lead}</div>
+      ${q.type==='intro'
+        ? `<button class="btn btn-primary" id="next">Empezar</button>
+           <span class="enter-hint" style="margin-left:14px">pulsa <b>Enter ↵</b></span>`
+        : ``}
+    `;
+  } else {
+    const qn = QUESTIONS.slice(0,idx+1).filter(x=>x.id).length;
+    let body = '';
+    if(q.type==='text'){
+      body = `<textarea id="field" placeholder="Escribe aquí…">${answers[q.id]||''}</textarea>`;
+    } else if(q.type==='choice'){
+      body = `<div class="options">` + q.options.map((o,i)=>`
+        <div class="opt${answers[q.id]===o?' selected':''}" data-val="${o}">
+          <span class="key">${String.fromCharCode(65+i)}</span>${o}
+        </div>`).join('') + `</div>`;
+    } else if(q.type==='scale'){
+      let pips='';
+      for(let n=q.min;n<=q.max;n++){
+        pips+=`<div class="pip${String(answers[q.id])===String(n)?' selected':''}" data-val="${n}">${n}</div>`;
+      }
+      body = `<div class="scale">${pips}</div>
+              <div class="scale-labels"><span>${q.minLabel}</span><span>${q.maxLabel}</span></div>`;
+    }
+    card.innerHTML = `
+      <div class="qnum">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M3 7h8m0 0L8 4m3 3-3 3" stroke="#1a90ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Pregunta ${qn} de ${totalAnswerable}
+      </div>
+      <div class="qtitle">${q.title}</div>
+      ${q.hint?`<div class="qhint">${q.hint}</div>`:`<div style="height:18px"></div>`}
+      ${body}
+      <div class="controls">
+        ${idx>1?`<button class="btn btn-ghost" id="back">← Atrás</button>`:``}
+        <button class="btn btn-primary" id="next">${idx===QUESTIONS.length-2?'Enviar':'Siguiente'}</button>
+        <span class="enter-hint">pulsa <b>Enter ↵</b></span>
+      </div>
+    `;
+  }
+
+  stage.appendChild(card);
+  requestAnimationFrame(()=>card.classList.add('active'));
+
+  // listeners
+  const nextBtn = card.querySelector('#next');
+  const backBtn = card.querySelector('#back');
+  if(nextBtn) nextBtn.onclick = goNext;
+  if(backBtn) backBtn.onclick = goBack;
+
+  if(q.type==='text'){
+    const f = card.querySelector('#field');
+    f.focus();
+    f.oninput = ()=>{ answers[q.id]=f.value; };
+  }
+  if(q.type==='choice'){
+    card.querySelectorAll('.opt').forEach(el=>{
+      el.onclick=()=>{
+        card.querySelectorAll('.opt').forEach(x=>x.classList.remove('selected'));
+        el.classList.add('selected');
+        answers[q.id]=el.dataset.val;
+        updateProgress();
+        // sin auto-avance: el avance ocurre con "Siguiente" o Enter
+      };
+    });
+  }
+  if(q.type==='scale'){
+    card.querySelectorAll('.pip').forEach(el=>{
+      el.onclick=()=>{
+        card.querySelectorAll('.pip').forEach(x=>x.classList.remove('selected'));
+        el.classList.add('selected');
+        answers[q.id]=el.dataset.val;
+        updateProgress();
+        // sin auto-avance: el avance ocurre con "Siguiente" o Enter
+      };
+    });
+  }
+  updateProgress();
+}
+
+function transition(dir, cb){
+  const card = stage.querySelector('.card.active');
+  if(card){
+    card.classList.remove('active');
+    card.classList.add('leaving');
+    setTimeout(()=>{ card.remove(); cb(); }, dir==='back'?300:300);
+  } else cb();
+}
+
+async function goNext(){
+  const q = QUESTIONS[idx];
+  if(q.type==='text' && q.id){
+    const f = stage.querySelector('#field');
+    if(f) answers[q.id]=f.value;
+  }
+  if(idx===QUESTIONS.length-2){ // last answerable -> await submit BEFORE showing "gracias"
+    if(submitting) return;             // ya hay un envío en curso, ignora Enter/click extra
+    const btn = stage.querySelector('#next');
+    clearSubmitError();
+    if(btn){ btn.disabled = true; btn.textContent = 'Enviando…'; }
+    const ok = await submit();
+    if(!ok){
+      showSubmitError('No se pudo guardar tu feedback. Revisa tu conexión e inténtalo de nuevo.');
+      if(btn){ btn.disabled = false; btn.textContent = 'Enviar'; }
+      return;                          // NO avanzar a la pantalla final si no se guardó
+    }
+  }
+  if(idx < QUESTIONS.length-1){
+    idx++;
+    transition('next', render);
+  }
+}
+function goBack(){
+  if(idx>0){ idx--; transition('back', render); }
+}
+
+/* ---------- ENVÍO ----------
+   Persiste `answers` en public.dts_form_submissions vía API route server-side
+   (service_role). Espera (await) la respuesta: Miguel NO ve "gracias" si el POST
+   no devuelve 200. Las respuestas se conservan en pantalla y en window.__answers.
+   Estructura de `answers`: { q1:"...", q2:"...", ... } con las id de cada pregunta.
+*/
+let submitted = false;   // ya guardado con éxito
+let submitting = false;  // envío en curso
+
+function showSubmitError(msg){
+  let el = stage.querySelector('#submit-error');
+  if(!el){
+    const controls = stage.querySelector('.controls');
+    el = document.createElement('div');
+    el.id = 'submit-error';
+    el.style.cssText = 'flex-basis:100%;color:#d33;font-size:14px;margin-top:6px';
+    if(controls) controls.appendChild(el);
+  }
+  el.textContent = msg;
+}
+function clearSubmitError(){
+  const el = stage.querySelector('#submit-error');
+  if(el) el.remove();
+}
+
+async function submit(){
+  if(submitted) return true;             // ya se guardó antes, no reenviar
+  if(submitting) return false;           // hay uno en vuelo
+  submitting = true;
+  window.__answers = answers;            // disponible en consola para depurar
+  console.log('[Gapply feedback] respuestas:', JSON.stringify(answers,null,2));
+  try{
+    const r = await fetch('/api/dts/feedback/form', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        form_type: 'miguel_roadmap_feedback',
+        form_version: 'v1',
+        respondent_label: 'Miguel López Silanes',
+        payload: answers,
+        source: 'feedback_miguel.html'
+      })
+    });
+    if(!r.ok){
+      console.error('[Gapply feedback] POST falló:', r.status);
+      submitting = false;
+      return false;
+    }
+    submitted = true;
+    submitting = false;
+    return true;
+  }catch(err){
+    console.error('[Gapply feedback] POST error:', err);
+    submitting = false;
+    return false;
+  }
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){
+    const q=QUESTIONS[idx];
+    if(q.type==='text' && e.shiftKey) return; // Shift+Enter = salto de línea
+    e.preventDefault();
+    goNext();
+  }
+});
+
+render();
+</script>
+</body>
+</html>

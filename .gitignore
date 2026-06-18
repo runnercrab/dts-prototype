@@ -18,3 +18,4 @@ backups/
 *.OLD
 backup_local/
 .claude/
+.env*
