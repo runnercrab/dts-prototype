@@ -153,53 +153,38 @@
 /* ---------- PREGUNTAS ---------- */
 const QUESTIONS = [
   { type:"intro",
-    title:"Tu opinión sobre el plan de acción",
-    lead:"Miguel, eres el primero que completó el plan de acción entero, así que tu opinión me vale oro. Son unas preguntas rápidas, sin filtros. Gracias, crack." },
+    title:"Tu opinión sobre Gapply",
+    lead:"Miguel, gracias por echarme una mano. Más que feedback de diseño, me interesa tu opinión como empresario: si el plan de acción sirve de verdad, si Gapply se podría vender, a quién, y qué habría que cambiar para hacerlo más útil y más comprable. Sé directo, aunque sea duro." },
 
-  { id:"q1", type:"choice", title:"Cuando viste el plan de acción completo, ¿qué sensación te dio?",
-    options:["Potente y útil","Claro y abarcable","Interesante pero largo","Algo abrumador"] },
+  { id:"q1", type:"choice", title:"Después de ver Gapply completo, ¿qué sensación te deja como producto?",
+    options:["Tiene potencial claro de negocio","Es interesante, pero aún no lo veo vendible","Parece útil, pero más como diagnóstico puntual que como SaaS","No lo veo claro como producto de pago"] },
 
-  { id:"q2", type:"choice", title:"¿Cómo lo viste?",
-    options:["Aplicable de verdad a una empresa","Una herramienta interesante para entender el diagnóstico","Un poco de las dos"] },
+  { id:"q2", type:"choice", title:"¿Crees que resuelve un problema que las empresas sienten de verdad, o más bien algo que 'estaría bien tener'?",
+    options:["Problema real y frecuente","Problema real, pero no urgente","Algo útil, pero no prioritario","No veo un dolor suficientemente fuerte"] },
 
-  { id:"q3", type:"text", title:"¿Las acciones se entendían bien?",
-    hint:"¿Alguna te dejó pensando \"vale, pero esto cómo lo hago exactamente\"?" },
+  { id:"q3", type:"choice", title:"El plan de acción que viste, ¿te pareció útil para saber qué hacer después del diagnóstico?",
+    options:["Sí, daba una dirección clara","Sí, pero necesitaba más concreción","Era interesante, pero no me llevaba claramente a actuar","No, lo vi demasiado genérico"] },
 
-  { id:"q4", type:"choice", title:"El \"qué hacer\", el \"cómo\" y el \"para qué sirve\" de cada acción…",
-    options:["Suficientes, bien","Demasiado largos","Se quedaban cortos","Variaba según la acción"] },
+  { id:"q4", type:"choice", title:"Si fueras el dueño de esa empresa, ¿sabrías qué hacer la semana siguiente con ese plan?",
+    options:["Sí, podría empezar","Sí, pero necesitaría ayuda","Más o menos, pero me faltaría priorización","No, no sabría por dónde empezar"] },
 
-  { id:"q5", type:"scale", title:"¿Los tiempos estimados de las acciones te parecieron realistas?",
-    min:1,max:5,minLabel:"Nada realistas",maxLabel:"Muy realistas" },
+  { id:"q5", type:"choice", title:"¿Las acciones te parecieron adaptadas a la empresa o demasiado genéricas?",
+    options:["Bastante adaptadas","Algunas adaptadas y otras genéricas","Demasiado genéricas","No lo recuerdo con suficiente detalle"] },
 
-  { id:"q6", type:"text", title:"¿El orden de las acciones tenía sentido?",
-    hint:"¿O las habrías priorizado de otra manera?" },
+  { id:"q6", type:"choice", title:"Si una PYME tuviera que pagar por esto, ¿qué modelo te parece más realista?",
+    options:["Suscripción mensual si el seguimiento es bueno","Diagnóstico puntual, pero no suscripción","Solo lo pagaría si viniera con consultoría","Le costaría pagar por esto"] },
 
-  { id:"q7", type:"text", title:"¿Hubo alguna acción o recomendación que dijeras \"esto sí aporta valor\"?",
-    hint:"Si te acuerdas de alguna en concreto, mejor." },
+  { id:"q7", type:"choice", title:"¿Se lo pasarías a algún empresario que conozcas?",
+    options:["Sí, se lo pasaría a varios","Sí, pero solo a un perfil concreto","Tal vez, si estuviera más pulido","No lo pasaría todavía"] },
 
-  { id:"q8", type:"text", title:"¿Y alguna que te pareciera inútil, repetida, genérica o que no aplicaba?",
-    hint:"Sé sincero, esto es lo que más me ayuda." },
+  { id:"q8", type:"text", title:"Si sí, ¿a qué tipo de empresa/persona se lo pasarías primero?",
+    hint:"Sector, tamaño, tipo de CEO, empresa familiar, empresa en crecimiento, empresa desordenada, ROEF/familias empresarias, etc." },
 
-  { id:"q9", type:"text", title:"¿En algún momento te perdiste, te aburriste o te costó seguir?",
-    hint:"¿Dónde, si te acuerdas?" },
+  { id:"q9", type:"text", title:"¿Qué crees que haría que un empresario dijera 'esto no es para mí' o 'no pago por esto'?",
+    hint:"Precio, falta de confianza, demasiado genérico, demasiado largo, falta de acompañamiento, no entender el beneficio, etc." },
 
-  { id:"q10", type:"text", title:"¿Echaste de menos alguna forma mejor de saber por dónde ibas o qué era lo más importante?",
-    hint:"" },
-
-  { id:"q11", type:"text", title:"¿Viste algo raro, incoherente o que no cuadrara?",
-    hint:"Entre el diagnóstico, los resultados y el plan de acción." },
-
-  { id:"q12", type:"choice", title:"¿Se lo recomendarías a otro empresario?",
-    options:["Sí, sin duda","Sí, con matices","No estoy seguro","No"] },
-
-  { id:"q12b", type:"text", title:"¿Por qué?",
-    hint:"Una línea sobre tu respuesta anterior." },
-
-  { id:"q13", type:"text", title:"Si pudieras cambiar UNA sola cosa del plan de acción, ¿cuál sería?",
-    hint:"La que más te chirríe." },
-
-  { id:"q14", type:"text", title:"Pensando en lo vuestro de familias empresarias / ROEF…",
-    hint:"¿Qué parte de Gapply tendría sentido adaptar a ese mundo, y qué parte no encajaría?" },
+  { id:"q10", type:"text", title:"Si tuvieras que cambiar una sola cosa para que Gapply fuera más útil y más vendible, ¿cuál sería?",
+    hint:"La más importante. Una sola." },
 
   { type:"end",
     title:"¡Gracias, Miguel!",
@@ -378,7 +363,7 @@ async function submit(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         form_type: 'miguel_roadmap_feedback',
-        form_version: 'v1',
+        form_version: 'v2',
         respondent_label: 'Miguel López Silanes',
         payload: answers,
         source: 'feedback_miguel.html'
