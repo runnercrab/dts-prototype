@@ -12,8 +12,12 @@ import { NextResponse } from "next/server";
  * mitigación mínima/reversible del síntoma de 005, coherente con el firewall
  * ya aceptado en /dts/roadmap (page.tsx).
  */
-export function isProductionDtsWriteBlocked(): boolean {
+function isProductionEnv(): boolean {
   return process.env.VERCEL_ENV === "production";
+}
+
+export function isProductionDtsWriteBlocked(): boolean {
+  return isProductionEnv();
 }
 
 /**
@@ -35,6 +39,39 @@ export function assertDtsWritesAllowedInThisEnvironment(): NextResponse | null {
       error: "LEGACY_WRITES_DISABLED_IN_PRODUCTION",
       details:
         "El motor de ejecución legacy está deshabilitado en producción (mitigación 005). Usa el flujo /dts.",
+    },
+    { status: 403 }
+  );
+}
+
+/**
+ * A2 — Cierre del hueco residual de LECTURA del roadmap en producción.
+ *
+ * `GET /api/dts/roadmap` llama a `fetchRoadmapWithSummary` con service role y,
+ * por el path V1, puede renderizar programas inactivos/zombie (auditoría A2).
+ * La página `/dts/roadmap/[assessmentId]` ya está protegida por el firewall de
+ * entorno (page.tsx), pero este endpoint API seguía vivo y sin gatear.
+ *
+ * Mientras 1A esté roto, apagamos la lectura SOLO en producción
+ * (VERCEL_ENV === "production"). Preview/local quedan intactos.
+ *
+ * Marker propio (NO el de escrituras 005) para no confundir semántica GET vs
+ * write. Llamar como PRIMERA sentencia del handler GET, antes del cliente
+ * Supabase y de cualquier fetch.
+ *
+ *   const blocked = assertDtsRoadmapReadAllowedInThisEnvironment();
+ *   if (blocked) return blocked;
+ *
+ * Devuelve un 403 si estamos en producción; null si se puede continuar.
+ */
+export function assertDtsRoadmapReadAllowedInThisEnvironment(): NextResponse | null {
+  if (!isProductionEnv()) return null;
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "ROADMAP_API_DISABLED_IN_PRODUCTION",
+      details:
+        "La lectura del roadmap está deshabilitada en producción (mitigación A2, motor V1 zombie-vulnerable). Disponible en preview/local.",
     },
     { status: 403 }
   );

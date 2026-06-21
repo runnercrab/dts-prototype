@@ -439,8 +439,8 @@ async function fetchRoadmapV1(
     .select(`
       id, program_id, action_id, phase, criticality_tier, priority_badge,
       assignment_reasons, effort_hours_estimated, status,
-      dts_program_catalog (id, code, name_ceo, dolor_ceo, why_matters, expected_outcome, dimension_primary, category, impact_default, effort_default),
-      dts_action_catalog (id, code, title, description, deliverable, dod, band, hours_min, hours_typical, hours_max, effort_hours, month)
+      dts_program_catalog (id, code, name_ceo, dolor_ceo, why_matters, expected_outcome, dimension_primary, category, impact_default, effort_default, is_active, display_order),
+      dts_action_catalog (id, code, title, description, deliverable, dod, band, hours_min, hours_typical, hours_max, effort_hours, month, is_active)
     `)
     .eq('assessment_id', assessmentId)
     .order('criticality_tier', { ascending: true })
@@ -461,6 +461,11 @@ async function fetchRoadmapV1(
     const prog = init.dts_program_catalog as any
     const action = init.dts_action_catalog as any
     const progId = init.program_id
+
+    // A2 defense-in-depth: no renderizar programas inactivos/zombie.
+    // dts_program_catalog.is_active === true exigido; display_order === 999
+    // marca placeholders/zombies (mismo criterio que el path V22).
+    if (!prog || prog.is_active !== true || prog.display_order === 999) continue
 
     if (!programMap.has(progId)) {
       programMap.set(progId, {
@@ -484,7 +489,11 @@ async function fetchRoadmapV1(
     const monthPhase = MONTH_TO_PHASE[action?.month as string] || 'backlog'
     const phase = (rawPhase && rawPhase !== 'backlog') ? rawPhase : monthPhase
 
-    if (entry.actions[phase]) {
+    // A2 defense-in-depth: saltar acciones inactivas (el programa activo
+    // sigue siendo válido). display_order en dts_action_catalog: NO_DETERMINABLE
+    // (sin evidencia de que la columna exista), por eso no se filtra por orden.
+    const actionInactive = action?.is_active === false
+    if (!actionInactive && entry.actions[phase]) {
       entry.actions[phase].push({
         id: init.id,
         code: action?.code || '',
@@ -537,8 +546,16 @@ async function fetchRoadmapV1(
   applyStatuses(programs, statuses)
   await enrichReasons(supabase, programs)
 
+  // A2: la capacidad usada también excluye programas/acciones inactivos,
+  // coherente con los programas que sí se renderizan.
   const calcUsed = (phase: string) =>
-    initiatives.filter((i: any) => i.phase === phase).reduce((sum: number, i: any) => sum + (i.effort_hours_estimated || 0), 0)
+    initiatives.filter((i: any) => {
+      const p = i.dts_program_catalog as any
+      const a = i.dts_action_catalog as any
+      if (!p || p.is_active !== true || p.display_order === 999) return false
+      if (a?.is_active === false) return false
+      return i.phase === phase
+    }).reduce((sum: number, i: any) => sum + (i.effort_hours_estimated || 0), 0)
 
   const capFromSummary = (summary as any).capacity
   const cl = capFromSummary
