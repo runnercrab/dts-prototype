@@ -1,6 +1,7 @@
 // src/app/api/dts/execution/activate_from_roadmap/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { assertDtsWritesAllowedInThisEnvironment } from "@/lib/dts/prodGate";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,10 @@ async function assertProgramBelongsToAssessmentPack(params: {
 
 export async function POST(req: NextRequest) {
   const requestId = `activate_program_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+  // 005 — env-gate: en prod, bloquear escritura legacy antes de tocar DB.
+  const blocked = assertDtsWritesAllowedInThisEnvironment();
+  if (blocked) return blocked;
 
   try {
     const body = (await req.json().catch(() => null)) as Body | null;

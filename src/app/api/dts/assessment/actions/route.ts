@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { assertDtsWritesAllowedInThisEnvironment } from "@/lib/dts/prodGate";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,10 @@ function isUuid(v: string) {
 }
 
 export async function POST(req: Request) {
+  // 005 — env-gate: en prod, bloquear escritura legacy antes de tocar DB.
+  const blocked = assertDtsWritesAllowedInThisEnvironment();
+  if (blocked) return blocked;
+
   let body: any;
 
   try {
