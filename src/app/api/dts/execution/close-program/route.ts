@@ -1,6 +1,7 @@
 // src/app/api/dts/execution/close-program/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { assertDtsWritesAllowedInThisEnvironment } from "@/lib/dts/prodGate";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,10 @@ function getSupabaseAdmin() {
 
 export async function POST(req: Request) {
   const requestId = `close_${Date.now()}`;
+
+  // 005 — env-gate: en prod, bloquear escritura legacy antes de tocar DB.
+  const blocked = assertDtsWritesAllowedInThisEnvironment();
+  if (blocked) return blocked;
 
   try {
     const body = await req.json();

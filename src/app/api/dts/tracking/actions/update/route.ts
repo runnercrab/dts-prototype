@@ -1,6 +1,7 @@
 // src/app/api/dts/tracking/actions/update/route.ts
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { assertDtsWritesAllowedInThisEnvironment } from "@/lib/dts/prodGate";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,10 @@ type UpdateBody = {
  */
 export async function POST(req: Request) {
   const requestId = `tracking_update_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+  // 005 — env-gate: en prod, bloquear escritura legacy antes de tocar DB.
+  const blocked = assertDtsWritesAllowedInThisEnvironment();
+  if (blocked) return blocked;
 
   let body: UpdateBody;
   try {

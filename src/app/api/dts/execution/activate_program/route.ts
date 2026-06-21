@@ -1,6 +1,7 @@
 // src/app/api/dts/execution/activate_program/route.ts
 import { NextResponse } from "next/server";
 import { supabaseService } from "@/lib/supabase/server";
+import { assertDtsWritesAllowedInThisEnvironment } from "@/lib/dts/prodGate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,10 @@ export async function POST(req: Request) {
   const requestId = `activate_program_${Date.now()}_${Math.random()
     .toString(16)
     .slice(2)}`;
+
+  // 005 — env-gate: en prod, bloquear escritura legacy antes de tocar DB.
+  const blocked = assertDtsWritesAllowedInThisEnvironment();
+  if (blocked) return blocked;
 
   try {
     const supabase = supabaseService();

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { assertDtsWritesAllowedInThisEnvironment } from "@/lib/dts/prodGate"
 
 export async function POST(req: NextRequest) {
+  // 005 — env-gate: en prod, bloquear escritura legacy antes de tocar DB.
+  const blocked = assertDtsWritesAllowedInThisEnvironment()
+  if (blocked) return blocked
+
   try {
     const { assessmentId, actionId, status } = await req.json()
 
