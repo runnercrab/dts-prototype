@@ -144,6 +144,20 @@ export async function GET(req: Request) {
     );
   }
 
+  // M3: esta vista (matriz de cuadrantes) MUERE para v23 — sin sustituto; el
+  // plan v3 no usa cuadrantes. Legacy congelado. Mensaje PROVISIONAL (papeleta-UI).
+  if (assessment.pack === "gapply_v23") {
+    return NextResponse.json(
+      {
+        error: "vista_no_disponible_v23",
+        pack: assessment.pack,
+        message:
+          "Esta vista ya no forma parte del plan v3. [TEXTO PROVISIONAL — pendiente papeleta-UI]",
+      },
+      { status: 410 }
+    );
+  }
+
   // 2) Programas canónicos via snapshotResolver (snapshot if cacheable + state allows; live otherwise)
   let resolved;
   try {

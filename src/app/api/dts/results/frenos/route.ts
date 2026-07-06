@@ -95,6 +95,19 @@ export async function GET(req: Request) {
       );
     }
     const pack = (assessmentRow.pack || "").toString().trim();
+    // M3: la vista de frenos MUERE para v23 (el motor v3 sustituye el freno
+    // silencioso por gates explícitos con texto). Legacy congelado. PROVISIONAL.
+    if (pack === "gapply_v23") {
+      return NextResponse.json(
+        {
+          error: "vista_no_disponible_v23",
+          pack,
+          message:
+            "Esta vista ya no forma parte del plan v3. [TEXTO PROVISIONAL — pendiente papeleta-UI]",
+        },
+        { status: 410 }
+      );
+    }
     if (!pack) {
       return NextResponse.json(
         { error: "Missing pack on assessment" },

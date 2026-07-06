@@ -102,6 +102,19 @@ export async function GET(req: Request) {
     );
   }
 
+  // M3: endpoint deprecated; MUERE para v23. Legacy congelado. Texto PROVISIONAL.
+  if (assessment.pack === "gapply_v23") {
+    return NextResponse.json(
+      {
+        error: "vista_no_disponible_v23",
+        pack: assessment.pack,
+        message:
+          "Esta vista ya no forma parte del plan v3. [TEXTO PROVISIONAL — pendiente papeleta-UI]",
+      },
+      { status: 410 }
+    );
+  }
+
   // 2) Ranking via snapshotResolver (snapshot if cacheable + state allows; live otherwise)
   let resolved;
   try {

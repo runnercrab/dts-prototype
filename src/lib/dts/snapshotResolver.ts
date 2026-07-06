@@ -297,10 +297,14 @@ type SnapshotRow = {
   // (DB shape is jsonb; runtime check via Array.isArray for arrays)
   results_payload: Record<string, any>;
   programs_payload: any[] | null;
+  // M3: roadmap v3 congelado (columna aditiva nullable; filas v2 = null)
+  roadmap_payload: Record<string, any> | null;
   responses_payload: any[] | null;
   model_fingerprint: string;
   input_fingerprint: string;
   trigger_reason: string;
+  // M3: qué motores generaron el snapshot (discrimina v2 congelado vs v3)
+  source_rpc_versions: Record<string, string> | null;
 };
 
 async function loadAssessmentAndSnapshot(
@@ -316,7 +320,7 @@ async function loadAssessmentAndSnapshot(
     sb
       .from("dts_assessment_results_snapshots")
       .select(
-        "id, results_payload, programs_payload, responses_payload, model_fingerprint, input_fingerprint, trigger_reason"
+        "id, results_payload, programs_payload, roadmap_payload, responses_payload, model_fingerprint, input_fingerprint, trigger_reason, source_rpc_versions"
       )
       .eq("assessment_id", assessmentId)
       .eq("snapshot_status", "active")
@@ -438,6 +442,54 @@ async function callDtsResultsProgramsV2(
     );
   }
   return Array.isArray(data) ? data : [];
+}
+
+// ─── M3: motor v3 (repoint acotado a v23) ──────────────────────────────
+// Packs cuyo ranking/roadmap se sirve desde el motor v3. El pack legacy
+// (todo lo demás) sigue por v2 sin tocar.
+export const V3_PACKS = new Set<string>(["gapply_v23"]);
+
+// callDtsResultsProgramsV3: ranking v3 (filas verbatim del motor). No usa
+// p_only_shortlist/p_use_overrides (el motor v3 no los define).
+// Filas: rank, program_id, program_code, title, crit, tier, impact_n, effort,
+//        priority_score, weighted_need, criteria_covered, freno_gate, entra_en_roadmap.
+async function callDtsResultsProgramsV3(
+  sb: SupabaseClient,
+  assessmentId: string
+): Promise<ProgramsV2Array> {
+  const { data, error } = await sb.rpc("dts_results_programs_v3", {
+    p_assessment_id: assessmentId,
+  });
+  if (error) {
+    throw new Error(
+      `[snapshotResolver] dts_results_programs_v3 failed for ${assessmentId}: ${error.message}`
+    );
+  }
+  return Array.isArray(data) ? data : [];
+}
+
+// callDtsV3GenerateRoadmap: roadmap v3 (jsonb objeto). Claves top:
+//   roadmap_version, assessment_id, semantica, programas[], carga_por_mes, generated_at.
+// programas[]: rank, code, name_ceo, gate_estado, gate_detalle, razon_ceo,
+//   fase, mes_arranque, disponibilidad, score, need, acciones[].
+async function callDtsV3GenerateRoadmap(
+  sb: SupabaseClient,
+  assessmentId: string
+): Promise<Record<string, any>> {
+  const { data, error } = await sb.rpc("dts_v3_generate_roadmap", {
+    p_assessment_id: assessmentId,
+  });
+  if (error) {
+    throw new Error(
+      `[snapshotResolver] dts_v3_generate_roadmap failed for ${assessmentId}: ${error.message}`
+    );
+  }
+  if (!data || typeof data !== "object") {
+    throw new Error(
+      `[snapshotResolver] dts_v3_generate_roadmap returned non-object for ${assessmentId}`
+    );
+  }
+  return data as Record<string, any>;
 }
 
 // callDtsResultsV1Coverage: live RPC dts_results_v1 (cobertura) → CoverageV1.
@@ -872,8 +924,26 @@ export async function resolveProgramsPayload(
   const cacheable = onlyShortlist === false && useOverrides === true;
   const baseLog = { kind: "programs", assessment: assessmentId };
 
-  // Pre-check params no-cacheables → fallback live SIN tocar snapshot
-  if (!cacheable) {
+  // M3: carga assessment+snapshot primero para conocer el pack y ramificar
+  // el motor LIVE (v3 para v23, v2 legacy). El snapshot congelado se sirve
+  // siempre verbatim (P4-1: los completados intocados ven su foto).
+  const { assessment, snapshot } = await loadAssessmentAndSnapshot(
+    sb,
+    assessmentId
+  );
+  const status = assessment.status;
+  const pack = assessment.pack;
+  const isV3 = V3_PACKS.has(pack);
+
+  // Motor LIVE según pack. v3 no usa onlyShortlist/useOverrides.
+  const callLivePrograms = () =>
+    isV3
+      ? callDtsResultsProgramsV3(sb, assessmentId)
+      : callDtsResultsProgramsV2(sb, assessmentId, onlyShortlist, useOverrides);
+
+  // Pre-check params no-cacheables (solo aplica a v2 legacy; v3 los ignora)
+  // → fallback live SIN tocar snapshot.
+  if (!cacheable && !isV3) {
     const data = await callDtsResultsProgramsV2(
       sb,
       assessmentId,
@@ -899,13 +969,6 @@ export async function resolveProgramsPayload(
       data,
     };
   }
-
-  const { assessment, snapshot } = await loadAssessmentAndSnapshot(
-    sb,
-    assessmentId
-  );
-  const status = assessment.status;
-  const pack = assessment.pack;
 
   // Estado A
   if (status === "completed" && snapshot) {
@@ -937,12 +1000,7 @@ export async function resolveProgramsPayload(
 
   // Estado B
   if (status === "completed" && !snapshot) {
-    const data = await callDtsResultsProgramsV2(
-      sb,
-      assessmentId,
-      onlyShortlist,
-      useOverrides
-    );
+    const data = await callLivePrograms();
     logResolver("warn", {
       ...baseLog,
       state: "B",
@@ -965,12 +1023,7 @@ export async function resolveProgramsPayload(
 
   // Estado C
   if (status === "draft" && !snapshot) {
-    const data = await callDtsResultsProgramsV2(
-      sb,
-      assessmentId,
-      onlyShortlist,
-      useOverrides
-    );
+    const data = await callLivePrograms();
     logResolver("info", {
       ...baseLog,
       state: "C",
@@ -1024,12 +1077,7 @@ export async function resolveProgramsPayload(
     }
 
     // D_drift
-    const data = await callDtsResultsProgramsV2(
-      sb,
-      assessmentId,
-      onlyShortlist,
-      useOverrides
-    );
+    const data = await callLivePrograms();
     logResolver("warn", {
       ...baseLog,
       state: "D_drift",
@@ -1054,12 +1102,7 @@ export async function resolveProgramsPayload(
 
   // Unexpected fallback: status not in ["completed", "draft"] or unforeseen combo.
   // Defensive: do NOT trust snapshot here. Always fall back to live RPC.
-  const fallbackData = await callDtsResultsProgramsV2(
-    sb,
-    assessmentId,
-    onlyShortlist,
-    useOverrides
-  );
+  const fallbackData = await callLivePrograms();
   logResolver("warn", {
     ...baseLog,
     state: "unexpected_fallback",
@@ -1080,6 +1123,154 @@ export async function resolveProgramsPayload(
     reason: "unexpected_fallback",
     data: fallbackData,
   };
+}
+
+// ─── M3: resolveRoadmapPayload (roadmap v3, acotado a v23) ────────────
+// Nuevo camino de lectura de `roadmap_payload` (jsonb del motor v3).
+//  - v23 completed + snapshot con roadmap_payload → sirve el roadmap CONGELADO;
+//    `modelEvolved=true` cuando el fingerprint del modelo ya no casa (deja de ser
+//    solo log: el caller puede marcarlo como "histórico / modelo evolucionado").
+//  - v23 draft / sin snapshot → roadmap v3 LIVE (`dts_v3_generate_roadmap`).
+//  - v23 completed con snapshot v2 antiguo (roadmap_payload NULL) → data=null:
+//    el caller cae al camino legacy y preserva la foto de mayo (P4-1, cero cambio).
+//  - packs legacy → applicable=false: el caller usa su motor de siempre INTACTO.
+export type ResolvedRoadmapV3 = {
+  applicable: boolean;
+  fromSnapshot: boolean;
+  snapshotId: string | null;
+  state: string;
+  modelFingerprintMatch: boolean | null;
+  modelEvolved: boolean;
+  data: Record<string, any> | null;
+};
+
+export async function resolveRoadmapPayload(
+  sb: SupabaseClient,
+  assessmentId: string
+): Promise<ResolvedRoadmapV3> {
+  const { assessment, snapshot } = await loadAssessmentAndSnapshot(
+    sb,
+    assessmentId
+  );
+  const status = assessment.status;
+  const pack = assessment.pack;
+  const baseLog = { kind: "roadmap_v3", assessment: assessmentId };
+
+  // Pack legacy → el motor v3 no aplica; el caller usa su camino de siempre.
+  if (!V3_PACKS.has(pack)) {
+    return {
+      applicable: false,
+      fromSnapshot: false,
+      snapshotId: null,
+      state: "not_v3_pack",
+      modelFingerprintMatch: null,
+      modelEvolved: false,
+      data: null,
+    };
+  }
+
+  const frozen = (snapshot?.roadmap_payload ?? null) as Record<
+    string,
+    any
+  > | null;
+
+  // Live: llama al motor puro; si devuelve {error}, lo tratamos como sin datos.
+  const live = async (state: string): Promise<ResolvedRoadmapV3> => {
+    const data = await callDtsV3GenerateRoadmap(sb, assessmentId);
+    const hasError = data && typeof data.error === "string";
+    logResolver(hasError ? "warn" : "info", {
+      ...baseLog,
+      state,
+      fromSnapshot: false,
+      live: true,
+      ...(hasError ? { engineError: data.error } : {}),
+    });
+    return {
+      applicable: true,
+      fromSnapshot: false,
+      snapshotId: null,
+      state,
+      modelFingerprintMatch: null,
+      modelEvolved: false,
+      data: hasError ? null : data,
+    };
+  };
+
+  // Estado A: completed + snapshot.
+  if (status === "completed" && snapshot) {
+    if (frozen) {
+      const liveModelFp = await computeModelFingerprint(sb, pack);
+      const modelFingerprintMatch = liveModelFp === snapshot.model_fingerprint;
+      logResolver(modelFingerprintMatch ? "info" : "warn", {
+        ...baseLog,
+        state: "A",
+        fromSnapshot: true,
+        modelFingerprintMatch,
+        modelEvolved: !modelFingerprintMatch,
+        snapshotId: snapshot.id,
+      });
+      return {
+        applicable: true,
+        fromSnapshot: true,
+        snapshotId: snapshot.id,
+        state: "A",
+        modelFingerprintMatch,
+        modelEvolved: !modelFingerprintMatch,
+        data: frozen,
+      };
+    }
+    // Snapshot v2 antiguo sin roadmap_payload → caller cae a legacy (foto mayo).
+    logResolver("info", {
+      ...baseLog,
+      state: "A_no_v3_roadmap",
+      fromSnapshot: true,
+      snapshotId: snapshot.id,
+    });
+    return {
+      applicable: true,
+      fromSnapshot: false,
+      snapshotId: snapshot.id,
+      state: "A_no_v3_roadmap",
+      modelFingerprintMatch: null,
+      modelEvolved: false,
+      data: null,
+    };
+  }
+
+  // Estado B: completed sin snapshot → live.
+  if (status === "completed" && !snapshot) return live("B");
+
+  // Estado C: draft sin snapshot → live.
+  if (status === "draft" && !snapshot) return live("C");
+
+  // Estado D / D_drift: draft + snapshot.
+  if (status === "draft" && snapshot) {
+    const liveInputFp = await computeInputFingerprint(sb, assessmentId);
+    if (liveInputFp === snapshot.input_fingerprint && frozen) {
+      const liveModelFp = await computeModelFingerprint(sb, pack);
+      const modelFingerprintMatch = liveModelFp === snapshot.model_fingerprint;
+      logResolver("info", {
+        ...baseLog,
+        state: "D",
+        fromSnapshot: true,
+        modelFingerprintMatch,
+        snapshotId: snapshot.id,
+      });
+      return {
+        applicable: true,
+        fromSnapshot: true,
+        snapshotId: snapshot.id,
+        state: "D",
+        modelFingerprintMatch,
+        modelEvolved: !modelFingerprintMatch,
+        data: frozen,
+      };
+    }
+    return live("D_drift");
+  }
+
+  // Unexpected fallback.
+  return live("unexpected_fallback");
 }
 
 // ─── Public API: stubs para PR-2 (exportadas, no llamadas en PR-1) ────

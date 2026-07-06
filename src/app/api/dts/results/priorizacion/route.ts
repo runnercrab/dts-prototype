@@ -126,6 +126,19 @@ export async function GET(req: Request) {
       );
     }
     const pack = (assessmentRow.pack || "").toString().trim();
+    // M3: la vista de priorización (bandas high/medium/low) MUERE para v23; el
+    // orden lo da el motor v3. Legacy congelado. Mensaje PROVISIONAL (papeleta-UI).
+    if (pack === "gapply_v23") {
+      return NextResponse.json(
+        {
+          error: "vista_no_disponible_v23",
+          pack,
+          message:
+            "Esta vista ya no forma parte del plan v3. [TEXTO PROVISIONAL — pendiente papeleta-UI]",
+        },
+        { status: 410 }
+      );
+    }
     if (!pack) {
       return NextResponse.json(
         { error: "Missing pack on assessment" },

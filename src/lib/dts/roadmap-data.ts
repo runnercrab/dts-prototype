@@ -4,7 +4,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { resolveProgramsPayload } from '@/lib/dts/snapshotResolver'
+import { resolveProgramsPayload, resolveRoadmapPayload } from '@/lib/dts/snapshotResolver'
 
 // ── Types ──
 
@@ -246,10 +246,89 @@ export async function fetchRoadmapWithSummary(
     throw new Error(`Assessment not found: ${aErr?.message || 'no data'}`)
   }
 
+  // M3: repoint acotado a gapply_v23 → roadmap v3 (muere la metodología v2 en
+  // este camino: fetchRoadmapV22 / MONTH_TO_PHASE / capacidad / enrichReasons).
+  if (assessment.pack === 'gapply_v23') {
+    return fetchRoadmapV3(supabase, assessmentId)
+  }
+  // Legacy INTACTO: gapply_v22 sigue por V22; el resto por V1 (dts_v2_generate_roadmap).
   if (V22_PACKS.has(assessment.pack)) {
     return fetchRoadmapV22(supabase, assessmentId)
   } else {
     return fetchRoadmapV1(supabase, assessmentId)
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// V3 PATH — roadmap v3 (motor puro). Sin MONTH_TO_PHASE, sin capacidad
+// 40/80/120, sin enrichReasons: los textos visibles vienen SOLO del motor
+// (razon_ceo, ya renderizada contra dts_v3_gate_messages).
+// ══════════════════════════════════════════════════════════════════
+async function fetchRoadmapV3(
+  supabase: SupabaseClient,
+  assessmentId: string
+): Promise<RoadmapData> {
+  const resolved = await resolveRoadmapPayload(supabase, assessmentId)
+  const meta = {
+    fromSnapshot: resolved.fromSnapshot,
+    snapshotId: resolved.snapshotId,
+    snapshotState: resolved.state,
+  }
+  if (!resolved.applicable || !resolved.data) return emptyRoadmap('v3', meta)
+
+  const programas: any[] = Array.isArray(resolved.data.programas)
+    ? resolved.data.programas
+    : []
+
+  const programs: RoadmapProgram[] = programas
+    .slice()
+    .sort((a: any, b: any) => (a?.fase ?? 999) - (b?.fase ?? 999) || (a?.rank ?? 999) - (b?.rank ?? 999))
+    .map((p: any) => ({
+      id: p?.code ?? '',
+      code: p?.code ?? '',
+      name: p?.name_ceo ?? p?.code ?? '',
+      dimension: '',
+      tier: typeof p?.fase === 'number' ? p.fase : 99,
+      dolor_ceo: null,
+      why_matters: null,
+      expected_outcome: null,
+      ejemplos: null,
+      weighted_need: typeof p?.need === 'number' ? p.need : 0,
+      program_score: typeof p?.score === 'number' ? p.score : 0,
+      priority_badge: null,
+      // Razones visibles SOLO del motor (gate ya renderizado); 'libre' → sin texto.
+      reasons: typeof p?.razon_ceo === 'string' && p.razon_ceo ? [p.razon_ceo] : [],
+      hours_typical: null,
+      // Sin buckets de meses (MONTH_TO_PHASE muere para v3): acciones tal cual del motor.
+      actions: { '30d': [], '60d': [], '90d': [], backlog: [] },
+    }))
+
+  const summary: RoadmapSummary = {
+    programs_assigned: programs.length,
+    programs_active_90d: programs.length,
+    actions_assigned: 0,
+    actions_in_90d: 0,
+    capacity_exceeded: false,
+    capacity_excess_hours: { '30d': 0, '60d': 0, '90d': 0, total: 0 },
+    overflow_to_backlog: false,
+    capacity_exceeded_by_starters: false,
+    starter_actions_forced: 0,
+    d5_dimensions: [],
+    version: 'v3',
+  }
+
+  return {
+    programs,
+    capacity: {
+      '30d': { limit: 0, used: 0 },
+      '60d': { limit: 0, used: 0 },
+      '90d': { limit: 0, used: 0 },
+    },
+    d5: [],
+    summary,
+    fromSnapshot: meta.fromSnapshot,
+    snapshotId: meta.snapshotId,
+    snapshotState: meta.snapshotState,
   }
 }
 
