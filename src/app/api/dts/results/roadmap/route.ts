@@ -1,7 +1,11 @@
 // src/app/api/dts/results/roadmap/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { resolveProgramsPayload } from "@/lib/dts/snapshotResolver";
+import {
+  resolveProgramsPayload,
+  resolveRoadmapPayload,
+} from "@/lib/dts/snapshotResolver";
+import { phaseLabel } from "@/lib/dts/phaseLabels";
 
 export const dynamic = "force-dynamic";
 
@@ -230,6 +234,98 @@ export async function GET(req: Request) {
       { error: "Assessment no encontrado", details: aErr?.message ?? null },
       { status: 404 }
     );
+  }
+
+  // ─── M3: ROADMAP v3 (repoint acotado a v23) ──────────────────────────
+  // Si el pack es v23 y hay roadmap v3 (live o congelado), la pantalla pinta
+  // las fases F1..Fn del motor (etiqueta mecánica) con WIP del motor y los
+  // textos de gate ya renderizados por el motor (razon_ceo). Muere la lógica
+  // Big4 (quadrant/olas/spill/whyNow) PARA v23. Legacy y foto-v2-congelada
+  // (Gedeth/fc, sin roadmap_payload) caen al camino Big4 de abajo, INTACTO.
+  let roadmapV3;
+  try {
+    roadmapV3 = await resolveRoadmapPayload(supabase, assessmentId);
+  } catch (err: any) {
+    console.error("[api roadmap] resolveRoadmapPayload error:", err);
+    return NextResponse.json(
+      { error: "Error obteniendo roadmap v3", details: err?.message ?? null },
+      { status: 500 }
+    );
+  }
+
+  if (roadmapV3.applicable && roadmapV3.data) {
+    const rm = roadmapV3.data;
+    const programas: any[] = Array.isArray(rm.programas) ? rm.programas : [];
+    const wip = toInt(rm?.semantica?.wip_max, 2) || 2;
+
+    // code → program_id (la pantalla usa program_id para activar/enlazar).
+    const codes = Array.from(
+      new Set(programas.map((p: any) => p?.code).filter(Boolean))
+    ) as string[];
+    const idByCode = new Map<string, string>();
+    if (codes.length > 0) {
+      const { data: cat } = await supabase
+        .from("dts_program_catalog")
+        .select("id, code")
+        .in("code", codes);
+      for (const row of cat || []) {
+        if (row?.code && row?.id) idByCode.set(row.code, row.id);
+      }
+    }
+
+    // Una fase visible por cada fase del motor v3 (entero), ordenadas.
+    const byFase = new Map<number, any[]>();
+    for (const p of programas) {
+      const fase = toInt(p?.fase, 0) || 0;
+      const list = byFase.get(fase) || [];
+      list.push(p);
+      byFase.set(fase, list);
+    }
+
+    const phases = Array.from(byFase.keys())
+      .sort((a, b) => a - b)
+      .map((fase) => ({
+        phase: String(fase),
+        title: phaseLabel(fase), // etiqueta mecánica "Fase N"
+        subtitle: "", // textos solo del motor: sin subtítulo metodológico inventado
+        programs: (byFase.get(fase) || [])
+          .sort(
+            (a: any, b: any) => (toInt(a.rank, 999) || 999) - (toInt(b.rank, 999) || 999)
+          )
+          .map((p: any) => ({
+            rank: toInt(p.rank, 0) || 0,
+            program_id: idByCode.get(p.code) ?? p.code,
+            program_code: p.code ?? null,
+            title: p.name_ceo ?? p.code ?? "",
+            quadrant: "unknown" as QuadrantKey,
+            impact_score: null,
+            effort_score: null,
+            // Texto visible SOLO del motor + dts_v3_gate_messages (razon_ceo ya
+            // renderizada por el motor). 'libre' → sin texto (no se inventa nada).
+            why_now: typeof p.razon_ceo === "string" ? p.razon_ceo : "",
+          })),
+      }));
+
+    const includedCount = phases.reduce((acc, ph) => acc + ph.programs.length, 0);
+
+    const res = NextResponse.json({
+      assessment_id: assessmentId,
+      pack: assessment.pack,
+      max_per_phase: wip,
+      count: includedCount,
+      phases,
+      payload_version: "v3",
+      roadmap_version: rm.roadmap_version ?? "v3",
+      fromSnapshot: roadmapV3.fromSnapshot,
+      snapshotId: roadmapV3.snapshotId,
+      snapshotState: roadmapV3.state,
+      modelFingerprintMatch: roadmapV3.modelFingerprintMatch,
+    });
+    res.headers.set("X-From-Snapshot", String(roadmapV3.fromSnapshot));
+    res.headers.set("X-Snapshot-State", roadmapV3.state);
+    res.headers.set("X-Payload-Version", "v3");
+    if (roadmapV3.modelEvolved) res.headers.set("X-Model-Evolved", "true");
+    return res;
   }
 
   // 2) detectar “modo vacío” (0 respuestas) -> fallback pack programs

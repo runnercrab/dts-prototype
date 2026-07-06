@@ -549,8 +549,9 @@ function FloatingAvatarButton({ chatMessages }: { chatMessages: ChatMessage[] })
 export default function DiagnosticoFullPage() {
   const router = useRouter()
 
-  // ✅ CAMBIO: default pack canónico a v2
-  const DEFAULT_PACK = 'tmf_mvp12_v2'
+  // M3: el default de cliente tmf muere. La creación pasa por la puerta B
+  // (funnel data-driven → gapply_v23); el default de presentación es el pack v23.
+  const DEFAULT_PACK = 'gapply_v23'
   const createInFlightRef = useRef(false)
 
   const [phase, setPhase] = useState<'onboarding' | 'assessment' | 'completed'>('onboarding')
@@ -641,16 +642,18 @@ export default function DiagnosticoFullPage() {
         if (createInFlightRef.current) return
         createInFlightRef.current = true
 
-        const res = await fetch('/api/dts/assessment/create', {
+        // M3: creación por puerta B (funnel data-driven → gapply_v23). No se
+        // envía pack por body (lo decide is_funnel_default). Respuesta OK de la
+        // puerta B = { assessmentId } (sin campo `ok`).
+        const res = await fetch('/api/dts/create-assessment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           cache: 'no-store',
-          body: JSON.stringify({ pack: packFromUrl }),
         })
 
         const json = await safeReadJson(res)
 
-        if (!res.ok || !json?.ok || !json?.assessmentId) {
+        if (!res.ok || !json?.assessmentId) {
           console.error('❌ assessment/create failed', { status: res.status, json })
           setPhase('onboarding')
           return

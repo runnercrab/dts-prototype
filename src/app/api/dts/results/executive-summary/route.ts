@@ -250,6 +250,21 @@ export async function GET(req: Request) {
     }
 
     const packCode = String(assessmentRow.pack || "").trim();
+    // M3: executive-summary MUERE para v23 (duplicaba scoreByWeightedGap/assignBands
+    // del motor v2). Legacy congelado. Mensaje PROVISIONAL — pendiente papeleta-UI.
+    if (packCode === "gapply_v23") {
+      return NextResponse.json(
+        {
+          ok: false,
+          requestId,
+          error: "vista_no_disponible_v23",
+          pack: packCode,
+          message:
+            "Esta vista ya no forma parte del plan v3. [TEXTO PROVISIONAL — pendiente papeleta-UI]",
+        },
+        { status: 410 }
+      );
+    }
     if (!packCode) {
       return NextResponse.json(
         { ok: false, requestId, error: "PACK_MISSING_ON_ASSESSMENT" },

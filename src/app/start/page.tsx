@@ -42,19 +42,11 @@ export default async function StartPage({
     );
   }
 
-  // mode === "mvp"
-  const { data, error } = await supabase.rpc("dts_assessment_resume_or_create_v1", {
-    p_pack: pack,
-  });
-
-  if (error || !data) {
-    redirect(`/?err=mvp_start_failed&pack=${encodeURIComponent(pack)}`);
-  }
-
-  const assessmentId = String(data);
-  redirect(
-    `/diagnostico-full?assessmentId=${encodeURIComponent(
-      assessmentId
-    )}&pack=${encodeURIComponent(pack)}`
-  );
+  // ─── M3: PUERTA C CERRADA (mode=mvp) ───────────────────────────────
+  // Cierre de las puertas A/C CONFIRMADO (STOP-1 resuelto). La creación nueva
+  // de diagnósticos pasa por la PUERTA B (funnel data-driven → gapply_v23).
+  // Redirección = TEXTO PROVISIONAL — pendiente de papeleta-UI.
+  // NOTA: mode=demo (lectura de demo precargada, arriba) se CONSERVA: su cierre
+  // quedó firmado como "a decidir en mesa" y no es "creación nueva".
+  redirect(`/dts?from=start_mvp_closed`);
 }

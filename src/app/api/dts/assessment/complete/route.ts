@@ -4,10 +4,10 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-// Fase 1: solo gapply_v23 va al wrapper con snapshot.
-// Otros packs siguen llamando a dts_assessment_complete_v1 directamente (legacy).
-// Esta lista debe coincidir con la allowlist de la wrapper SQL.
-const SNAPSHOT_PACKS = new Set(["gapply_v23"]);
+// M3: la allowlist hardcodeada (SNAPSHOT_PACKS) muere. La fuente de verdad de
+// qué pack recibe snapshot es la config data-driven `dts_packs.snapshot_enabled`
+// (mismo criterio que el wrapper SQL v3). Los packs con snapshot_enabled=true van
+// al wrapper v3; el resto sigue en dts_assessment_complete_v1 (legacy, sin snapshot).
 
 function isUuid(v: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
@@ -111,19 +111,40 @@ export async function POST(req: Request) {
       );
     }
 
+    // ─── Config data-driven: ¿este pack recibe snapshot? (dts_packs) ─
+    const { data: packRow, error: packErr } = await supabase
+      .from("dts_packs")
+      .select("id, snapshot_enabled")
+      .eq("id", asm.pack)
+      .maybeSingle();
+
+    if (packErr) {
+      console.error("[assessment/complete] pack lookup error:", {
+        assessmentId,
+        pack: asm.pack,
+        code: packErr.code,
+        message: packErr.message,
+      });
+      return NextResponse.json<CompleteErr>(
+        { ok: false, error: "lookup_failed" },
+        { status: 500 }
+      );
+    }
+    const snapshotEnabled = packRow?.snapshot_enabled === true;
+
     // Defensive: rechazar demo en path snapshot ANTES de llamar al wrapper.
     // El wrapper también lo rechaza (defensa en profundidad).
-    if (SNAPSHOT_PACKS.has(asm.pack) && asm.is_demo === true) {
+    if (snapshotEnabled && asm.is_demo === true) {
       return NextResponse.json<CompleteErr>(
         { ok: false, error: "demo_not_allowed" },
         { status: 403 }
       );
     }
 
-    // ─── Path A: gapply_v23 → wrapper con snapshot ───────────────────
-    if (SNAPSHOT_PACKS.has(asm.pack)) {
+    // ─── Path A: snapshot_enabled → wrapper v3 con snapshot ──────────
+    if (snapshotEnabled) {
       const { data, error } = await supabase.rpc(
-        "dts_complete_assessment_with_snapshot",
+        "dts_complete_assessment_with_snapshot_v3",
         { p_assessment_id: assessmentId }
       );
 

@@ -308,22 +308,34 @@ function ResultsTopBar({
   assessmentId,
   pack,
   activeTab,
+  isV3 = false,
 }: {
   assessmentId: string;
   pack: string;
   activeTab: TabKey;
+  isV3?: boolean;
 }) {
   const base = `/resultados/${assessmentId}`;
 
-  const ctaHref = activeTab === "frenos" ? `${base}/cierre` : `${base}/frenos`;
+  // M3: en v23 las vistas frenos/priorización mueren; el CTA lleva al plan v3.
+  // Navegación/etiqueta = TEXTO PROVISIONAL (pendiente papeleta-UI).
+  const ctaHref = isV3
+    ? `${base}/ejecucion/programas`
+    : activeTab === "frenos"
+    ? `${base}/cierre`
+    : `${base}/frenos`;
 
-  const ctaLabel =
-    activeTab === "frenos" ? "Finalizar diagnóstico" : "Siguiente: Frenos";
+  const ctaLabel = isV3
+    ? "Ver plan de acción"
+    : activeTab === "frenos"
+    ? "Finalizar diagnóstico"
+    : "Siguiente: Frenos";
 
-  const ctaTitle =
-    activeTab === "frenos"
-      ? "Cerrar diagnóstico y pasar al siguiente bloque"
-      : "Siguiente paso recomendado: revisar frenos";
+  const ctaTitle = isV3
+    ? "Ir al plan de acción (v3) [texto provisional — pendiente papeleta-UI]"
+    : activeTab === "frenos"
+    ? "Cerrar diagnóstico y pasar al siguiente bloque"
+    : "Siguiente paso recomendado: revisar frenos";
 
   return (
     <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-100">
@@ -365,16 +377,21 @@ function ResultsTopBar({
             active={activeTab === "overview"}
             label="Visión general"
           />
-          <TabLink
-            href={`${base}/frenos`}
-            active={activeTab === "frenos"}
-            label="Frenos"
-          />
-          <TabLink
-            href={`${base}/priorizacion`}
-            active={activeTab === "priorizacion"}
-            label="Priorización"
-          />
+          {/* M3: tabs frenos/priorización MUEREN para v23 (pantallas muertas). Legacy las conserva. */}
+          {!isV3 ? (
+            <>
+              <TabLink
+                href={`${base}/frenos`}
+                active={activeTab === "frenos"}
+                label="Frenos"
+              />
+              <TabLink
+                href={`${base}/priorizacion`}
+                active={activeTab === "priorizacion"}
+                label="Priorización"
+              />
+            </>
+          ) : null}
         </div>
 
         <Link
@@ -544,16 +561,24 @@ export default async function ResultadosPage({
   const completionPct = Math.round(((data.totals.completion_rate ?? 0) * 100) as number);
   const completed = total > 0 && evaluated >= total;
 
+  // M3: para v23 las vistas frenos/priorización MUEREN (el motor v3 sustituye
+  // el freno silencioso y las bandas por gates/orden explícitos). No se hacen
+  // los fetches (darían 410) y la navegación se sustituye por texto PROVISIONAL
+  // (pendiente papeleta-UI). Legacy: fetches y tabs INTACTOS.
+  const isV3 = data.pack === "gapply_v23";
+
   const frenosResp =
-    activeTab === "frenos" ? await fetchFrenos(assessmentId, 12) : null;
+    activeTab === "frenos" && !isV3 ? await fetchFrenos(assessmentId, 12) : null;
 
   const priorResp =
-    activeTab === "priorizacion"
+    activeTab === "priorizacion" && !isV3
       ? await fetchPriorizacion(assessmentId, 12)
       : null;
 
-  const topFrenosResp = isOverview ? await fetchFrenos(assessmentId, 3) : null;
-  const topPriorResp = isOverview ? await fetchPriorizacion(assessmentId, 3) : null;
+  const topFrenosResp =
+    isOverview && !isV3 ? await fetchFrenos(assessmentId, 3) : null;
+  const topPriorResp =
+    isOverview && !isV3 ? await fetchPriorizacion(assessmentId, 3) : null;
 
   const scoreResp = isOverview ? await fetchScore(assessmentId) : null;
   const dimsMetaResp = isOverview ? await fetchDimensionsMeta() : null;
@@ -570,7 +595,7 @@ export default async function ResultadosPage({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ResultsTopBar assessmentId={assessmentId} pack={data.pack} activeTab={activeTab} />
+      <ResultsTopBar assessmentId={assessmentId} pack={data.pack} activeTab={activeTab} isV3={isV3} />
 
       <div className="py-8">
         {activeTab === "overview" ? (
@@ -805,7 +830,13 @@ export default async function ResultadosPage({
           </div>
         ) : null}
 
-        {activeTab === "frenos" ? (
+        {activeTab === "frenos" && isV3 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 text-sm text-slate-600">
+            Esta vista ya no forma parte de tu plan. [TEXTO PROVISIONAL — pendiente papeleta-UI]
+          </div>
+        ) : null}
+
+        {activeTab === "frenos" && !isV3 ? (
           <div className="space-y-4">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">Frenos del negocio</h2>
@@ -837,7 +868,13 @@ export default async function ResultadosPage({
           </div>
         ) : null}
 
-        {activeTab === "priorizacion" ? (
+        {activeTab === "priorizacion" && isV3 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 text-sm text-slate-600">
+            Esta vista ya no forma parte de tu plan. [TEXTO PROVISIONAL — pendiente papeleta-UI]
+          </div>
+        ) : null}
+
+        {activeTab === "priorizacion" && !isV3 ? (
           <div className="space-y-4">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">Priorización inicial</h2>

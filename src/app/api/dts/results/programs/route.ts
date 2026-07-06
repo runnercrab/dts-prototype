@@ -163,52 +163,80 @@ export async function GET(req: Request) {
   const data = resolved.data;
   const rows = Array.isArray(data) ? data : [];
 
+  // M3: discrimina la forma servida por el resolver. El motor v3 (v23) trae
+  // `entra_en_roadmap`/`priority_score`; el v2 legacy trae `program_score`/
+  // `priority_badge`/`top_contributors`. Un snapshot v23 con foto v2 antigua
+  // (Gedeth/fc) se sirve congelado en forma v2 → sniff por fila, no por pack.
+  const isV3Row = (r: any) =>
+    r && typeof r === "object" && "entra_en_roadmap" in r;
+  const payloadVersion = rows.some(isV3Row) ? "v3" : "v2";
+  const modelFingerprintMatch =
+    "modelFingerprintMatch" in resolved ? resolved.modelFingerprintMatch : null;
+
   // ✅ Modo normal: ranking con datos
   if (rows.length > 0) {
     const items = rows
-      .map((r: any) => ({
-        rank: toInt(r.rank, null),
-        program_id: r.program_id ?? null,
-        program_code: r.program_code ?? null,
-        title: r.title ?? null,
-        status: r.status ?? null,
+      .map((r: any) => {
+        const v3 = isV3Row(r);
+        return {
+          rank: toInt(r.rank, null),
+          program_id: r.program_id ?? null,
+          program_code: r.program_code ?? null,
+          title: r.title ?? null,
+          status: r.status ?? null,
 
-        impact_score: toInt(r.impact_score, null),
-        effort_score: toInt(r.effort_score, null),
+          // v3: impact_n/effort del motor; v2: impact_score/effort_score
+          impact_score: toInt(v3 ? r.impact_n : r.impact_score, null),
+          effort_score: toInt(v3 ? r.effort : r.effort_score, null),
 
-        weighted_need: toNum(r.weighted_need, null),
-        value_score: toNum(r.value_score, null),
-        program_score: toNum(r.program_score, null),
+          weighted_need: toNum(r.weighted_need, null),
+          value_score: toNum(r.value_score, null),
+          // v3: el score del motor es priority_score; v2: program_score
+          program_score: toNum(v3 ? r.priority_score : r.program_score, null),
 
-        criteria_covered: toInt(r.criteria_covered, null),
+          criteria_covered: toInt(r.criteria_covered, null),
 
-        notes: r.notes ?? null,
-        owner: r.owner ?? null,
+          // v3 (D1/T2): tier/crit/entra_en_roadmap del motor; null en v2
+          tier: v3 ? toInt(r.tier, null) : null,
+          crit: v3 ? toInt(r.crit, null) : null,
+          entra_en_roadmap: v3 ? r.entra_en_roadmap === true : null,
 
-        priority_badge: r.priority_badge ?? null,
-        priority_reason: r.priority_reason ?? null,
+          notes: r.notes ?? null,
+          owner: r.owner ?? null,
 
-        top_contributors: Array.isArray(r.top_contributors)
-          ? r.top_contributors.map((c: any) => ({
-              gap: toInt(c.gap, 0) ?? 0,
-              title: c.title ?? null,
-              importance: toInt(c.importance, 0) ?? 0,
-              map_weight: toNum(c.map_weight, 0) ?? 0,
-              pack_weight: toNum(c.pack_weight, 0) ?? 0,
-              criteria_code: c.criteria_code ?? null,
-              need_component: toNum(c.need_component, 0) ?? 0,
-            }))
-          : [],
+          // v3 (D4/T2): mueren badges TOP/MEDIA, priority_reason técnico y
+          // top_contributors; solo sobreviven en la foto v2 congelada.
+          priority_badge: v3 ? null : r.priority_badge ?? null,
+          priority_reason: v3 ? null : r.priority_reason ?? null,
 
-        top_contributors_need: toNum(r.top_contributors_need, null),
-        top_contributors_share: toNum(r.top_contributors_share, null),
-        top_contributors_count: toInt(r.top_contributors_count, null),
-      }))
+          top_contributors:
+            !v3 && Array.isArray(r.top_contributors)
+              ? r.top_contributors.map((c: any) => ({
+                  gap: toInt(c.gap, 0) ?? 0,
+                  title: c.title ?? null,
+                  importance: toInt(c.importance, 0) ?? 0,
+                  map_weight: toNum(c.map_weight, 0) ?? 0,
+                  pack_weight: toNum(c.pack_weight, 0) ?? 0,
+                  criteria_code: c.criteria_code ?? null,
+                  need_component: toNum(c.need_component, 0) ?? 0,
+                }))
+              : [],
+
+          top_contributors_need: v3 ? null : toNum(r.top_contributors_need, null),
+          top_contributors_share: v3
+            ? null
+            : toNum(r.top_contributors_share, null),
+          top_contributors_count: v3
+            ? null
+            : toInt(r.top_contributors_count, null),
+        };
+      })
       .sort((a: any, b: any) => (a.rank ?? 999) - (b.rank ?? 999));
 
     const res = NextResponse.json({
       ok: true,
       version: "v1",
+      payload_version: payloadVersion,
       assessment_id: assessmentId,
       pack: assessment.pack,
       mode: "ranked",
@@ -218,9 +246,14 @@ export async function GET(req: Request) {
       fromSnapshot: resolved.fromSnapshot,
       snapshotId: "snapshotId" in resolved ? resolved.snapshotId : null,
       snapshotState: resolved.state,
+      // M3: "modelo evolucionado" deja de ser solo log; se expone al caller.
+      modelFingerprintMatch,
     });
     res.headers.set("X-From-Snapshot", String(resolved.fromSnapshot));
     res.headers.set("X-Snapshot-State", resolved.state);
+    res.headers.set("X-Payload-Version", payloadVersion);
+    if (modelFingerprintMatch === false)
+      res.headers.set("X-Model-Evolved", "true");
     return res;
   }
 
