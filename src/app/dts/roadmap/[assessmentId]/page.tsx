@@ -133,31 +133,47 @@ export default function DtsRoadmapPage() {
                   ) : null}
 
                   <div className="mt-4 space-y-3">
-                    {ph.programs.map((p) => (
-                      <div
-                        key={p.program_id || p.program_code || String(p.rank)}
-                        className="rounded-xl border border-slate-200 p-4"
-                      >
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-sm text-slate-500">
-                            #{p.rank}
-                          </span>
-                          {p.program_code ? (
-                            <span className="font-mono text-sm text-slate-700">
-                              {p.program_code}
+                    {ph.programs.map((p) => {
+                      // Gating (payload v3 manda): why_now no-vacío ⟺ bloqueado/
+                      // no_medible → NO se ofrece ejecución activa (item 5).
+                      const gated = !!(p.why_now && p.why_now.length > 0);
+                      return (
+                        <div
+                          key={p.program_id || p.program_code || String(p.rank)}
+                          className="rounded-xl border border-slate-200 p-4"
+                        >
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-sm text-slate-500">
+                              #{p.rank}
                             </span>
+                            {p.program_code ? (
+                              <span className="font-mono text-sm text-slate-700">
+                                {p.program_code}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="mt-1 text-lg font-semibold text-slate-900">
+                            {p.title}
+                          </div>
+                          {gated ? (
+                            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                              {p.why_now}
+                            </div>
+                          ) : p.program_code ? (
+                            <div className="mt-3">
+                              <Link
+                                href={`/dts/roadmap/${assessmentId}/programas/${encodeURIComponent(
+                                  p.program_code
+                                )}`}
+                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                              >
+                                Ver acciones →
+                              </Link>
+                            </div>
                           ) : null}
                         </div>
-                        <div className="mt-1 text-lg font-semibold text-slate-900">
-                          {p.title}
-                        </div>
-                        {p.why_now ? (
-                          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                            {p.why_now}
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
