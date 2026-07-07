@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { assertDtsWritesAllowedInThisEnvironment } from "@/lib/dts/prodGate"
 
+// M3 · Ejecución mínima /dts — desbloqueo ACOTADO del firewall 005 para este
+// único handler y SOLO para gapply_v23. El pack se verifica en servidor por
+// SELECT directo sobre dts_assessments (tabla neutra, sin RPC) ANTES del upsert.
+// Los packs legacy siguen gateados por prodGate tal cual (005 intacto).
+// Solo marca/desmarca (pending/completed); upsert directo; nada de responsables,
+// notas, horas, validación de impacto, activar/cerrar programa.
 export async function POST(req: NextRequest) {
-  // 005 — env-gate: en prod, bloquear escritura legacy antes de tocar DB.
-  const blocked = assertDtsWritesAllowedInThisEnvironment()
-  if (blocked) return blocked
-
   try {
     const { assessmentId, actionId, status } = await req.json()
 
@@ -21,6 +23,23 @@ export async function POST(req: NextRequest) {
     }
 
     const sb = createClient(url, key, { auth: { persistSession: false } })
+
+    // Verificación de pack en servidor (SELECT directo, sin RPC) antes de escribir.
+    const { data: asm, error: asmErr } = await sb
+      .from("dts_assessments")
+      .select("pack")
+      .eq("id", assessmentId)
+      .maybeSingle()
+
+    if (asmErr) return NextResponse.json({ ok: false, error: asmErr.message }, { status: 500 })
+    if (!asm) return NextResponse.json({ ok: false, error: "Assessment not found" }, { status: 404 })
+
+    // Desbloqueo acotado: SOLO gapply_v23 salta el firewall 005. El resto queda
+    // gateado exactamente como antes (403 en prod; preview/local sin cambio).
+    if (asm.pack !== "gapply_v23") {
+      const blocked = assertDtsWritesAllowedInThisEnvironment()
+      if (blocked) return blocked
+    }
 
     const { error } = await sb
       .from("dts_action_status")
