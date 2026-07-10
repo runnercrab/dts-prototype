@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import DtsSidebar from "@/components/dts/DtsSidebar";
@@ -62,6 +62,14 @@ export default function DiagnosticoPage() {
   const [companyName, setCompanyName] = useState("");
   const [showHelp, setShowHelp] = useState(false); // ✅ modal ℹ️
 
+  // ── Cierre completion/snapshot (papeleta v2.1) ──────────────────────
+  const [completing, setCompleting] = useState(false);
+  const [completeError, setCompleteError] = useState<string | null>(null);
+  const [completed, setCompleted] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const completeFiredRef = useRef(false); // in-flight / idempotencia de /complete
+  const autoFiredRef = useRef(false);     // auto-disparo UNA vez por entrada a completion
+
   const isNotApplicable = (q: Question | undefined) =>
     q?.response?.as_is_notes === "NO_APLICA" || (q?.response && q.response.as_is_level === null);
 
@@ -117,6 +125,7 @@ export default function DiagnosticoPage() {
   // ✅ Cerrar modal al cambiar de pregunta
   useEffect(() => {
     setShowHelp(false);
+    setSaveError(null);
   }, [currentIndex]);
 
   const saveResponse = useCallback(
@@ -125,13 +134,22 @@ export default function DiagnosticoPage() {
       if (!lvl || !questions[currentIndex]) return;
       setSaving(true);
       try {
-        await fetch("/api/dts/save-response", {
+        const res = await fetch("/api/dts/save-response", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ assessmentId, criteriaCode: questions[currentIndex].criteria_code, asIsLevel: lvl }),
         });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || json?.ok !== true) {
+          console.error("[dts/save-response] no confirmado:", res.status, json);
+          setSaveError("No se pudo guardar. Vuelve a seleccionar la opción.");
+          setSaving(false);
+          return;
+        }
+        setSaveError(null);
+        setCompleteError(null);
         setQuestions((prev) => prev.map((q, i) => i === currentIndex ? { ...q, response: { as_is_level: lvl, notes: "" } } : q));
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error(e); setSaveError("No se pudo guardar. Vuelve a seleccionar la opción."); }
       setSaving(false);
     },
     [asIsLevel, currentIndex, questions, assessmentId]
@@ -141,15 +159,24 @@ export default function DiagnosticoPage() {
     setAsIsLevel(level);
     setSaving(true);
     try {
-      await fetch("/api/dts/save-response", {
+      const res = await fetch("/api/dts/save-response", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assessmentId, criteriaCode: questions[currentIndex].criteria_code, asIsLevel: level }),
       });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || json?.ok !== true) {
+        console.error("[dts/save-response] no confirmado:", res.status, json);
+        setSaveError("No se pudo guardar. Vuelve a seleccionar la opción.");
+        setSaving(false);
+        return;
+      }
+      setSaveError(null);
+      setCompleteError(null);
       setQuestions((prev) => prev.map((q, i) => i === currentIndex ? { ...q, response: { as_is_level: level, notes: "" } } : q));
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 800);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); setSaveError("No se pudo guardar. Vuelve a seleccionar la opción."); }
     setSaving(false);
   }
 
@@ -157,7 +184,7 @@ export default function DiagnosticoPage() {
     if (!questions[currentIndex]) return;
     setSaving(true);
     try {
-      await fetch("/api/dts/save-response", {
+      const res = await fetch("/api/dts/save-response", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -166,6 +193,15 @@ export default function DiagnosticoPage() {
           asIsLevel: null,
         }),
       });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || json?.ok !== true) {
+        console.error("[dts/save-response] no confirmado:", res.status, json);
+        setSaveError("No se pudo guardar. Vuelve a intentarlo.");
+        setSaving(false);
+        return;
+      }
+      setSaveError(null);
+      setCompleteError(null);
       setQuestions((prev) =>
         prev.map((q, i) =>
           i === currentIndex
@@ -181,6 +217,7 @@ export default function DiagnosticoPage() {
       }, 400);
     } catch (e) {
       console.error(e);
+      setSaveError("No se pudo guardar. Vuelve a intentarlo.");
     }
     setSaving(false);
   }
@@ -215,6 +252,76 @@ export default function DiagnosticoPage() {
       setShowCompletion(true);
     }
   }
+
+  // ── CAPA 2: belt de servidor + completion (papeleta v2.1) ───────────
+  const handleComplete = useCallback(async () => {
+    if (!assessmentId || completeFiredRef.current) return;
+    setCompleting(true);
+    setCompleteError(null);
+    try {
+      // 1) Verdad de servidor: re-consulta list-questions (protege drafts retomados / divergencia UI-BD)
+      const lq = await fetch("/api/dts/list-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ assessmentId }),
+      });
+      const lqJson = await lq.json().catch(() => null);
+      if (!lq.ok || !Array.isArray(lqJson?.questions)) throw new Error("list-questions no disponible");
+      const serverQs: Question[] = lqJson.questions;
+      setQuestions(serverQs); // sincroniza UI con BD
+
+      const missing = serverQs.filter((q) => q.response == null);
+      if (serverQs.length === 0 || missing.length > 0) {
+        // UX: nombrar la pregunta y llevar al CEO a ella (no un "faltan preguntas" ciego)
+        const first = missing[0];
+        const idx = serverQs.findIndex((q) => q.criteria_code === first?.criteria_code);
+        setCompleteError(
+          `Falta confirmar: "${first?.question}" (${first?.dimension_name}). Te llevamos a ella.`
+        );
+        completeFiredRef.current = false;
+        setCompleting(false);
+        setShowCompletion(false); // dispara reset de autoFiredRef
+        setShowDimIntro(false);
+        if (idx >= 0) {
+          setCurrentIndex(idx);
+          setAsIsLevel(serverQs[idx]?.response?.as_is_level ?? null);
+        }
+        return; // NO se llama a /complete
+      }
+
+      // 2) 36/36 confirmadas por servidor → completar + snapshot
+      completeFiredRef.current = true;
+      const res = await fetch("/api/dts/assessment/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ assessmentId }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || json?.ok !== true) throw new Error(json?.error || `complete ${res.status}`);
+      setCompleted(true);
+    } catch (e) {
+      completeFiredRef.current = false; // habilita reintento MANUAL
+      setCompleteError("No hemos podido guardar tu informe. Reinténtalo.");
+      console.error("[dts/completion] fallo:", e);
+    } finally {
+      setCompleting(false);
+    }
+  }, [assessmentId]);
+
+  // Auto-disparo ÚNICO por entrada a completion (no re-dispara aunque /complete falle)
+  useEffect(() => {
+    if (showCompletion && !completed && !completing && !autoFiredRef.current) {
+      autoFiredRef.current = true;
+      handleComplete();
+    }
+  }, [showCompletion, completed, completing, handleComplete]);
+
+  // Reset del auto-disparo SOLO al salir de completion (discrepancia, goTo, back)
+  useEffect(() => {
+    if (!showCompletion) autoFiredRef.current = false;
+  }, [showCompletion]);
 
   const current = questions[currentIndex];
   const currentDim = current ? dimCode(current.criteria_code) : "";
@@ -355,7 +462,14 @@ export default function DiagnosticoPage() {
                 <h1 className="text-[32px] md:text-[40px] font-extrabold text-slate-900 mb-5 tracking-tight">Diagnóstico completado</h1>
                 <p className="text-[17px] md:text-[19px] text-slate-700 mb-4 max-w-lg leading-relaxed">Has evaluado las {questions.length} áreas clave de tu empresa.</p>
                 <p className="text-[16px] md:text-[17px] text-slate-600 mb-14 max-w-md">Tu informe incluye tu nivel de madurez digital, los obstáculos que te están frenando y el primer paso concreto para avanzar.</p>
-                <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all hover:opacity-90" style={{ backgroundColor: GAPPLY_BLUE }}>Ver mis resultados →</button>
+                {completeError ? (
+                  <div className="flex flex-col items-center gap-4 max-w-md">
+                    <p className="text-[16px] text-red-600 font-medium">{completeError}</p>
+                    <button onClick={() => handleComplete()} disabled={completing} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all hover:opacity-90 disabled:opacity-40" style={{ backgroundColor: GAPPLY_BLUE }}>{completing ? "Comprobando…" : "Reintentar"}</button>
+                  </div>
+                ) : (
+                  <button onClick={() => completed && router.push(`/dts/resultados/${assessmentId}`)} disabled={completing || !completed} className="px-12 py-4 rounded-2xl text-white text-[18px] font-bold shadow-lg hover:shadow-xl transition-all hover:opacity-90 disabled:opacity-40" style={{ backgroundColor: GAPPLY_BLUE }}>{completing ? "Comprobando y generando tu informe…" : "Ver mis resultados →"}</button>
+                )}
               </div>
 
             ) : showDimIntro && currentDimInfo ? (
@@ -371,6 +485,16 @@ export default function DiagnosticoPage() {
 
             ) : current ? (
               <div>
+                {completeError && (
+                  <div className="mb-6 px-6 py-4 rounded-2xl bg-red-50 text-[15px] text-red-700 font-medium" style={{ border: '1.5px solid #fecaca' }}>
+                    {completeError}
+                  </div>
+                )}
+                {saveError && (
+                  <div className="mb-6 px-6 py-4 rounded-2xl bg-red-50 text-[15px] text-red-700 font-medium" style={{ border: '1.5px solid #fecaca' }}>
+                    {saveError}
+                  </div>
+                )}
                 <div className="mb-10">
                   <div className="flex items-center gap-4 mb-5">
                     <span className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-[14px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 font-[family-name:var(--font-space-mono)]">
@@ -477,7 +601,7 @@ export default function DiagnosticoPage() {
                       {currentIndex === questions.length - 1 ? "Finalizar" : "Siguiente →"}
                     </button>
                     {totalAnswered === questions.length && (
-                      <button onClick={() => router.push(`/dts/resultados/${assessmentId}`)} className="flex-1 sm:flex-none px-6 md:px-7 py-3.5 rounded-2xl text-white text-[15px] md:text-[16px] font-bold transition-colors shadow-md hover:shadow-lg hover:opacity-90" style={{ backgroundColor: GAPPLY_BLUE }}>
+                      <button onClick={() => setShowCompletion(true)} className="flex-1 sm:flex-none px-6 md:px-7 py-3.5 rounded-2xl text-white text-[15px] md:text-[16px] font-bold transition-colors shadow-md hover:shadow-lg hover:opacity-90" style={{ backgroundColor: GAPPLY_BLUE }}>
                         Ver resultados →
                       </button>
                     )}
